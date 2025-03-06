@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimal MIDI Tool Interface</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .card { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+    .btn { background: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+    .btn-secondary { background: #2196F3; }
+    .btn-danger { background: #F44336; }
+    .note-display { height: 300px; overflow: auto; padding: 10px; background: #f5f5f5; border-radius: 5px; margin-top: 10px; font-family: monospace; }
+    .steps { background: #ffffcc; padding: 10px; border-left: 4px solid #ffeb3b; margin-bottom: 20px; }
+    .log { background: #f1f1f1; height: 100px; overflow: auto; padding: 10px; font-family: monospace; margin-top: 20px; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Minimal MIDI Tool Interface</h1>
+    <p>This is a simplified interface to test the core functionality.</p>
+    
+    <div class="steps">
+      <h3>Simple Steps:</h3>
+      <ol>
+        <li>Click "Create Session" button</li>
+        <li>Click "Create Sequence" button</li>
+        <li>Click "Generate Chord Progression" button</li>
+        <li>View the notes that were created below</li>
+      </ol>
+    </div>
+    
+    <div class="card">
+      <h2>1. Session Management</h2>
+      <button id="createSessionBtn" class="btn">Create Session</button>
+      <span id="sessionStatus">No active session</span>
+    </div>
+    
+    <div class="card">
+      <h2>2. Sequence Management</h2>
+      <button id="createSequenceBtn" class="btn">Create Sequence</button>
+      <span id="sequenceStatus">No sequence created</span>
+    </div>
+    
+    <div class="card">
+      <h2>3. Pattern Generation</h2>
+      <button id="generateChordBtn" class="btn">Generate Chord Progression</button>
+      <button id="generateBasslineBtn" class="btn btn-secondary">Generate Bassline</button>
+      <button id="generateDrumBtn" class="btn btn-secondary">Generate Drum Pattern</button>
+      <p>Note Count: <span id="noteCount">0</span></p>
+    </div>
+    
+    <div class="card">
+      <h2>4. View Notes</h2>
+      <button id="viewNotesBtn" class="btn btn-secondary">Refresh Notes</button>
+      <div class="note-display" id="noteDisplay">No notes to display</div>
+    </div>
+    
+    <div class="log" id="log"></div>
+  </div>
+  
+  <script>
+    // State
+    let sessionId = null;
+    let sequenceId = null;
+    
+    // Elements
+    const sessionStatus = document.getElementById('sessionStatus');
+    const sequenceStatus = document.getElementById('sequenceStatus');
+    const noteCount = document.getElementById('noteCount');
+    const noteDisplay = document.getElementById('noteDisplay');
+    const logElement = document.getElementById('log');
+    
+    // Logging function
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      entry.className = type;
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+      console.log(message);
+    }
+    
+    // API helper
+    async function callApi(endpoint, method = 'GET', body = null) {
+      try {
+        const options = {
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        };
+
+        if (body) {
+          options.body = JSON.stringify(body);
+        }
+
+        log(`API Call: ${method} ${endpoint}`);
+        const response = await fetch(`/api${endpoint}`, options);
+        const data = await response.json();
+
+        if (!data.success) {
+          log(`API Error: ${data.message}`, 'error');
+          return null;
+        }
+
+        return data;
+      } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        return null;
+      }
+    }
+    
+    // Event handlers
+    document.getElementById('createSessionBtn').addEventListener('click', async () => {
+      const data = await callApi('/sessions', 'POST', {});
+      if (data) {
+        sessionId = data.sessionId;
+        sessionStatus.textContent = `Active session: ${sessionId}`;
+        log(`Session created: ${sessionId}`, 'success');
+      }
+    });
+    
+    document.getElementById('createSequenceBtn').addEventListener('click', async () => {
+      if (!sessionId) {
+        log('Create a session first', 'error');
+        return;
+      }
+      
+      const data = await callApi(`/sessions/${sessionId}/sequences`, 'POST', {
+        name: 'Test Sequence',
+        tempo: 120,
+        key: 'C major'
+      });
+      
+      if (data) {
+        sequenceId = data.sequenceId;
+        sequenceStatus.textContent = `Active sequence: ${sequenceId}`;
+        log(`Sequence created: ${sequenceId}`, 'success');
+      }
+    });
+    
+    document.getElementById('generateChordBtn').addEventListener('click', async () => {
+      if (!sessionId || !sequenceId) {
+        log('Create a session and sequence first', 'error');
+        return;
+      }
+      
+      const data = await callApi(`/sessions/${sessionId}/patterns/chord-progression`, 'POST', {
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 4,
+        rhythmPattern: [4]
+      });
+      
+      if (data) {
+        noteCount.textContent = data.noteCount;
+        log(`Generated chord progression with ${data.noteCount} notes`, 'success');
+        // Refresh notes
+        document.getElementById('viewNotesBtn').click();
+      }
+    });
+    
+    document.getElementById('generateBasslineBtn').addEventListener('click', async () => {
+      if (!sessionId || !sequenceId) {
+        log('Create a session and sequence first', 'error');
+        return;
+      }
+      
+      const data = await callApi(`/sessions/${sessionId}/patterns/bassline`, 'POST', {
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 3
+      });
+      
+      if (data) {
+        noteCount.textContent = data.noteCount;
+        log(`Generated bassline with ${data.noteCount} notes`, 'success');
+        // Refresh notes
+        document.getElementById('viewNotesBtn').click();
+      }
+    });
+    
+    document.getElementById('generateDrumBtn').addEventListener('click', async () => {
+      if (!sessionId || !sequenceId) {
+        log('Create a session and sequence first', 'error');
+        return;
+      }
+      
+      const data = await callApi(`/sessions/${sessionId}/patterns/drums`, 'POST', {
+        patternType: 'basic',
+        measures: 2
+      });
+      
+      if (data) {
+        noteCount.textContent = data.noteCount;
+        log(`Generated drum pattern with ${data.noteCount} notes`, 'success');
+        // Refresh notes
+        document.getElementById('viewNotesBtn').click();
+      }
+    });
+    
+    document.getElementById('viewNotesBtn').addEventListener('click', async () => {
+      if (!sessionId || !sequenceId) {
+        log('Create a session and sequence first', 'error');
+        return;
+      }
+      
+      const data = await callApi(`/sessions/${sessionId}/sequences/${sequenceId}`);
+      if (data) {
+        // Format and display notes
+        if (data.sequence.notes && data.sequence.notes.length > 0) {
+          noteDisplay.innerHTML = formatNotes(data.sequence.notes);
+          noteCount.textContent = data.sequence.notes.length;
+        } else {
+          noteDisplay.textContent = 'No notes in sequence';
+          noteCount.textContent = '0';
+        }
+        log(`Retrieved sequence with ${data.sequence.notes.length} notes`, 'success');
+      }
+    });
+    
+    // Helper to format notes in a readable way
+    function formatNotes(notes) {
+      let html = '';
+      
+      // Group notes by type
+      const melodicNotes = notes.filter(note => note.channel === 0);
+      const bassNotes = notes.filter(note => note.channel === 1);
+      const drumNotes = notes.filter(note => note.channel === 9);
+      
+      html += `<h3>Melodic Notes (${melodicNotes.length})</h3>`;
+      if (melodicNotes.length > 0) {
+        html += '<ul>';
+        melodicNotes.slice(0, 10).forEach(note => {
+          html += `<li>Pitch: ${note.pitch}, Start: ${note.startTime}, Duration: ${note.duration}</li>`;
+        });
+        if (melodicNotes.length > 10) {
+          html += `<li>... and ${melodicNotes.length - 10} more</li>`;
+        }
+        html += '</ul>';
+      } else {
+        html += '<p>No melodic notes</p>';
+      }
+      
+      html += `<h3>Bass Notes (${bassNotes.length})</h3>`;
+      if (bassNotes.length > 0) {
+        html += '<ul>';
+        bassNotes.slice(0, 10).forEach(note => {
+          html += `<li>Pitch: ${note.pitch}, Start: ${note.startTime}, Duration: ${note.duration}</li>`;
+        });
+        if (bassNotes.length > 10) {
+          html += `<li>... and ${bassNotes.length - 10} more</li>`;
+        }
+        html += '</ul>';
+      } else {
+        html += '<p>No bass notes</p>';
+      }
+      
+      html += `<h3>Drum Notes (${drumNotes.length})</h3>`;
+      if (drumNotes.length > 0) {
+        html += '<ul>';
+        drumNotes.slice(0, 10).forEach(note => {
+          html += `<li>Pitch: ${note.pitch}, Start: ${note.startTime}, Duration: ${note.duration}</li>`;
+        });
+        if (drumNotes.length > 10) {
+          html += `<li>... and ${drumNotes.length - 10} more</li>`;
+        }
+        html += '</ul>';
+      } else {
+        html += '<p>No drum notes</p>';
+      }
+      
+      return html;
+    }
+  </script>
+</body>
+</html>
