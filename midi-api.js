@@ -21,6 +21,9 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Serve static files from the 'public' directory
+app.use(express.static('public'));
+
 // Store active sessions
 const sessions = new Map();
 
@@ -1424,10 +1427,16 @@ app.get('/api/capabilities', (req, res) => {
   });
 });
 
+// Redirect root to index.html
+app.get('/', (req, res) => {
+  res.redirect('/index.html');
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`MIDI Song Creation Tool API running on port ${PORT}`);
+  console.log(`Web interface available at http://localhost:${PORT}`);
 });
 
 module.exports = app;
