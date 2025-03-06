@@ -1,0 +1,17 @@
+{
+  "name": "midi_song_creation_tool",
+  "version": "1.0.0",
+  "description": "An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.",
+  "main": "midi-api.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
