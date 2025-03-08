@@ -25,6 +25,12 @@ else
     echo "✅ Dependencies already installed"
 fi
 
+# Install development dependencies (especially ESLint plugins)
+echo "📦 Installing development dependencies..."
+chmod +x scripts/install-dev-deps.sh
+./scripts/install-dev-deps.sh || { echo "❌ Failed to install dev dependencies"; exit 1; }
+echo "✅ Dev dependencies installed"
+
 # Run linting with more limited scope to focus on important issues
 echo "🔍 Running ESLint (excluding Cypress tests for now)..."
 npx eslint src/ --ext .js,.jsx || { echo "❌ ESLint checks failed on src/"; exit 1; }
