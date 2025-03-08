@@ -20,7 +20,8 @@
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
     "start": "node src/server/server.js",
     "dev": "nodemon src/server/server.js",
-    "prepare": "chmod +x scripts/run-tests.sh"
+    "prepare": "chmod +x scripts/run-tests.sh",
+    "generate:fixtures": "node scripts/generate-test-midi.js"
   },
   "dependencies": {
     "express": "^4.18.2",
