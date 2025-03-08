@@ -1,5 +1,8 @@
 name: Lint
 
+# This workflow runs code quality checks
+# It ensures code follows style guidelines and formatting standards
+
 on:
   push:
     branches: [ main, develop, feature/* ]
@@ -9,8 +12,10 @@ on:
 jobs:
   eslint:
     runs-on: ubuntu-latest
+    name: ESLint
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
       
       - name: Use Node.js
         uses: actions/setup-node@v3
@@ -22,5 +27,73 @@ jobs:
         run: npm ci
       
       - name: Run ESLint
-        run: npx eslint . --ext .js
+        id: eslint
+        run: npx eslint . --ext .js,.jsx --format json --output-file eslint-report.json
         continue-on-error: true # During initial setup, this might fail until ESLint is fully configured
+      
+      - name: Upload ESLint report
+        uses: actions/upload-artifact@v3
+        with:
+          name: eslint-report
+          path: eslint-report.json
+          
+  prettier:
+    runs-on: ubuntu-latest
+    name: Prettier
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Check formatting
+        id: prettier
+        run: npx prettier --check "**/*.{js,jsx,json,md}"
+        continue-on-error: true # Don't fail the build yet
+        
+  report:
+    needs: [eslint, prettier]
+    runs-on: ubuntu-latest
+    name: Lint Report
+    
+    steps:
+      - name: Download ESLint report
+        uses: actions/download-artifact@v3
+        with:
+          name: eslint-report
+          
+      - name: Create lint summary
+        run: |
+          echo "# Lint Results Summary" > lint-summary.md
+          
+          if [ -f eslint-report.json ]; then
+            ERROR_COUNT=$(grep -o '"errorCount":[0-9]*' eslint-report.json | grep -o '[0-9]*')
+            WARNING_COUNT=$(grep -o '"warningCount":[0-9]*' eslint-report.json | grep -o '[0-9]*')
+            
+            echo "## ESLint Results" >> lint-summary.md
+            echo "- Errors: $ERROR_COUNT" >> lint-summary.md
+            echo "- Warnings: $WARNING_COUNT" >> lint-summary.md
+            
+            if [ "$ERROR_COUNT" -gt 0 ]; then
+              echo "⚠️ ESLint found $ERROR_COUNT errors that need to be fixed" >> lint-summary.md
+            else
+              echo "✅ ESLint passed with no errors" >> lint-summary.md
+            fi
+          else
+            echo "⚠️ ESLint report not found" >> lint-summary.md
+          fi
+          
+          echo "See the full reports in the artifacts section" >> lint-summary.md
+          
+      - name: Publish lint summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: lint-summary
+          path: lint-summary.md
