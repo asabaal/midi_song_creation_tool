@@ -2,7 +2,7 @@
 // Setup for Jest DOM environment (for React component testing)
 
 // Import testing libraries
-import '@testing-library/jest-dom';
+require('@testing-library/jest-dom');
 
 // Mock window.matchMedia for responsive design testing
 Object.defineProperty(window, 'matchMedia', {
