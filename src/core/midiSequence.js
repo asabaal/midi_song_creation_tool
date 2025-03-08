@@ -1,12 +1,11 @@
 // src/core/midiSequence.js
 class MidiSequence {
-  constructor() {
-    this.tracks = [];
-    this.tempo = 120;
-    this.bpm = 120; // Alias for tests
-    this.timeSignature = [4, 4]; // Add for tests
-    
-    // Don't initialize with a default track for tests
+  constructor(options = {}) {
+    // Support both constructor styles - our original and the test's expected format
+    this.tracks = options.tracks || [];
+    this.tempo = options.bpm || 120;
+    this.bpm = options.bpm || 120; // Alias for tests
+    this.timeSignature = options.timeSignature || [4, 4];
   }
   
   addTrack(instrument = 0, name = '') {
@@ -25,7 +24,13 @@ class MidiSequence {
     this.bpm = tempo; // Update alias for tests
   }
   
+  // Method signature for our application
   addNote(trackId, note) {
+    if (typeof trackId === 'object') {
+      // Test is using object parameter style
+      return this.addNoteObject(trackId);
+    }
+    
     // Create track if it doesn't exist
     while (this.tracks.length <= trackId) {
       this.addTrack();
@@ -41,7 +46,36 @@ class MidiSequence {
     return this.tracks[trackId].notes.length - 1;
   }
   
-  removeNote(trackId, noteIndex) {
+  // Method signature for tests
+  addNoteObject(noteObj) {
+    const { trackId, pitch, startTime, duration, velocity = 100 } = noteObj;
+    
+    // Create track if it doesn't exist
+    while (this.tracks.length <= trackId) {
+      this.addTrack();
+    }
+    
+    this.tracks[trackId].notes.push({
+      pitch,
+      startTime,
+      duration,
+      velocity
+    });
+    
+    return this.tracks[trackId].notes.length - 1;
+  }
+  
+  removeNote(trackIdOrObj, noteIndex) {
+    if (typeof trackIdOrObj === 'object') {
+      // Test style
+      const { trackId, index } = trackIdOrObj;
+      return this.removeNoteByIndex(trackId, index);
+    }
+    
+    return this.removeNoteByIndex(trackIdOrObj, noteIndex);
+  }
+  
+  removeNoteByIndex(trackId, noteIndex) {
     if (trackId < this.tracks.length && noteIndex < this.tracks[trackId].notes.length) {
       this.tracks[trackId].notes.splice(noteIndex, 1);
       return true;
