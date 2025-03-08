@@ -11,9 +11,10 @@
              border-radius: 4px; cursor: pointer; margin: 5px; }
     button.blue { background: #2196F3; }
     button.red { background: #F44336; }
+    button.purple { background: #9C27B0; }
     button:disabled { background: #cccccc; cursor: not-allowed; }
     .card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
-    .controls { display: flex; gap: 10px; margin-bottom: 10px; }
+    .controls { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     #piano-roll { height: 400px; background: #f5f5f5; overflow: auto; position: relative; }
     .piano-key { position: absolute; height: 20px; border-bottom: 1px solid #ddd; display: flex;
                 align-items: center; padding-left: 10px; font-size: 12px; width: 100px; }
@@ -61,6 +62,15 @@
       <span id="playStatus">Nothing to play</span>
     </div>
   </div>
+
+  <div class="card">
+    <h2>4. Export to MIDI File</h2>
+    <div class="controls">
+      <button id="exportBtn" class="purple" disabled>💾 Export to MIDI</button>
+      <span id="exportStatus">Create music to export</span>
+    </div>
+    <p class="info-text">Export your song as a .mid file to open in any DAW (Ableton, Logic, FL Studio, etc.)</p>
+  </div>
   
   <div class="card">
     <h2>Piano Roll</h2>
@@ -84,6 +94,7 @@
     // DOM elements
     const setupStatus = document.getElementById('setupStatus');
     const playStatus = document.getElementById('playStatus');
+    const exportStatus = document.getElementById('exportStatus');
     const pianoRoll = document.getElementById('piano-roll');
     const statusBar = document.querySelector('.status');
     const logElement = document.getElementById('log');
@@ -96,6 +107,7 @@
     const clearBtn = document.getElementById('clearBtn');
     const playBtn = document.getElementById('playBtn');
     const stopBtn = document.getElementById('stopBtn');
+    const exportBtn = document.getElementById('exportBtn');
     
     // Logging function
     function log(message, type = 'info') {
@@ -131,6 +143,11 @@
           const errorText = await response.text();
           log(`API error (${response.status}): ${errorText}`, 'error');
           return null;
+        }
+        
+        // For binary responses (like MIDI files), return the Response object
+        if (response.headers.get('Content-Type') === 'audio/midi') {
+          return response;
         }
         
         const data = await response.json();
@@ -228,10 +245,12 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Enable play button
+      // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
+      exportBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export as MIDI file`;
     }
     
     // Generate bassline
@@ -263,10 +282,12 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Enable play button
+      // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
+      exportBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export as MIDI file`;
     }
     
     // Generate drums
@@ -295,10 +316,12 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Enable play button
+      // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
+      exportBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export as MIDI file`;
     }
     
     // Clear all notes
@@ -324,10 +347,73 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Disable play button
+      // Disable play and export buttons
       playBtn.disabled = true;
       stopBtn.disabled = true;
+      exportBtn.disabled = true;
       playStatus.textContent = 'Nothing to play';
+      exportStatus.textContent = 'Create music to export';
+    }
+    
+    // Export MIDI file
+    async function exportMidi() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      if (state.noteCount === 0) {
+        log('No notes to export', 'error');
+        updateStatus('No notes to export');
+        return;
+      }
+      
+      updateStatus('Exporting MIDI file...');
+      
+      try {
+        // Trigger file download using the export endpoint
+        const response = await callApi(`/sessions/${state.sessionId}/export/midi`);
+        
+        if (!response) {
+          throw new Error('Failed to get MIDI file from server');
+        }
+        
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Extract filename from the Content-Disposition header if possible
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = 'my_music.mid';
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) { 
+            filename = matches[1].replace(/['"]/g, '');
+          }
+        }
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        updateStatus(`Exported MIDI file successfully: ${filename}`);
+        log(`Exported MIDI file: ${filename}`, 'success');
+        exportStatus.textContent = `MIDI file exported successfully`;
+      } catch (error) {
+        console.error(error);
+        log(`Error exporting MIDI: ${error.message}`, 'error');
+        updateStatus('Failed to export MIDI file');
+      }
     }
     
     // Initialize piano roll
@@ -523,6 +609,7 @@
     clearBtn.addEventListener('click', clearNotes);
     playBtn.addEventListener('click', playSequence);
     stopBtn.addEventListener('click', stopPlayback);
+    exportBtn.addEventListener('click', exportMidi);
     
     // Initialize
     updateStatus('Ready - click "Set Up" to begin');
