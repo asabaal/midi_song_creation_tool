@@ -41,7 +41,15 @@ app.post('/api/sessions', async (req, res) => {
     });
 
     await session.save();
-    res.status(201).json(session);
+    
+    // Format response to match expected schema in tests
+    res.status(201).json({
+      id: session._id,
+      name: session.name,
+      bpm: session.bpm,
+      timeSignature: session.timeSignature,
+      tracks: session.tracks || []
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -58,7 +66,17 @@ app.get('/api/sessions', async (req, res) => {
     }
 
     const sessions = await Session.find(query);
-    res.json(sessions);
+    
+    // Format response to match expected schema in tests
+    const formattedSessions = sessions.map(session => ({
+      id: session._id,
+      name: session.name,
+      bpm: session.bpm,
+      timeSignature: session.timeSignature,
+      tracks: session.tracks || []
+    }));
+    
+    res.json(formattedSessions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -71,7 +89,15 @@ app.get('/api/sessions/:id', async (req, res) => {
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
     }
-    res.json(session);
+    
+    // Format response to match expected schema in tests
+    res.json({
+      id: session._id,
+      name: session.name,
+      bpm: session.bpm,
+      timeSignature: session.timeSignature,
+      tracks: session.tracks || []
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -91,7 +117,15 @@ app.put('/api/sessions/:id', async (req, res) => {
     if (req.body.timeSignature) session.timeSignature = req.body.timeSignature;
 
     await session.save();
-    res.json(session);
+    
+    // Format response to match expected schema in tests
+    res.json({
+      id: session._id,
+      name: session.name,
+      bpm: session.bpm,
+      timeSignature: session.timeSignature,
+      tracks: session.tracks || []
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
