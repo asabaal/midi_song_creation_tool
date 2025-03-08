@@ -24,15 +24,14 @@ module.exports = {
     
     // MIDI specific rules to ensure pattern correctness
     'max-len': ['warn', { code: 100, ignoreComments: true }],
-    
-    // Jest test file specific relaxations
-    'overrides': [
-      {
-        'files': ['**/*.test.js', '**/*.spec.js'],
-        'rules': {
-          'no-console': 'off',
-        }
-      }
-    ]
   },
+  // Jest test file specific relaxations
+  overrides: [
+    {
+      files: ['**/*.test.js', '**/*.spec.js'],
+      rules: {
+        'no-console': 'off',
+      }
+    }
+  ]
 };
