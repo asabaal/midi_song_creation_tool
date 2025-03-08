@@ -1,23 +1,23 @@
 # MIDI Song Creation Tool
 
-An agentic framework for creating and manipulating MIDI music via a web interface and API. This tool enables AI assistants like Claude to compose and edit music.
+A simple web-based tool for creating and experimenting with MIDI music. Create chord progressions, basslines, and drum patterns, then export them for use in your favorite DAW.
 
 ## Features
 
-- Create chord progressions, basslines, and drum patterns
-- Visualize music with a piano roll interface
-- Play back MIDI sequences in the browser
-- Export to standard MIDI files compatible with any DAW (Ableton, Logic, FL Studio, etc.)
-- API for AI assistant integration
+- **Easy-to-use web interface** - Create music with just a few clicks
+- **Pattern generation** - Create chord progressions, basslines, and drum patterns automatically
+- **Real-time playback** - Hear your creations instantly in the browser
+- **Visual piano roll** - See your notes on a piano roll interface
+- **Export to MIDI** - Export your creations as standard MIDI files to use in any DAW
+- **Export as JSON** - Export your sequences as JSON for sharing or importing later
+- **Import functionality** - Import previously exported sequences to continue editing
 
-## Getting Started
+## Requirements
 
-### Prerequisites
+- Node.js (v14 or higher)
+- npm (v6 or higher)
 
-- Node.js 16+ installed
-- A modern web browser (Chrome, Firefox, Edge)
-
-### Installation
+## Installation
 
 1. Clone the repository:
    ```bash
@@ -25,88 +25,108 @@ An agentic framework for creating and manipulating MIDI music via a web interfac
    cd midi_song_creation_tool
    ```
 
-2. Install dependencies:
+2. Checkout the `develop` branch (this contains the most recent code):
+   ```bash
+   git checkout develop
+   ```
+
+3. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Start the server:
+## Usage
+
+1. Start the server:
    ```bash
-   node midi-api.js
+   npm start
    ```
 
-4. Open your browser to:
+2. Open your browser and go to:
    ```
    http://localhost:3003
    ```
 
-## Usage
+3. Use the interface to create music:
+   - Click "Set Up" to create a session and sequence
+   - Add chord progressions, basslines, and drum patterns
+   - Use the Play button to hear your creation
+   - Export to MIDI or JSON when ready
 
-### Web Interface
+## Import/Export Functionality
 
-The web interface provides a simple way to:
+### Exporting Your Music
 
-1. Create a session
-2. Generate music (chord progressions, basslines, drum patterns)
-3. Play back the music
-4. Visualize notes on the piano roll
-5. Export to standard MIDI files
+The tool offers two export formats:
 
-### Creating Music
+1. **MIDI File (.mid)** - Standard MIDI files can be opened in any DAW such as:
+   - Ableton Live
+   - Logic Pro
+   - FL Studio
+   - GarageBand
+   - Pro Tools
+   - And more!
 
-1. Click "Set Up" to create a session
-2. Use "Add Chord Progression", "Add Bassline", and "Add Drums" buttons to create parts
-3. Click "Play" to hear your music
-4. When satisfied, click "Export to MIDI" to save your song
+2. **JSON Format** - A text-based format for:
+   - Sharing with others who use this tool
+   - Backing up your work
+   - Importing later to continue editing
 
-### Export to DAW
+To export:
+- Create some music (chord progression, bassline, drums)
+- Click either "Export to MIDI File" or "Export as JSON"
+- For JSON exports, you can copy the data or save it as a file
 
-The export feature creates standard MIDI files (.mid) compatible with:
-- Ableton Live
-- Logic Pro
-- FL Studio
-- Pro Tools
-- Cubase
-- GarageBand
-- Any other DAW that supports MIDI
+### Importing Music
 
-### API Endpoints
+To import previously exported JSON data:
+- Click "Import"
+- Either:
+  - Paste the JSON data into the text area, or
+  - Use the file input to upload a JSON file
+- Click "Process Import"
 
-The tool provides the following key API endpoints:
+## API Endpoints
 
-- **Create a session**: `POST /api/sessions`
-- **Create a sequence**: `POST /api/sessions/:sessionId/sequences`
-- **Generate chord progression**: `POST /api/sessions/:sessionId/patterns/chord-progression`
-- **Generate bassline**: `POST /api/sessions/:sessionId/patterns/bassline`
-- **Generate drums**: `POST /api/sessions/:sessionId/patterns/drums`
-- **Clear notes**: `DELETE /api/sessions/:sessionId/notes`
-- **Export to MIDI**: `GET /api/sessions/:sessionId/export/midi`
+The tool exposes a RESTful API for programmatic access. Here are the key endpoints:
 
-See the [DEVELOPER.md](DEVELOPER.md) file for detailed API documentation.
+### Session Management
+- `POST /api/sessions` - Create a new session
+- `GET /api/sessions/:sessionId` - Get session info
+
+### Sequence Management
+- `POST /api/sessions/:sessionId/sequences` - Create a new sequence
+- `GET /api/sessions/:sessionId/sequences/:sequenceId` - Get sequence details
+
+### Pattern Generation
+- `POST /api/sessions/:sessionId/patterns/chord-progression` - Generate chord progression
+- `POST /api/sessions/:sessionId/patterns/bassline` - Generate bassline
+- `POST /api/sessions/:sessionId/patterns/drums` - Generate drum pattern
+
+### Note Management
+- `DELETE /api/sessions/:sessionId/notes` - Clear all notes from current sequence
+
+### Import/Export
+- `GET /api/sessions/:sessionId/export/midi` - Export current sequence as MIDI file
+- `GET /api/sessions/:sessionId/export/json` - Export current sequence as JSON
+- `POST /api/sessions/:sessionId/import` - Import sequence from JSON data
 
 ## Debugging
 
-If you encounter issues, see the [DEBUG_GUIDE.md](DEBUG_GUIDE.md) file for debugging tips.
+If you encounter issues:
 
-Key debugging tools:
-- `/debug.html` interface
-- `/api/test` endpoint
-- `/api/debug/files` for file system checking
-- Logs in the console and error.log
+1. Check the server console for error messages
+2. Try the debug interface: `http://localhost:3003/debug.html`
+3. Review the error.log file for detailed error information
 
-## Future Plans
+## Next Steps for Development
 
-- More pattern generation options
-- Integration with advanced AI tools
-- Support for multiple simultaneous sessions
-- MIDI import functionality
+- Adding more pattern types (arpeggios, melodies)
+- Improving the piano roll with editing capabilities
+- Supporting MIDI input devices
+- Adding more instrument sounds for playback
+- Integration with external tools and services
 
 ## License
 
-ISC License
-
-## Acknowledgments
-
-- Web Audio API
-- Express.js
-- midi-writer-js
+ISC
