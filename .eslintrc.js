@@ -39,21 +39,6 @@ module.exports = {
         'no-console': 'off',
       }
     },
-    // Add specific configuration for Cypress files
-    {
-      files: ['**/cypress/**/*.js', '**/cypress/**/*.jsx', '**/*.cy.js', '**/*.cy.jsx'],
-      env: {
-        cypress: true // Changed from 'cypress/globals' to 'cypress'
-      },
-      plugins: [
-        'cypress'
-      ],
-      rules: {
-        'no-unused-vars': 'warn',
-        'no-console': 'off',
-        'no-undef': 'off', // Allow Cypress globals
-      }
-    },
     // JSX files
     {
       files: ['**/*.jsx'],
@@ -68,13 +53,14 @@ module.exports = {
       }
     }
   ],
-  plugins: [
-    'cypress'
-  ],
   globals: {
-    'cy': 'readonly',
-    'Cypress': 'readonly',
     'expect': 'readonly',
-    'assert': 'readonly',
+    'describe': 'readonly',
+    'it': 'readonly',
+    'test': 'readonly',
+    'beforeEach': 'readonly',
+    'afterEach': 'readonly',
+    'beforeAll': 'readonly',
+    'afterAll': 'readonly',
   }
 };
