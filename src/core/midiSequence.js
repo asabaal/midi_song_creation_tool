@@ -3,6 +3,8 @@ class MidiSequence {
   constructor() {
     this.tracks = [];
     this.tempo = 120;
+    this.bpm = 120; // Alias for tests
+    this.timeSignature = [4, 4]; // Add for tests
   }
   
   addTrack(instrument = 0, name = '') {
@@ -18,6 +20,7 @@ class MidiSequence {
   
   setTempo(tempo) {
     this.tempo = tempo;
+    this.bpm = tempo; // Update alias for tests
   }
   
   addNote(trackId, note) {
