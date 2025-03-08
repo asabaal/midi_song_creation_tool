@@ -220,6 +220,28 @@ try {
       sequence.clear();
       return previousNotes;
     };
+    
+    // Add export current sequence method
+    this.exportCurrentSequence = function() {
+      const sequence = this.getCurrentSequence();
+      if (!sequence) {
+        throw new Error('No current sequence selected');
+      }
+      
+      return sequence.toJSON();
+    };
+    
+    // Add import sequence method
+    this.importSequence = function(json) {
+      try {
+        const sequence = MidiSequence.fromJSON(json);
+        this.sequences[sequence.id] = sequence;
+        this.currentSequenceId = sequence.id;
+        return sequence;
+      } catch (error) {
+        throw new Error(`Failed to import sequence: ${error.message}`);
+      }
+    };
   };
   
   // Use fixed pattern generators if available, otherwise create fallbacks
@@ -320,7 +342,20 @@ try {
   };
   
   SequenceOperations = {};
-  MidiExporter = {};
+  MidiExporter = {
+    // Simple implementations if not loaded from framework
+    sequenceToMidiData: function(sequence) {
+      return JSON.stringify(sequence.toJSON());
+    },
+    
+    midiDataToSequence: function(midiData) {
+      try {
+        return MidiSequence.fromJSON(JSON.parse(midiData));
+      } catch (error) {
+        throw new Error('Invalid MIDI data format');
+      }
+    }
+  };
 }
 
 // Create Express application
@@ -831,6 +866,136 @@ app.post('/api/sessions/:sessionId/patterns/drums', (req, res) => {
     });
   } catch (error) {
     console.error(`Error generating drum pattern: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Export sequence as MIDI
+app.get('/api/sessions/:sessionId/export', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    const session = sessions.get(sessionId);
+    
+    // Get current sequence
+    const currentSequence = session.getCurrentSequence();
+    if (!currentSequence) {
+      return res.status(400).json({
+        success: false,
+        error: 'No sequence selected',
+        message: 'No current sequence selected in session'
+      });
+    }
+    
+    try {
+      // Export sequence using MidiExporter
+      const midiData = MidiExporter.sequenceToMidiData(currentSequence);
+      
+      console.log(`Exported sequence ${currentSequence.id} from session ${sessionId}`);
+      
+      res.json({
+        success: true,
+        message: `Exported ${currentSequence.name} sequence successfully`,
+        sequenceId: currentSequence.id,
+        format: 'midi',
+        data: midiData,
+        noteCount: currentSequence.notes.length
+      });
+    } catch (error) {
+      console.error(`Error exporting sequence: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: 'Export failed',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in export endpoint: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Import MIDI data to sequence
+app.post('/api/sessions/:sessionId/import', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { midiData, name } = req.body;
+    
+    // Check required parameters
+    if (!midiData) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing MIDI data',
+        message: 'MIDI data is required for import'
+      });
+    }
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    const session = sessions.get(sessionId);
+    
+    try {
+      // Convert MIDI data to sequence
+      const sequence = MidiExporter.midiDataToSequence(midiData);
+      
+      // Update name if provided
+      if (name) {
+        sequence.name = name;
+      }
+      
+      // Add sequence to session
+      session.sequences[sequence.id] = sequence;
+      session.currentSequenceId = sequence.id;
+      
+      console.log(`Imported sequence ${sequence.id} to session ${sessionId}`);
+      
+      res.status(201).json({
+        success: true,
+        message: `Imported ${sequence.name} successfully`,
+        sequenceId: sequence.id,
+        sequence: {
+          id: sequence.id,
+          name: sequence.name,
+          tempo: sequence.tempo,
+          timeSignature: sequence.timeSignature,
+          key: sequence.key,
+          noteCount: sequence.notes.length
+        }
+      });
+    } catch (error) {
+      console.error(`Error importing MIDI data: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: 'Import failed',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in import endpoint: ${error.message}`);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
