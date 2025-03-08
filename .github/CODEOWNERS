@@ -1,0 +1,17 @@
+# Default owners for everything in the repo
+* @asabaal
+
+# JavaScript files ownership
+*.js @asabaal
+*.jsx @asabaal
+*.json @asabaal
+
+# Test files ownership
+/tests/ @asabaal
+
+# Documentation ownership
+*.md @asabaal
+/docs/ @asabaal
+
+# GitHub workflow configurations
+/.github/ @asabaal
