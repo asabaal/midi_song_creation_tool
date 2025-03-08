@@ -290,6 +290,8 @@ const handlers = [
         ];
       }
     } else if (type === 'bassline') {
+      const { style } = req.body;
+      
       // Mock a simple bassline
       notes = [
         { id: uuidv4(), pitch: 36, startTime: 0, duration: 0.5, velocity: 100 },
@@ -298,7 +300,7 @@ const handlers = [
         { id: uuidv4(), pitch: 38, startTime: 3, duration: 0.5, velocity: 100 }
       ];
     } else if (type === 'drum') {
-      const { bars } = req.body;
+      const { style, bars } = req.body;
       
       // Generate a basic drum pattern for the specified number of bars
       const numBars = parseInt(bars) || 1;
