@@ -70,6 +70,26 @@ npm run test:watch
 npm run test:coverage
 ```
 
+### Local Testing Script
+
+For a complete verification of your code before pushing changes, use the local testing script:
+
+```bash
+# Make the script executable
+chmod +x scripts/local_test.sh
+
+# Run the local test
+./scripts/local_test.sh
+```
+
+This script will:
+- Verify your Node.js installation
+- Install dependencies if needed
+- Run ESLint and Prettier checks
+- Run all test suites (unit, integration, e2e)
+- Check test coverage against required thresholds
+- Build the project to verify everything compiles correctly
+
 ### Testing Structure
 
 - **Unit Tests**: Test individual functions and components
