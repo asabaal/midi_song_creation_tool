@@ -43,14 +43,12 @@ module.exports = {
     {
       files: ['**/cypress/**/*.js', '**/cypress/**/*.jsx', '**/*.cy.js', '**/*.cy.jsx'],
       env: {
-        'cypress/globals': true
+        cypress: true // Changed from 'cypress/globals' to 'cypress'
       },
       plugins: [
         'cypress'
       ],
       rules: {
-        'cypress/no-assigning-return-values': 'error',
-        'cypress/no-unnecessary-waiting': 'error',
         'no-unused-vars': 'warn',
         'no-console': 'off',
         'no-undef': 'off', // Allow Cypress globals
