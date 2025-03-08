@@ -23,28 +23,52 @@ We have the following GitHub Action workflows:
 
 These workflows automatically run on pull requests to `main` or `develop` branches and directly on pushes to these branches.
 
+## Phased Implementation Strategy
+
+Given some initial setup challenges, we're implementing quality gates in phases:
+
+### Phase 1: Core Module Validation
+- Focus on linting `src/core` and `src/server` modules
+- Run unit and integration tests
+- Basic code coverage reporting
+
+### Phase 2: React Component Validation
+- Add linting for `src/client` components
+- Enable JSX validation
+- Improve code coverage thresholds
+
+### Phase 3: Complete Testing Suite
+- Enable E2E tests with Cypress
+- Add Cypress ESLint plugin configuration
+- Implement pre-commit hooks
+
+### Phase 4: CI/CD Integration
+- Add deployment workflows
+- Release automation
+- Comprehensive reporting
+
+## Local Testing Strategy
+
+The current local testing approach is designed to gradually introduce the quality gates. To run the tests:
+
+```bash
+# Make executable
+chmod +x scripts/local_test.sh
+
+# Run
+./scripts/local_test.sh
+```
+
+This script currently:
+- Runs ESLint on the `src/core` and `src/server` directories
+- Runs Prettier checks on the same directories
+- Runs unit and integration tests
+- Checks test coverage
+- Builds the project
+
 ## Fixing Linting Issues
 
-The initial linting setup revealed several issues that need addressing:
-
-### Module Import/Export
-
-Some files were using ES6 module syntax (`import`/`export`) but were configured to use CommonJS. We've updated the configuration to support both:
-
-- Added `sourceType: 'module'` to parserOptions in ESLint config
-- Updated Cypress and Jest files to use the appropriate syntax
-
-### Cypress Tests
-
-Cypress tests had many `'cy' is not defined` errors. We've added:
-
-- A Cypress-specific ESLint configuration
-- Global declarations for Cypress variables
-- A separate `.eslintrc.js` in the Cypress directory
-
-### Ongoing Work
-
-To continue fixing these issues:
+To address linting issues effectively:
 
 1. **Fix incrementally**:
    ```bash
@@ -63,27 +87,6 @@ To continue fixing these issues:
    - Unused variables
    - Console statements that should be removed
    - Line length issues
-
-## Running the Local Test Script
-
-The `scripts/local_test.sh` script runs all checks locally before pushing:
-
-```bash
-# Make executable
-chmod +x scripts/local_test.sh
-
-# Run
-./scripts/local_test.sh
-```
-
-This script has been temporarily modified to focus on the most critical checks first, specifically:
-
-- ESLint checks on the `src/` directory
-- Prettier checks on the `src/` directory
-- Unit tests
-- Integration tests
-
-The E2E tests are temporarily skipped while we fix the linting issues with Cypress files.
 
 ## Future Improvements
 
