@@ -9,6 +9,10 @@ module.exports = {
   extends: 'eslint:recommended',
   parserOptions: {
     ecmaVersion: 12,
+    sourceType: 'module', // Add this to support import/export
+    ecmaFeatures: {
+      jsx: true, // Add this to support JSX
+    },
   },
   rules: {
     // Error prevention
@@ -28,10 +32,35 @@ module.exports = {
   // Jest test file specific relaxations
   overrides: [
     {
-      files: ['**/*.test.js', '**/*.spec.js'],
+      files: ['**/*.test.js', '**/*.spec.js', '**/*.test.jsx', '**/*.spec.jsx'],
       rules: {
         'no-console': 'off',
       }
+    },
+    // Add specific configuration for Cypress files
+    {
+      files: ['**/cypress/**/*.js', '**/cypress/**/*.jsx', '**/*.cy.js', '**/*.cy.jsx'],
+      env: {
+        'cypress/globals': true
+      },
+      plugins: [
+        'cypress'
+      ],
+      rules: {
+        'cypress/no-assigning-return-values': 'error',
+        'cypress/no-unnecessary-waiting': 'error',
+        'no-unused-vars': 'warn',
+        'no-console': 'off',
+      }
     }
-  ]
+  ],
+  plugins: [
+    'cypress'
+  ],
+  globals: {
+    'cy': 'readonly',
+    'Cypress': 'readonly',
+    'expect': 'readonly',
+    'assert': 'readonly',
+  }
 };
