@@ -1,6 +1,5 @@
 // src/server/app.js
 const express = require('express');
-const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const fs = require('fs');
@@ -315,6 +314,7 @@ app.put('/api/sessions/:id/transport', async (req, res) => {
     if (req.body.bpm) session.bpm = req.body.bpm;
     if (req.body.timeSignature) session.timeSignature = req.body.timeSignature;
     if (req.body.loop) {
+      session.loop = session.loop || {};
       session.loop.enabled = req.body.loop.enabled;
       if (req.body.loop.start !== undefined) session.loop.start = req.body.loop.start;
       if (req.body.loop.end !== undefined) session.loop.end = req.body.loop.end;
@@ -441,5 +441,8 @@ app.post('/api/sessions/:id/import/midi', upload.single('midiFile'), async (req,
     res.status(500).json({ error: error.message });
   }
 });
+
+// Set NODE_ENV for tests
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
 module.exports = app;
