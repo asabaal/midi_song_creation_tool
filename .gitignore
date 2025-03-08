@@ -30,3 +30,4 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+node_modules/.cache/mongodb-memory-server/
