@@ -43,7 +43,7 @@ jobs:
       id: e2e
       run: npm run test:e2e
       
-    - name: Check test coverage
+    - name: Generate coverage report
       id: coverage
       run: npm run test:coverage
     
@@ -80,22 +80,56 @@ jobs:
         fi
         
         echo "All coverage thresholds passed!"
-      continue-on-error: true  # Don't fail the build yet, just as a warning
       
-  # Add a job summary that reports test status
-  report:
+    - name: Store Test Status
+      run: echo "test_success=true" >> $GITHUB_ENV
+      if: ${{ success() }}
+      
+  # Add a job to publish status badge and summary
+  publish:
     needs: test
     runs-on: ubuntu-latest
-    name: Test Report
+    name: Publish Status
+    if: always()
     
     steps:
+      - name: Determine test status
+        id: status
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          if [ "$TEST_RESULT" == "success" ]; then
+            echo "STATUS_COLOR=success" >> $GITHUB_ENV
+            echo "STATUS_MESSAGE=passing" >> $GITHUB_ENV
+          else
+            echo "STATUS_COLOR=critical" >> $GITHUB_ENV
+            echo "STATUS_MESSAGE=failing" >> $GITHUB_ENV
+          fi
+
+      - name: Create badge
+        uses: schneegans/dynamic-badges-action@v1.6.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ secrets.BADGE_GIST_ID || '123456789' }}
+          filename: midi_song_creation_tool_tests.json
+          label: tests
+          message: ${{ env.STATUS_MESSAGE }}
+          color: ${{ env.STATUS_COLOR }}
+        continue-on-error: true  # Don't fail the workflow if this step fails
+      
       - name: Download all artifacts
         uses: actions/download-artifact@v3
-      
+        
       - name: Create test summary
         run: |
           echo "# Test Results Summary" > test-summary.md
-          echo "✅ All tests have passed" >> test-summary.md
+          
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ All tests have passed" >> test-summary.md
+          else
+            echo "❌ Some tests have failed" >> test-summary.md
+          fi
+          
           echo "📊 Coverage reports have been uploaded as artifacts" >> test-summary.md
           
       - name: Publish test summary
