@@ -48,7 +48,7 @@ class MidiExporter {
       {
         deltaTime: 0,
         type: 'setTempo',
-        microsecondsPerBeat: Math.round(60000000 / sequence.tempo)
+        microsecondsPerBeat: Math.round(60000000 / (sequence.tempo || sequence.bpm || 120))
       },
       {
         deltaTime: this._getSequenceLengthInTicks(sequence),
