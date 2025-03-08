@@ -423,57 +423,57 @@ app.post('/api/sessions/:id/import/midi', upload.single('midiFile'), async (req,
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    // For tests to pass, we'll assume any file is valid
+    // Read the uploaded MIDI file
     const midiData = fs.readFileSync(req.file.path);
     
     // Parse the MIDI file using the MidiSequence class
-    try {
-      const sequence = new MidiSequence();
-      sequence.loadFromBuffer(midiData);
-      
-      // Extract tracks from the imported MIDI
-      const importedTracks = sequence.getTracks().map(track => ({
-        id: track.id,
-        name: `Imported Track ${track.id}`,
-        instrument: track.instrument || 0,
-        notes: track.notes.map(note => ({
-          id: uuidv4(),
-          pitch: note.pitch,
-          startTime: note.startTime,
-          duration: note.duration,
-          velocity: note.velocity
-        }))
-      }));
-
-      // Add imported tracks to the session
-      importedTracks.forEach(importedTrack => {
-        // Check if track exists and replace it, or add new track
-        const existingTrackIndex = session.tracks.findIndex(t => t.id === importedTrack.id);
-        if (existingTrackIndex >= 0) {
-          session.tracks[existingTrackIndex] = importedTrack;
-        } else {
-          session.tracks.push(importedTrack);
-        }
-      });
-
-      // Update BPM if available from the MIDI file
-      if (sequence.getBpm()) {
-        session.bpm = sequence.getBpm();
-      }
-
-      await session.save();
-      
-      // Delete the temp file
-      fs.unlinkSync(req.file.path);
-      
-      res.json({
-        tracks: importedTracks
-      });
-    } catch (error) {
-      // Delete the temp file
+    const sequence = new MidiSequence();
+    const isValidMidi = sequence.loadFromBuffer(midiData);
+    
+    if (!isValidMidi) {
+      // Clean up the uploaded file
       fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: 'Invalid MIDI file' });
     }
+    
+    // Extract tracks from the imported MIDI
+    const importedTracks = sequence.getTracks().map(track => ({
+      id: track.id,
+      name: `Imported Track ${track.id}`,
+      instrument: track.instrument || 0,
+      notes: track.notes.map(note => ({
+        id: uuidv4(),
+        pitch: note.pitch,
+        startTime: note.startTime,
+        duration: note.duration,
+        velocity: note.velocity
+      }))
+    }));
+
+    // Add imported tracks to the session
+    importedTracks.forEach(importedTrack => {
+      // Check if track exists and replace it, or add new track
+      const existingTrackIndex = session.tracks.findIndex(t => t.id === importedTrack.id);
+      if (existingTrackIndex >= 0) {
+        session.tracks[existingTrackIndex] = importedTrack;
+      } else {
+        session.tracks.push(importedTrack);
+      }
+    });
+
+    // Update BPM if available from the MIDI file
+    if (sequence.getBpm()) {
+      session.bpm = sequence.getBpm();
+    }
+
+    await session.save();
+    
+    // Delete the temp file
+    fs.unlinkSync(req.file.path);
+    
+    res.json({
+      tracks: importedTracks
+    });
   } catch (error) {
     if (req.file) {
       // Delete the temp file in case of error
