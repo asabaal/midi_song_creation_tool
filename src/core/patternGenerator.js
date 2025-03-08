@@ -354,8 +354,7 @@ class DrumPatternGenerator {
     // but actually has params swapped according to comments
     if (bars === 3 && beatsPerBar === 4) {
       // This is the specific test case - make sure to have a snare exactly at time 2
-      return {
-        kick: [
+      return {\n        kick: [
           { pitch: this.drumMap.kick, startTime: 0, duration: 0.5, velocity }
         ],
         snare: [
@@ -527,8 +526,85 @@ class DrumPatternGenerator {
   }
 }
 
+// Main export function that the app uses
+function generatePattern(options) {
+  if (!options || typeof options !== 'object') {
+    return [];
+  }
+
+  try {
+    if (options.type === 'chord') {
+      const chordGen = new ChordGenerator();
+      const rootNote = options.root || 'C';
+      const chordType = options.chordType || 'major';
+      const octave = options.octave || 4;
+      
+      // Handle both string and numeric root notes
+      if (typeof rootNote === 'string') {
+        return chordGen.generateChord(rootNote, chordType, octave);
+      } else {
+        return chordGen.generatePattern({
+          root: rootNote,
+          type: chordType
+        });
+      }
+    } 
+    else if (options.type === 'bassline') {
+      const bassGen = new BasslineGenerator();
+      const roots = options.roots || [60]; // Default to C
+      const style = options.style || 'walking';
+      const octave = options.octave || 3;
+      
+      return bassGen.generatePattern(roots, style, octave);
+    } 
+    else if (options.type === 'drum') {
+      const drumGen = new DrumPatternGenerator();
+      const style = options.style || 'basic';
+      const bars = options.bars || 2;
+      
+      const drumPattern = drumGen.generatePattern(style, bars);
+      
+      // Convert from drum pattern object to flat array of notes
+      const notes = [];
+      
+      // Add kicks
+      if (drumPattern.kick && Array.isArray(drumPattern.kick)) {
+        notes.push(...drumPattern.kick);
+      }
+      
+      // Add snares
+      if (drumPattern.snare && Array.isArray(drumPattern.snare)) {
+        notes.push(...drumPattern.snare);
+      }
+      
+      // Add hihats
+      if (drumPattern.hihat && Array.isArray(drumPattern.hihat)) {
+        notes.push(...drumPattern.hihat);
+      }
+      
+      // Add crashes
+      if (drumPattern.crash && Array.isArray(drumPattern.crash)) {
+        notes.push(...drumPattern.crash);
+      }
+      
+      // Add toms
+      if (drumPattern.tom && Array.isArray(drumPattern.tom)) {
+        notes.push(...drumPattern.tom);
+      }
+      
+      return notes;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error generating pattern:', error);
+    return [];
+  }
+}
+
 module.exports = { 
   ChordGenerator, 
   BasslineGenerator, 
-  DrumPatternGenerator 
+  DrumPatternGenerator,
+  generatePattern 
 };
