@@ -84,23 +84,25 @@ class MidiExporter {
       const noteOnEvents = [];
       const noteOffEvents = [];
       
-      track.notes.forEach(note => {
-        // Note On event
-        noteOnEvents.push({
-          deltaTime: this._timeToTicks(note.startTime),
-          type: 'noteOn',
-          noteNumber: note.pitch,
-          velocity: note.velocity || 100
+      if (track.notes && Array.isArray(track.notes)) {
+        track.notes.forEach(note => {
+          // Note On event
+          noteOnEvents.push({
+            deltaTime: this._timeToTicks(note.startTime),
+            type: 'noteOn',
+            noteNumber: note.pitch,
+            velocity: note.velocity || 100
+          });
+          
+          // Note Off event
+          noteOffEvents.push({
+            deltaTime: this._timeToTicks(note.startTime + note.duration),
+            type: 'noteOff',
+            noteNumber: note.pitch,
+            velocity: 0
+          });
         });
-        
-        // Note Off event
-        noteOffEvents.push({
-          deltaTime: this._timeToTicks(note.startTime + note.duration),
-          type: 'noteOff',
-          noteNumber: note.pitch,
-          velocity: 0
-        });
-      });
+      }
       
       // Sort events by time
       const allEvents = [...noteOnEvents, ...noteOffEvents].sort((a, b) => a.deltaTime - b.deltaTime);
@@ -193,12 +195,14 @@ class MidiExporter {
     let maxTime = 0;
     
     sequence.tracks.forEach(track => {
-      track.notes.forEach(note => {
-        const noteEnd = note.startTime + note.duration;
-        if (noteEnd > maxTime) {
-          maxTime = noteEnd;
-        }
-      });
+      if (track.notes && Array.isArray(track.notes)) {
+        track.notes.forEach(note => {
+          const noteEnd = note.startTime + note.duration;
+          if (noteEnd > maxTime) {
+            maxTime = noteEnd;
+          }
+        });
+      }
     });
     
     // Add some padding
@@ -214,4 +218,10 @@ class MidiExporter {
   }
 }
 
-module.exports = { MidiExporter };
+// Function that creates a MIDI file from a sequence
+function createMidiFile(sequence) {
+  const exporter = new MidiExporter();
+  return exporter._serializeMidiData(exporter.sequenceToMidi(sequence));
+}
+
+module.exports = { MidiExporter, createMidiFile };
