@@ -7,6 +7,9 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
+// Import MIDI exporter
+const MidiExporter = require('./midi-exporter');
+
 // Set up detailed error logging
 console.error = function(msg) {
   const timestamp = new Date().toISOString();
@@ -34,7 +37,7 @@ try {
 }
 
 // Import the MIDI framework with error trapping
-let MusicTheory, MidiNote, MidiSequence, PatternGenerators, SequenceOperations, Session, MidiExporter;
+let MusicTheory, MidiNote, MidiSequence, PatternGenerators, SequenceOperations, Session;
 
 try {
   console.log('Attempting to load midi-framework.js...');
@@ -47,7 +50,6 @@ try {
   PatternGenerators = FixedPatternGenerators || midiFramework.PatternGenerators || {};
   SequenceOperations = midiFramework.SequenceOperations || {};
   Session = midiFramework.Session || function() {};
-  MidiExporter = midiFramework.MidiExporter || {};
   
   console.log('Successfully loaded midi-framework.js');
   
@@ -320,7 +322,6 @@ try {
   };
   
   SequenceOperations = {};
-  MidiExporter = {};
 }
 
 // Create Express application
@@ -831,6 +832,119 @@ app.post('/api/sessions/:sessionId/patterns/drums', (req, res) => {
     });
   } catch (error) {
     console.error(`Error generating drum pattern: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// =================
+// EXPORT ENDPOINTS
+// =================
+
+// Export current sequence to MIDI file
+app.get('/api/sessions/:sessionId/export/midi', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    const session = sessions.get(sessionId);
+    
+    // Check if current sequence exists
+    const currentSequence = session.getCurrentSequence();
+    if (!currentSequence) {
+      return res.status(400).json({
+        success: false,
+        error: 'No current sequence',
+        message: 'No current sequence selected'
+      });
+    }
+    
+    // Generate MIDI file
+    try {
+      const midiData = MidiExporter.sequenceToMidiFile(currentSequence);
+      
+      // Set response headers for file download
+      const filename = currentSequence.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mid';
+      res.setHeader('Content-Type', 'audio/midi');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      res.setHeader('Content-Length', midiData.length);
+      
+      // Send the MIDI file data
+      res.send(midiData);
+      
+      console.log(`Exported sequence ${currentSequence.id} as MIDI file: ${filename}`);
+    } catch (error) {
+      console.error(`Error generating MIDI file: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate MIDI file',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in MIDI export endpoint: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Export specific sequence to MIDI file
+app.get('/api/sessions/:sessionId/sequences/:sequenceId/export/midi', (req, res) => {
+  try {
+    const { sessionId, sequenceId } = req.params;
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    const session = sessions.get(sessionId);
+    
+    // Try to get the sequence
+    try {
+      const sequence = session.getSequence(sequenceId);
+      
+      // Generate MIDI file
+      const midiData = MidiExporter.sequenceToMidiFile(sequence);
+      
+      // Set response headers for file download
+      const filename = sequence.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mid';
+      res.setHeader('Content-Type', 'audio/midi');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      res.setHeader('Content-Length', midiData.length);
+      
+      // Send the MIDI file data
+      res.send(midiData);
+      
+      console.log(`Exported sequence ${sequence.id} as MIDI file: ${filename}`);
+    } catch (error) {
+      console.error(`Error exporting sequence: ${error.message}`);
+      res.status(404).json({
+        success: false,
+        error: 'Failed to export sequence',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in sequence export endpoint: ${error.message}`);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
