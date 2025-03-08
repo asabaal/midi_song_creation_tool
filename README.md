@@ -1,5 +1,8 @@
 # MIDI Song Creation Tool
 
+[![Test Suite](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml)
+[![Lint](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml)
+
 An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.
 
 ## Overview
@@ -16,31 +19,77 @@ This framework provides a robust set of tools for working with MIDI data program
 
 ## Components
 
-The framework consists of three main components:
+The framework consists of these main components:
 
-1. **Core MIDI Framework** (`midi-framework.js`): Handles note creation, manipulation and basic music theory
-2. **API Layer** (`midi-api.js`): Provides structured endpoints for Claude to interact with
-3. **Web Interface** (`public/index.html`): Simple UI for human testing and visualization
+1. **Core Library** (`src/core`): Handles note creation, manipulation and basic music theory
+2. **Server** (`src/server`): Provides structured API endpoints for Claude to interact with
+3. **Web Interface** (`public`): Simple UI for human testing and visualization
 
 ## Setup Instructions
 
 1. **Install Dependencies**:
    ```bash
-   npm init -y
-   npm install express body-parser cors
+   npm install
    ```
 
-2. **File Structure**:
-   - Create `midi-framework.js` (core music theory and MIDI operations)
-   - Create `midi-api.js` (RESTful API endpoints)
-   - Create `public/index.html` (web interface)
-
-3. **Start the Server**:
+2. **Start the Server**:
    ```bash
-   node midi-api.js
+   npm start
+   ```
+
+3. **Development Mode**:
+   ```bash
+   npm run dev
    ```
 
 4. **Access the UI**: Open `http://localhost:3000` in your browser
+
+## Testing
+
+This project includes a comprehensive testing suite:
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run only unit tests
+npm run test:unit
+
+# Run only integration tests
+npm run test:integration
+
+# Run end-to-end tests
+npm run test:e2e
+
+# Run tests with watch mode (for development)
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Testing Structure
+
+- **Unit Tests**: Test individual functions and components
+- **Integration Tests**: Test API endpoints and module interactions
+- **End-to-End Tests**: Test full application workflows using Cypress
+
+For more details about the testing suite, see the [tests/README.md](tests/README.md) file.
+
+## Code Quality
+
+```bash
+# Run linting
+npm run lint
+
+# Fix linting issues automatically
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+```
 
 ## API Documentation
 
