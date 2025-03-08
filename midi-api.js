@@ -144,8 +144,22 @@ try {
   // Add static fromJSON method to MidiSequence
   MidiSequence.fromJSON = function(json) {
     try {
-      const data = typeof json === 'string' ? JSON.parse(json) : json;
+      // Handle both string and object inputs safely
+      let data;
+      if (typeof json === 'string') {
+        data = JSON.parse(json);
+      } else if (typeof json === 'object' && json !== null) {
+        data = json;
+      } else {
+        throw new Error('Invalid JSON input - must be a string or object');
+      }
       
+      // Handle if data is nested inside another object (like API response)
+      if (data.data && typeof data.data === 'object') {
+        data = data.data;
+      }
+      
+      // Create a new sequence with the imported data
       const sequence = new MidiSequence({
         id: data.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
         name: data.name || 'Imported Sequence',
@@ -154,6 +168,7 @@ try {
         key: data.key || 'C major'
       });
       
+      // Add notes if they exist
       if (data.notes && Array.isArray(data.notes)) {
         const midiNotes = data.notes.map(note => 
           new MidiNote(
@@ -165,10 +180,16 @@ try {
           )
         );
         sequence.addNotes(midiNotes);
+      } else {
+        console.log('No notes found in imported data or notes is not an array');
+        // Initialize with empty notes array
+        sequence.notes = [];
       }
       
       return sequence;
     } catch (error) {
+      console.error('Error parsing JSON data:', error);
+      console.error('JSON input was:', json);
       throw new Error(`Failed to parse sequence data: ${error.message}`);
     }
   };
@@ -273,6 +294,7 @@ try {
         this.currentSequenceId = sequence.id;
         return sequence;
       } catch (error) {
+        console.error('Failed to import sequence:', error.message);
         throw new Error(`Failed to import sequence: ${error.message}`);
       }
     };
@@ -1111,6 +1133,9 @@ app.post('/api/sessions/:sessionId/import', (req, res) => {
     const { sessionId } = req.params;
     const { name, data } = req.body;
     
+    console.log('Import data received:');
+    console.log('Body keys:', Object.keys(req.body));
+    
     // Check if session exists
     if (!sessions.has(sessionId)) {
       return res.status(404).json({
@@ -1124,8 +1149,34 @@ app.post('/api/sessions/:sessionId/import', (req, res) => {
     
     // Try to import the sequence
     try {
-      // Determine if data is JSON string or object
-      const jsonData = typeof data === 'string' ? data : JSON.stringify(data);
+      // Safely handle various input formats
+      let jsonData;
+      
+      if (data) {
+        // If data is already parsed
+        if (typeof data === 'object') {
+          jsonData = data;
+        } 
+        // If data is a string, parse it
+        else if (typeof data === 'string') {
+          try {
+            jsonData = JSON.parse(data);
+          } catch (e) {
+            console.error('Failed to parse JSON string:', e);
+            throw new Error(`Invalid JSON format: ${e.message}`);
+          }
+        }
+        else {
+          throw new Error('Import data is neither a string nor an object');
+        }
+      } else {
+        // If data is not in the expected field, try the whole body
+        jsonData = req.body;
+      }
+      
+      console.log('Importing data with keys:', Object.keys(jsonData || {}));
+      
+      // Import the sequence
       const sequence = session.importSequence(jsonData);
       
       res.json({
