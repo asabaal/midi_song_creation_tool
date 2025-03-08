@@ -2,109 +2,108 @@
 class MidiSequence {
   constructor() {
     this.tracks = [];
-    this.bpm = 120; // Changed from tempo to bpm as tests expect
-    this.timeSignature = [4, 4];
-    this.notes = [];
+    this.tempo = 120;
   }
   
-  addTrack(track) {
-    this.tracks.push(track);
-    return this.tracks.length - 1; // Return the track index
+  addTrack(instrument = 0, name = '') {
+    const trackId = this.tracks.length;
+    this.tracks.push({
+      notes: [],
+      instrument,
+      name,
+      id: trackId
+    });
+    return trackId;
   }
   
   setTempo(tempo) {
-    this.bpm = tempo; // Update bpm instead of tempo
+    this.tempo = tempo;
   }
-
-  addNote(note) {
-    // Ensure the note has an ID
-    note.id = note.id || Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // Add track if it doesn't exist
-    while (this.tracks.length <= note.trackId) {
-      this.addTrack({ name: `Track ${this.tracks.length}` });
+  
+  addNote(trackId, note) {
+    // Create track if it doesn't exist
+    while (this.tracks.length <= trackId) {
+      this.addTrack();
     }
     
-    this.notes.push(note);
-    return note.id;
+    this.tracks[trackId].notes.push({
+      pitch: note.pitch,
+      startTime: note.startTime,
+      duration: note.duration,
+      velocity: note.velocity || 100
+    });
+    
+    return this.tracks[trackId].notes.length - 1;
   }
-
-  removeNote(noteId) {
-    const index = this.notes.findIndex(note => note.id === noteId);
-    if (index !== -1) {
-      this.notes.splice(index, 1);
+  
+  removeNote(trackId, noteIndex) {
+    if (trackId < this.tracks.length && noteIndex < this.tracks[trackId].notes.length) {
+      this.tracks[trackId].notes.splice(noteIndex, 1);
       return true;
     }
     return false;
   }
-
-  getNotes(trackId = null) {
-    if (trackId === null) {
-      return this.notes;
-    }
-    return this.notes.filter(note => note.trackId === trackId);
-  }
-
-  calculateDuration() {
-    if (this.notes.length === 0) {
-      return 0;
-    }
+  
+  getDuration() {
+    let maxDuration = 0;
     
-    return Math.max(...this.notes.map(note => note.startTime + note.duration));
-  }
-
-  quantize(gridSize = 0.25) {
-    this.notes.forEach(note => {
-      note.startTime = Math.round(note.startTime / gridSize) * gridSize;
-      note.duration = Math.round(note.duration / gridSize) * gridSize;
-      if (note.duration < gridSize) {
-        note.duration = gridSize;
-      }
-    });
-  }
-
-  transpose(semitones, trackId = null) {
-    const notesToTranspose = trackId === null 
-      ? this.notes 
-      : this.notes.filter(note => note.trackId === trackId);
-    
-    notesToTranspose.forEach(note => {
-      note.pitch += semitones;
-    });
-  }
-
-  handleCollisions() {
-    // Group notes by track
-    const trackNotes = {};
-    
-    this.notes.forEach(note => {
-      if (!trackNotes[note.trackId]) {
-        trackNotes[note.trackId] = [];
-      }
-      trackNotes[note.trackId].push(note);
-    });
-
-    // Handle collisions within each track
-    Object.values(trackNotes).forEach(notes => {
-      // Sort notes by start time
-      notes.sort((a, b) => a.startTime - b.startTime);
-      
-      // Check for overlaps
-      for (let i = 0; i < notes.length - 1; i++) {
-        const currentNote = notes[i];
-        const nextNote = notes[i + 1];
-        
-        // If current note overlaps with next note
-        if (currentNote.startTime + currentNote.duration > nextNote.startTime) {
-          // Adjust current note duration
-          currentNote.duration = nextNote.startTime - currentNote.startTime;
-          
-          // Ensure minimum duration
-          if (currentNote.duration < 0.1) {
-            currentNote.duration = 0.1;
-          }
+    this.tracks.forEach(track => {
+      track.notes.forEach(note => {
+        const noteEnd = note.startTime + note.duration;
+        if (noteEnd > maxDuration) {
+          maxDuration = noteEnd;
         }
+      });
+    });
+    
+    return maxDuration;
+  }
+  
+  quantizeNotes(gridSize) {
+    this.tracks.forEach(track => {
+      track.notes.forEach(note => {
+        // Quantize start time to nearest grid value
+        note.startTime = Math.round(note.startTime / gridSize) * gridSize;
+        
+        // Quantize duration to nearest grid value
+        note.duration = Math.round(note.duration / gridSize) * gridSize;
+        
+        // Ensure minimum duration
+        if (note.duration < gridSize) {
+          note.duration = gridSize;
+        }
+      });
+    });
+  }
+  
+  transposeTrack(trackId, semitones) {
+    if (trackId < this.tracks.length) {
+      this.tracks[trackId].notes.forEach(note => {
+        note.pitch += semitones;
+      });
+      return true;
+    }
+    return false;
+  }
+  
+  wouldCollide(noteCandidate) {
+    const { trackId, pitch, startTime, duration } = noteCandidate;
+    
+    if (trackId >= this.tracks.length) {
+      return false;
+    }
+    
+    const endTime = startTime + duration;
+    
+    return this.tracks[trackId].notes.some(note => {
+      if (note.pitch !== pitch) {
+        return false;
       }
+      
+      const noteEndTime = note.startTime + note.duration;
+      
+      // Check for overlap
+      return (startTime < noteEndTime && endTime > note.startTime);
     });
   }
 }
