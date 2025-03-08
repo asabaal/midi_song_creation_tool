@@ -11,9 +11,11 @@
              border-radius: 4px; cursor: pointer; margin: 5px; }
     button.blue { background: #2196F3; }
     button.red { background: #F44336; }
+    button.purple { background: #9C27B0; }
+    button.orange { background: #FF9800; }
     button:disabled { background: #cccccc; cursor: not-allowed; }
     .card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
-    .controls { display: flex; gap: 10px; margin-bottom: 10px; }
+    .controls { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     #piano-roll { height: 400px; background: #f5f5f5; overflow: auto; position: relative; }
     .piano-key { position: absolute; height: 20px; border-bottom: 1px solid #ddd; display: flex;
                 align-items: center; padding-left: 10px; font-size: 12px; width: 100px; }
@@ -29,6 +31,8 @@
           font-family: monospace; margin-top: 10px; }
     .success { color: green; }
     .error { color: red; }
+    textarea { width: 100%; height: 100px; margin-top: 10px; font-family: monospace; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -61,6 +65,24 @@
       <span id="playStatus">Nothing to play</span>
     </div>
   </div>
+
+  <div class="card">
+    <h2>4. Import/Export</h2>
+    <div class="controls">
+      <button id="exportBtn" class="purple" disabled>Export to MIDI</button>
+      <button id="importBtn" class="orange" disabled>Import from MIDI</button>
+    </div>
+    <div id="exportArea" class="hidden">
+      <p>Exported MIDI Data (JSON format):</p>
+      <textarea id="exportText" readonly></textarea>
+      <p>Save this JSON data or copy it to import later.</p>
+    </div>
+    <div id="importArea" class="hidden">
+      <p>Paste MIDI Data (JSON format) to import:</p>
+      <textarea id="importText"></textarea>
+      <button id="processImportBtn" class="orange">Process Import</button>
+    </div>
+  </div>
   
   <div class="card">
     <h2>Piano Roll</h2>
@@ -87,6 +109,10 @@
     const pianoRoll = document.getElementById('piano-roll');
     const statusBar = document.querySelector('.status');
     const logElement = document.getElementById('log');
+    const exportText = document.getElementById('exportText');
+    const importText = document.getElementById('importText');
+    const exportArea = document.getElementById('exportArea');
+    const importArea = document.getElementById('importArea');
     
     // Buttons
     const setupBtn = document.getElementById('setupBtn');
@@ -96,6 +122,9 @@
     const clearBtn = document.getElementById('clearBtn');
     const playBtn = document.getElementById('playBtn');
     const stopBtn = document.getElementById('stopBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const processImportBtn = document.getElementById('processImportBtn');
     
     // Logging function
     function log(message, type = 'info') {
@@ -192,6 +221,8 @@
       bassBtn.disabled = false;
       drumBtn.disabled = false;
       clearBtn.disabled = false;
+      exportBtn.disabled = false;
+      importBtn.disabled = false;
       
       // Get piano roll ready
       initPianoRoll();
@@ -328,6 +359,90 @@
       playBtn.disabled = true;
       stopBtn.disabled = true;
       playStatus.textContent = 'Nothing to play';
+    }
+    
+    // Export MIDI
+    async function exportMidi() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Exporting MIDI data...');
+      
+      const data = await callApi(`/sessions/${state.sessionId}/export`, 'GET');
+      
+      if (!data) {
+        updateStatus('Failed to export MIDI data');
+        return;
+      }
+      
+      // Show exported data in textarea
+      exportText.value = data.data;
+      exportArea.classList.remove('hidden');
+      importArea.classList.add('hidden');
+      
+      updateStatus(`Exported ${data.noteCount} notes to MIDI format`);
+      log(`Exported sequence ${data.sequenceId}`, 'success');
+    }
+    
+    // Show import area
+    function showImportArea() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      exportArea.classList.add('hidden');
+      importArea.classList.remove('hidden');
+      importText.value = '';
+      importText.focus();
+      
+      updateStatus('Ready to import MIDI data');
+    }
+    
+    // Process import
+    async function processImport() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      const midiData = importText.value.trim();
+      if (!midiData) {
+        log('No MIDI data to import', 'error');
+        return;
+      }
+      
+      updateStatus('Importing MIDI data...');
+      
+      const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', {
+        midiData: midiData,
+        name: 'Imported Sequence'
+      });
+      
+      if (!data) {
+        updateStatus('Failed to import MIDI data');
+        return;
+      }
+      
+      state.sequenceId = data.sequenceId;
+      state.noteCount = data.sequence.noteCount;
+      
+      updateStatus(`Imported ${data.sequence.noteCount} notes successfully`);
+      log(`Imported sequence ${data.sequenceId}`, 'success');
+      
+      // Hide import area
+      importArea.classList.add('hidden');
+      
+      // Refresh piano roll and update UI
+      refreshPianoRoll();
+      
+      // Enable play button if notes were imported
+      playBtn.disabled = data.sequence.noteCount === 0;
+      stopBtn.disabled = data.sequence.noteCount === 0;
+      playStatus.textContent = data.sequence.noteCount > 0 ? 
+        `${data.sequence.noteCount} notes ready to play` : 'Nothing to play';
     }
     
     // Initialize piano roll
@@ -523,6 +638,9 @@
     clearBtn.addEventListener('click', clearNotes);
     playBtn.addEventListener('click', playSequence);
     stopBtn.addEventListener('click', stopPlayback);
+    exportBtn.addEventListener('click', exportMidi);
+    importBtn.addEventListener('click', showImportArea);
+    processImportBtn.addEventListener('click', processImport);
     
     // Initialize
     updateStatus('Ready - click "Set Up" to begin');
