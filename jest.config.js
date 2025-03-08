@@ -12,7 +12,7 @@ module.exports = {
     },
     {
       displayName: 'client',
-      testMatch: ['<rootDir>/tests/unit/client/**/*.test.js'],
+      testMatch: ['<rootDir>/tests/unit/client/**/*.test.js', '<rootDir>/tests/unit/client/**/*.test.jsx'],
       testEnvironment: 'jsdom',
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
     },
@@ -28,7 +28,16 @@ module.exports = {
     'src/**/*.{js,jsx}',
     '!**/node_modules/**',
     '!**/vendor/**',
+    '!**/dist/**',
+    '!**/*.config.js',
+    '!**/coverage/**',
   ],
+  
+  // Coverage directory
+  coverageDirectory: '<rootDir>/coverage',
+  
+  // Coverage reporters
+  coverageReporters: ['json', 'lcov', 'text', 'clover', 'html'],
   
   // Module path mapping (adjust based on your project structure)
   moduleNameMapper: {
@@ -47,5 +56,43 @@ module.exports = {
       functions: 70,
       lines: 70,
     },
+    './src/core/': {
+      statements: 80,
+      branches: 70,
+      functions: 80,
+      lines: 80,
+    },
+    './src/server/': {
+      statements: 75,
+      branches: 65,
+      functions: 75,
+      lines: 75,
+    },
   },
+  
+  // Verbose output
+  verbose: true,
+  
+  // Test timeout
+  testTimeout: 10000,
+  
+  // Watch plugins
+  watchPlugins: [
+    'jest-watch-typeahead/filename',
+    'jest-watch-typeahead/testname',
+  ],
+  
+  // Ignore transformations
+  transformIgnorePatterns: [
+    '/node_modules/(?!(@babel|jest-runtime)).+\\.js$'
+  ],
+  
+  // Custom reporters
+  reporters: [
+    'default',
+    ['jest-junit', {
+      outputDirectory: './test-results/jest',
+      outputName: 'results.xml',
+    }]
+  ],
 };
