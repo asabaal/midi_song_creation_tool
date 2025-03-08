@@ -17,11 +17,11 @@ if (!fs.existsSync(fixturesDir)) {
 function generateCMajorScaleMIDI() {
   // Basic MIDI file headers
   const header = Buffer.from('MThd' + 
-                              '\x00\x00\x00\x06' + // Header length (6 bytes)
-                              '\x00\x01' +         // Format (1 - multiple track)
-                              '\x00\x02' +         // Number of tracks (2)
-                              '\x00\x60',          // Division (96 ticks per quarter note)
-                             'binary');
+    '\\x00\\x00\\x00\\x06' + // Header length (6 bytes)
+    '\\x00\\x01' +         // Format (1 - multiple track)
+    '\\x00\\x02' +         // Number of tracks (2)
+    '\\x00\\x60',          // Division (96 ticks per quarter note)
+  'binary');
   
   // First track (tempo track)
   const track1Data = [
@@ -30,9 +30,9 @@ function generateCMajorScaleMIDI() {
     '00', 'FF', '2F', '00' // End of track
   ];
   const track1 = Buffer.from('MTrk' + 
-                              '\x00\x00\x00' + String.fromCharCode(track1Data.length) + // Track length
-                              track1Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
-                             'binary');
+    '\\x00\\x00\\x00' + String.fromCharCode(track1Data.length) + // Track length
+    track1Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
+  'binary');
   
   // Second track (C major scale)
   const track2Data = [
@@ -57,9 +57,9 @@ function generateCMajorScaleMIDI() {
   ];
   
   const track2 = Buffer.from('MTrk' + 
-                              '\x00\x00\x00' + String.fromCharCode(track2Data.length) + // Track length
-                              track2Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
-                             'binary');
+    '\\x00\\x00\\x00' + String.fromCharCode(track2Data.length) + // Track length
+    track2Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
+  'binary');
   
   // Combine all segments
   const midiFile = Buffer.concat([header, track1, track2]);
@@ -75,11 +75,11 @@ function generateCMajorScaleMIDI() {
 function generateCMajorChordMIDI() {
   // Basic MIDI file headers
   const header = Buffer.from('MThd' + 
-                              '\x00\x00\x00\x06' + // Header length (6 bytes)
-                              '\x00\x01' +         // Format (1 - multiple track)
-                              '\x00\x02' +         // Number of tracks (2)
-                              '\x00\x60',          // Division (96 ticks per quarter note)
-                             'binary');
+    '\\x00\\x00\\x00\\x06' + // Header length (6 bytes)
+    '\\x00\\x01' +         // Format (1 - multiple track)
+    '\\x00\\x02' +         // Number of tracks (2)
+    '\\x00\\x60',          // Division (96 ticks per quarter note)
+  'binary');
   
   // First track (tempo track)
   const track1Data = [
@@ -88,9 +88,9 @@ function generateCMajorChordMIDI() {
     '00', 'FF', '2F', '00' // End of track
   ];
   const track1 = Buffer.from('MTrk' + 
-                              '\x00\x00\x00' + String.fromCharCode(track1Data.length) + // Track length
-                              track1Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
-                             'binary');
+    '\\x00\\x00\\x00' + String.fromCharCode(track1Data.length) + // Track length
+    track1Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
+  'binary');
   
   // Second track (C major chord)
   const track2Data = [
@@ -105,9 +105,9 @@ function generateCMajorChordMIDI() {
   ];
   
   const track2 = Buffer.from('MTrk' + 
-                              '\x00\x00\x00' + String.fromCharCode(track2Data.length) + // Track length
-                              track2Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
-                             'binary');
+    '\\x00\\x00\\x00' + String.fromCharCode(track2Data.length) + // Track length
+    track2Data.map(hex => String.fromCharCode(parseInt(hex, 16))).join(''),
+  'binary');
   
   // Combine all segments
   const midiFile = Buffer.concat([header, track1, track2]);
