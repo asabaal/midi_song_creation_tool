@@ -12,28 +12,23 @@ const MidiWriter = require('midi-writer-js');
  */
 function sequenceToMidiFile(sequence) {
   try {
-    // Create a MIDI track
-    const track = new MidiWriter.Track();
+    console.log('Creating MIDI file...');
+    
+    // Create tracks for each channel (multi-track MIDI approach)
+    const tracks = [];
     
     // Set tempo from sequence or default to 120 BPM
     const tempo = sequence.tempo || 120;
-    track.setTempo(tempo);
-    console.log(`Using tempo: ${tempo}`);
     
     // Get notes from sequence
     const notes = sequence.notes || [];
     console.log(`Total notes to process: ${notes.length}`);
     
     if (notes.length > 0) {
-      // Sort notes by start time to make sure they're processed in order
-      const sortedNotes = [...notes].sort((a, b) => 
-        (a.startTime || 0) - (b.startTime || 0)
-      );
-      
       // Group notes by channel
       const notesByChannel = {};
       
-      sortedNotes.forEach(note => {
+      notes.forEach(note => {
         if (!note || typeof note.pitch !== 'number') return;
         
         // Default to channel 0 if not specified
@@ -52,6 +47,12 @@ function sequenceToMidiFile(sequence) {
         const midiChannel = channel + 1; // MIDI channels are 1-based
         
         console.log(`Processing ${channelNotes.length} notes for channel ${channel}`);
+        
+        // Create a track for this channel
+        const track = new MidiWriter.Track();
+        
+        // Set tempo
+        track.setTempo(tempo);
         
         // Set appropriate instrument for each channel
         try {
@@ -80,49 +81,57 @@ function sequenceToMidiFile(sequence) {
           console.error(`Error setting instrument for channel ${channel}:`, e);
         }
         
-        // Add notes in this channel
-        let currentTime = 0;
+        // Sort notes by start time
+        const sortedNotes = [...channelNotes].sort((a, b) => 
+          (a.startTime || 0) - (b.startTime || 0)
+        );
         
-        channelNotes.forEach(note => {
+        // Add notes in this channel
+        sortedNotes.forEach(note => {
           try {
-            // Calculate wait time since last note
-            const startTime = note.startTime || 0;
-            const waitTime = startTime - currentTime;
-            
-            // Create the note event
             const noteEvent = new MidiWriter.NoteEvent({
               pitch: [note.pitch],
               duration: getDuration(note.duration || 1),
               velocity: note.velocity || 100,
               channel: midiChannel,
-              wait: waitTime > 0 ? getDuration(waitTime) : undefined
+              // Using the 'sequential' mode which automatically handles timing
+              sequential: true
             });
             
             // Add to track
             track.addEvent(noteEvent);
-            
-            // Update current time
-            currentTime = startTime;
             
             console.log(`Added note: pitch=${note.pitch}, duration=${note.duration}, channel=${midiChannel}`);
           } catch (e) {
             console.error('Error adding note:', e);
           }
         });
+        
+        // Add this track
+        tracks.push(track);
       });
-    } else {
-      // Add a dummy note if no notes exist
-      console.log('No notes to export, adding dummy note');
+    } 
+    
+    // If no tracks were created, add a default track with a silent note
+    if (tracks.length === 0) {
+      console.log('No notes to export, adding dummy track');
+      const dummyTrack = new MidiWriter.Track();
+      dummyTrack.setTempo(tempo);
+      
       const dummyEvent = new MidiWriter.NoteEvent({
         pitch: ['C4'],
         duration: ['4'],
         velocity: 0
       });
-      track.addEvent(dummyEvent);
+      
+      dummyTrack.addEvent(dummyEvent);
+      tracks.push(dummyTrack);
     }
     
     // Create writer and build file
-    const writer = new MidiWriter.Writer([track]);
+    const writer = new MidiWriter.Writer(tracks);
+    console.log(`Created MIDI file with ${tracks.length} tracks`);
+    
     const midiData = writer.buildFile();
     
     return Buffer.from(midiData);
