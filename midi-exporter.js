@@ -1,6 +1,6 @@
 /**
  * MIDI Exporter Module
- * Enhanced version with proper timing, duration and channel information
+ * Simple version with basic timing and channel information
  */
 
 const MidiWriter = require('midi-writer-js');
@@ -12,128 +12,131 @@ const MidiWriter = require('midi-writer-js');
  */
 function sequenceToMidiFile(sequence) {
   try {
-    console.log('Creating MIDI file...');
+    console.log('Exporting sequence to MIDI...');
     
-    // Create tracks for each channel (multi-track MIDI approach)
-    const tracks = [];
+    // Create a single track for simplicity
+    const track = new MidiWriter.Track();
     
     // Set tempo from sequence or default to 120 BPM
     const tempo = sequence.tempo || 120;
+    track.setTempo(tempo);
+    console.log(`Tempo: ${tempo} BPM`);
     
     // Get notes from sequence
     const notes = sequence.notes || [];
-    console.log(`Total notes to process: ${notes.length}`);
+    console.log(`Processing ${notes.length} notes`);
     
     if (notes.length > 0) {
-      // Group notes by channel
-      const notesByChannel = {};
+      // Sort notes by start time
+      const sortedNotes = [...notes]
+        .filter(note => note && typeof note.pitch === 'number')
+        .sort((a, b) => (a.startTime || 0) - (b.startTime || 0));
       
-      notes.forEach(note => {
-        if (!note || typeof note.pitch !== 'number') return;
-        
-        // Default to channel 0 if not specified
-        const channel = typeof note.channel === 'number' ? note.channel : 0;
-        
-        if (!notesByChannel[channel]) {
-          notesByChannel[channel] = [];
+      // Create a simplified version that groups notes with the same start time
+      const timeGroups = {};
+      
+      sortedNotes.forEach(note => {
+        const startTime = Math.floor((note.startTime || 0) * 4) / 4; // Round to nearest quarter beat
+        if (!timeGroups[startTime]) {
+          timeGroups[startTime] = [];
         }
-        
-        notesByChannel[channel].push(note);
+        timeGroups[startTime].push(note);
       });
       
-      // Process each channel
-      Object.entries(notesByChannel).forEach(([channelStr, channelNotes]) => {
-        const channel = parseInt(channelStr, 10);
-        const midiChannel = channel + 1; // MIDI channels are 1-based
+      // Sort the time groups by start time
+      const groupStartTimes = Object.keys(timeGroups).map(Number).sort((a, b) => a - b);
+      
+      console.log(`Created ${groupStartTimes.length} note groups`);
+      
+      // Add each group of notes
+      let lastTime = 0;
+      
+      groupStartTimes.forEach(startTime => {
+        const notes = timeGroups[startTime];
+        if (!notes || notes.length === 0) return;
         
-        console.log(`Processing ${channelNotes.length} notes for channel ${channel}`);
+        // Calculate rest duration if needed
+        const waitDuration = startTime - lastTime;
         
-        // Create a track for this channel
-        const track = new MidiWriter.Track();
-        
-        // Set tempo
-        track.setTempo(tempo);
-        
-        // Set appropriate instrument for each channel
-        try {
-          // Drums are on channel 9 (MIDI channel 10)
-          if (channel === 9) {
-            track.addEvent(new MidiWriter.ProgramChangeEvent({
-              instrument: 0, 
-              channel: 10
+        // Add a rest if there's a significant gap
+        if (waitDuration > 0.1) {
+          try {
+            // Add an explicit rest
+            track.addEvent(new MidiWriter.NoteEvent({
+              rest: true,
+              duration: getDuration(waitDuration)
             }));
-          } 
-          // Bass is on channel 1 (MIDI channel 2)
-          else if (channel === 1) {
-            track.addEvent(new MidiWriter.ProgramChangeEvent({
-              instrument: 32, // Electric bass
-              channel: 2
-            }));
+            console.log(`Added rest: ${waitDuration} beats`);
+          } catch (e) {
+            console.error('Error adding rest:', e);
           }
-          // Other channels default to piano
-          else {
-            track.addEvent(new MidiWriter.ProgramChangeEvent({
-              instrument: 0, // Acoustic piano
-              channel: midiChannel
-            }));
-          }
-        } catch (e) {
-          console.error(`Error setting instrument for channel ${channel}:`, e);
         }
         
-        // Sort notes by start time
-        const sortedNotes = [...channelNotes].sort((a, b) => 
-          (a.startTime || 0) - (b.startTime || 0)
-        );
+        // Group notes by channel
+        const channelGroups = {};
         
-        // Add notes in this channel
-        sortedNotes.forEach(note => {
-          try {
-            const noteEvent = new MidiWriter.NoteEvent({
-              pitch: [note.pitch],
-              duration: getDuration(note.duration || 1),
-              velocity: note.velocity || 100,
-              channel: midiChannel,
-              // Using the 'sequential' mode which automatically handles timing
-              sequential: true
-            });
-            
-            // Add to track
-            track.addEvent(noteEvent);
-            
-            console.log(`Added note: pitch=${note.pitch}, duration=${note.duration}, channel=${midiChannel}`);
-          } catch (e) {
-            console.error('Error adding note:', e);
+        notes.forEach(note => {
+          const channel = typeof note.channel === 'number' ? note.channel : 0;
+          if (!channelGroups[channel]) {
+            channelGroups[channel] = [];
           }
+          channelGroups[channel].push(note);
         });
         
-        // Add this track
-        tracks.push(track);
+        // Add notes for each channel
+        Object.entries(channelGroups).forEach(([channelStr, channelNotes]) => {
+          const channel = parseInt(channelStr, 10);
+          const midiChannel = channel + 1; // MIDI channels are 1-based
+          
+          // Set instrument for channel (only add once per channel)
+          if (!track.instruments || !track.instruments[midiChannel]) {
+            try {
+              // Mark that we've set an instrument for this channel
+              if (!track.instruments) track.instruments = {};
+              track.instruments[midiChannel] = true;
+              
+              // Set appropriate instrument
+              track.addEvent(new MidiWriter.ProgramChangeEvent({
+                instrument: channel === 9 ? 0 : (channel === 1 ? 32 : 0),
+                channel: midiChannel
+              }));
+            } catch (e) {
+              console.error(`Error setting instrument for channel ${midiChannel}:`, e);
+            }
+          }
+          
+          // Add all notes in this channel at this time
+          channelNotes.forEach(note => {
+            try {
+              track.addEvent(new MidiWriter.NoteEvent({
+                pitch: [note.pitch],
+                duration: getDuration(note.duration || 1),
+                velocity: note.velocity || 100,
+                channel: midiChannel
+              }));
+            } catch (e) {
+              console.error('Error adding note:', e);
+            }
+          });
+        });
+        
+        // Update last time
+        lastTime = startTime + Math.max(...notes.map(n => n.duration || 1));
       });
-    } 
-    
-    // If no tracks were created, add a default track with a silent note
-    if (tracks.length === 0) {
-      console.log('No notes to export, adding dummy track');
-      const dummyTrack = new MidiWriter.Track();
-      dummyTrack.setTempo(tempo);
-      
-      const dummyEvent = new MidiWriter.NoteEvent({
+    } else {
+      // Add a dummy note
+      track.addEvent(new MidiWriter.NoteEvent({
         pitch: ['C4'],
         duration: ['4'],
         velocity: 0
-      });
-      
-      dummyTrack.addEvent(dummyEvent);
-      tracks.push(dummyTrack);
+      }));
     }
     
     // Create writer and build file
-    const writer = new MidiWriter.Writer(tracks);
-    console.log(`Created MIDI file with ${tracks.length} tracks`);
-    
+    const writer = new MidiWriter.Writer([track]);
     const midiData = writer.buildFile();
     
+    console.log('MIDI file created successfully');
     return Buffer.from(midiData);
   } catch (error) {
     console.error('Error in MIDI export:', error);
@@ -177,7 +180,7 @@ function getDuration(duration) {
     return ['16'];
   }
   
-  // Default to shortest common duration
+  // Default to shortest duration
   return ['16'];
 }
 
