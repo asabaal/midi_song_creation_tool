@@ -4,7 +4,8 @@
   "description": "An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.",
   "main": "midi-api.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node midi-api.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +14,7 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "midi-writer-js": "^2.1.4",
     "node-fetch": "^3.3.2"
   }
 }
