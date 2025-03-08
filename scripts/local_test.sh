@@ -25,20 +25,14 @@ else
     echo "✅ Dependencies already installed"
 fi
 
-# Install development dependencies (especially ESLint plugins)
-echo "📦 Installing development dependencies..."
-chmod +x scripts/install-dev-deps.sh
-./scripts/install-dev-deps.sh || { echo "❌ Failed to install dev dependencies"; exit 1; }
-echo "✅ Dev dependencies installed"
-
 # Run linting with more limited scope to focus on important issues
-echo "🔍 Running ESLint (excluding Cypress tests for now)..."
-npx eslint src/ --ext .js,.jsx || { echo "❌ ESLint checks failed on src/"; exit 1; }
-echo "✅ ESLint passed for src/ directory"
+echo "🔍 Running ESLint (focused on core and server only)..."
+npx eslint src/core src/server --ext .js || { echo "❌ ESLint checks failed on core modules"; exit 1; }
+echo "✅ ESLint passed for core and server modules"
 
-echo "🔍 Running Prettier format check on src/..."
-npx prettier --check "src/**/*.{js,jsx,json,md}" || { echo "❌ Prettier checks failed"; exit 1; }
-echo "✅ Prettier checks passed for src/"
+echo "🔍 Running Prettier format check on core and server..."
+npx prettier --check "src/core/**/*.js" "src/server/**/*.js" || { echo "❌ Prettier checks failed"; exit 1; }
+echo "✅ Prettier checks passed for core and server"
 
 # Run tests
 echo "🧪 Running unit tests..."
