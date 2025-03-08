@@ -1,35 +1,103 @@
 // tests/fixtures/mock-data/db-setup.js
-const { MongoMemoryServer } = require('mongodb-memory-server');
-const mongoose = require('mongoose');
-const { Session } = require('../../../src/server/models/session');
 const { v4: uuidv4 } = require('uuid');
 
-let mongoServer;
+// In-memory mock database
+const mockDb = {
+  sessions: [],
+  _id: 0,
+  
+  // Generate MongoDB-like ObjectId
+  createObjectId() {
+    this._id += 1;
+    return this._id.toString();
+  },
+  
+  // Find a session by ID
+  findSessionById(id) {
+    return this.sessions.find(session => session._id.toString() === id);
+  },
+  
+  // Clone an object to simulate MongoDB document return
+  clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+};
+
+// Mock Session model
+const Session = {
+  insertMany: async (sessions) => {
+    sessions.forEach(session => {
+      const newSession = { ...session, _id: mockDb.createObjectId() };
+      mockDb.sessions.push(newSession);
+    });
+    return mockDb.clone(sessions);
+  },
+  
+  find: async (query = {}) => {
+    let results = mockDb.sessions;
+    
+    // Handle date filtering
+    if (query.createdAt && query.createdAt.$gte) {
+      const fromDate = new Date(query.createdAt.$gte);
+      results = results.filter(session => 
+        new Date(session.createdAt) >= fromDate
+      );
+    }
+    
+    return mockDb.clone(results);
+  },
+  
+  findById: async (id) => {
+    const session = mockDb.findSessionById(id);
+    return session ? mockDb.clone(session) : null;
+  },
+  
+  findByIdAndDelete: async (id) => {
+    const sessionIndex = mockDb.sessions.findIndex(s => s._id.toString() === id);
+    if (sessionIndex >= 0) {
+      const deletedSession = mockDb.sessions[sessionIndex];
+      mockDb.sessions.splice(sessionIndex, 1);
+      return mockDb.clone(deletedSession);
+    }
+    return null;
+  }
+};
+
+// Prototype for the Session class
+Session.prototype = {
+  save: async function() {
+    const sessionIndex = mockDb.sessions.findIndex(s => s._id.toString() === this._id.toString());
+    
+    if (sessionIndex >= 0) {
+      // Update existing session
+      mockDb.sessions[sessionIndex] = { ...this };
+    } else {
+      // Create new session
+      this._id = mockDb.createObjectId();
+      mockDb.sessions.push(this);
+    }
+    
+    return this;
+  }
+};
 
 /**
- * Set up an in-memory MongoDB server for testing
+ * Set up the mock database for testing
  */
 async function setupTestDb() {
-  // Create a new instance of MongoDB Memory Server
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
+  // Clear any existing data
+  mockDb.sessions = [];
   
-  // Connect Mongoose to the Memory Server
-  await mongoose.connect(uri);
-  
-  // Clear all collections
-  await mongoose.connection.db.dropDatabase();
-  
-  // Seed with some test data
+  // Seed with test data
   await seedTestData();
 }
 
 /**
- * Clean up and close the test database
+ * Clean up the mock database
  */
 async function teardownTestDb() {
-  await mongoose.disconnect();
-  await mongoServer.stop();
+  // Clear all data
+  mockDb.sessions = [];
 }
 
 /**
@@ -86,12 +154,13 @@ async function seedTestData() {
  * @returns {Promise<string>} Session ID
  */
 async function createTestSession(name) {
-  const session = new Session({
+  const session = {
     name: name || `Test Session ${Date.now()}`,
     bpm: 120,
     timeSignature: [4, 4],
-    tracks: []
-  });
+    tracks: [],
+    save: Session.prototype.save
+  };
   
   await session.save();
   return session._id.toString();
@@ -100,5 +169,6 @@ async function createTestSession(name) {
 module.exports = {
   setupTestDb,
   teardownTestDb,
-  createTestSession
+  createTestSession,
+  Session
 };
