@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coverage Report Viewer - MIDI Song Creation Tool</title>
+    <style>
+        :root {
+            --primary-color: #2c78cb;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            flex: 1;
+            min-width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .summary-card h3 {
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .coverage-bar {
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .coverage-value {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        
+        .high {
+            background-color: var(--success-color);
+        }
+        
+        .medium {
+            background-color: var(--warning-color);
+        }
+        
+        .low {
+            background-color: var(--danger-color);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        tr:hover {
+            background-color: #e2e2e2;
+        }
+        
+        .file-link {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .file-link:hover {
+            text-decoration: underline;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2161a8;
+        }
+        
+        #coverage-details {
+            margin-top: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        #search-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            margin-bottom: -1px;
+        }
+        
+        .tab.active {
+            border: 1px solid #ddd;
+            border-bottom-color: white;
+            background-color: white;
+            border-radius: 4px 4px 0 0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .summary-card {
+                min-width: calc(50% - 40px);
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .summary-card {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>MIDI Song Creation Tool - Coverage Report</h1>
+        <p>Test Coverage Summary & Analysis Dashboard</p>
+    </header>
+    
+    <div class="container">
+        <div class="summary">
+            <div class="summary-card">
+                <h3>Lines</h3>
+                <div class="summary-value" id="lines-value">0%</div>
+                <div class="coverage-bar">
+                    <div class="coverage-value" id="lines-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="summary-card">
+                <h3>Statements</h3>
+                <div class="summary-value" id="statements-value">0%</div>
+                <div class="coverage-bar">
+                    <div class="coverage-value" id="statements-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="summary-card">
+                <h3>Functions</h3>
+                <div class="summary-value" id="functions-value">0%</div>
+                <div class="coverage-bar">
+                    <div class="coverage-value" id="functions-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div class="summary-card">
+                <h3>Branches</h3>
+                <div class="summary-value" id="branches-value">0%</div>
+                <div class="coverage-bar">
+                    <div class="coverage-value" id="branches-bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="files">Files</div>
+            <div class="tab" data-tab="summary">Summary</div>
+            <div class="tab" data-tab="components">Components</div>
+        </div>
+        
+        <div class="tab-content active" id="files-tab">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search files...">
+            </div>
+            
+            <table id="coverage-table">
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Lines</th>
+                        <th>Statements</th>
+                        <th>Functions</th>
+                        <th>Branches</th>
+                    </tr>
+                </thead>
+                <tbody id="coverage-body">
+                    <!-- Table content will be dynamically populated -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="tab-content" id="summary-tab">
+            <h2>Coverage Summary</h2>
+            <p>This report was generated on <span id="report-date">Loading...</span>.</p>
+            
+            <h3>Coverage Thresholds</h3>
+            <ul>
+                <li>High Coverage: ≥ 80%</li>
+                <li>Medium Coverage: 60% - 79%</li>
+                <li>Low Coverage: < 60%</li>
+            </ul>
+            
+            <h3>Test Configuration</h3>
+            <p>Test suite configuration is defined in <code>jest.config.js</code> with the following thresholds:</p>
+            <ul>
+                <li>Global: Statements (70%), Branches (60%), Functions (70%), Lines (70%)</li>
+                <li>Core Modules: Statements (80%), Branches (70%), Functions (80%), Lines (80%)</li>
+                <li>Server Modules: Statements (75%), Branches (65%), Functions (75%), Lines (75%)</li>
+            </ul>
+        </div>
+        
+        <div class="tab-content" id="components-tab">
+            <h2>Component Coverage</h2>
+            <p>Component coverage details will be added here.</p>
+        </div>
+        
+        <div class="actions">
+            <a href="../coverage/lcov-report/index.html" target="_blank" class="btn btn-primary">View Detailed Report</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>How to Improve Coverage</h2>
+        <p>To improve test coverage:</p>
+        <ul>
+            <li><strong>Focus on Uncovered Files:</strong> Prioritize files with low coverage percentages</li>
+            <li><strong>Test Edge Cases:</strong> Add tests for boundary conditions and error handling paths</li>
+            <li><strong>Add Integration Tests:</strong> Ensure components work correctly together</li>
+            <li><strong>Mock External Dependencies:</strong> Use mocks for external services to isolate code</li>
+        </ul>
+    </div>
+    
+    <script>
+        // This script would typically load and parse the coverage data from coverage-summary.json
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // In a real scenario, this would fetch the actual coverage data
+                // For this example, we'll use placeholder data
+                const coverageData = {
+                    total: {
+                        lines: { pct: 78.5 },
+                        statements: { pct: 77.2 },
+                        functions: { pct: 82.1 },
+                        branches: { pct: 65.8 }
+                    },
+                    files: [
+                        {
+                            file: 'src/core/musicTheory.js',
+                            lines: { pct: 92.3 },
+                            statements: { pct: 90.5 },
+                            functions: { pct: 95.0 },
+                            branches: { pct: 85.2 }
+                        },
+                        {
+                            file: 'src/core/midiSequence.js',
+                            lines: { pct: 85.7 },
+                            statements: { pct: 84.2 },
+                            functions: { pct: 88.9 },
+                            branches: { pct: 79.1 }
+                        },
+                        {
+                            file: 'src/server/routes/musicTheoryRoutes.js',
+                            lines: { pct: 76.4 },
+                            statements: { pct: 75.8 },
+                            functions: { pct: 80.0 },
+                            branches: { pct: 68.5 }
+                        },
+                        {
+                            file: 'src/client/components/VirtualKeyboard.jsx',
+                            lines: { pct: 82.3 },
+                            statements: { pct: 81.0 },
+                            functions: { pct: 85.7 },
+                            branches: { pct: 72.4 }
+                        }
+                    ]
+                };
+                
+                // Update summary
+                updateSummary(coverageData.total);
+                
+                // Populate table
+                populateTable(coverageData.files);
+                
+                // Set report date
+                document.getElementById('report-date').textContent = new Date().toLocaleString();
+                
+                // Setup search
+                setupSearch();
+                
+                // Setup tabs
+                setupTabs();
+                
+            } catch (error) {
+                console.error('Error loading coverage data:', error);
+            }
+        });
+        
+        function updateSummary(totalCoverage) {
+            // Update values and bars for each metric
+            updateMetric('lines', totalCoverage.lines.pct);
+            updateMetric('statements', totalCoverage.statements.pct);
+            updateMetric('functions', totalCoverage.functions.pct);
+            updateMetric('branches', totalCoverage.branches.pct);
+        }
+        
+        function updateMetric(metric, value) {
+            // Round to 1 decimal place
+            const roundedValue = Math.round(value * 10) / 10;
+            
+            // Update value text
+            document.getElementById(`${metric}-value`).textContent = `${roundedValue}%`;
+            
+            // Update progress bar
+            const bar = document.getElementById(`${metric}-bar`);
+            bar.style.width = `${roundedValue}%`;
+            
+            // Set color class based on value
+            if (roundedValue >= 80) {
+                bar.className = 'coverage-value high';
+            } else if (roundedValue >= 60) {
+                bar.className = 'coverage-value medium';
+            } else {
+                bar.className = 'coverage-value low';
+            }
+        }
+        
+        function populateTable(files) {
+            const tableBody = document.getElementById('coverage-body');
+            tableBody.innerHTML = ''; // Clear existing rows
+            
+            files.forEach(file => {
+                const row = document.createElement('tr');
+                
+                // File column with link
+                const fileCell = document.createElement('td');
+                const fileLink = document.createElement('a');
+                fileLink.href = `../coverage/lcov-report/${file.file}.html`;
+                fileLink.className = 'file-link';
+                fileLink.textContent = file.file;
+                fileLink.target = '_blank';
+                fileCell.appendChild(fileLink);
+                row.appendChild(fileCell);
+                
+                // Coverage columns
+                addCoverageCell(row, file.lines.pct);
+                addCoverageCell(row, file.statements.pct);
+                addCoverageCell(row, file.functions.pct);
+                addCoverageCell(row, file.branches.pct);
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        function addCoverageCell(row, value) {
+            const cell = document.createElement('td');
+            const roundedValue = Math.round(value * 10) / 10;
+            
+            cell.textContent = `${roundedValue}%`;
+            
+            // Add color class
+            if (roundedValue >= 80) {
+                cell.style.color = 'var(--success-color)';
+            } else if (roundedValue >= 60) {
+                cell.style.color = 'var(--warning-color)';
+            } else {
+                cell.style.color = 'var(--danger-color)';
+            }
+            
+            row.appendChild(cell);
+        }
+        
+        function setupSearch() {
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', function() {
+                const filter = this.value.toLowerCase();
+                const rows = document.getElementById('coverage-body').getElementsByTagName('tr');
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const fileColumn = rows[i].getElementsByTagName('td')[0];
+                    const fileName = fileColumn.textContent || fileColumn.innerText;
+                    
+                    if (fileName.toLowerCase().indexOf(filter) > -1) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            });
+        }
+        
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Hide all tab content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Show content for active tab
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+        }
+    </script>
+</body>
+</html>
