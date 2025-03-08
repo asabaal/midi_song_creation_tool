@@ -1,5 +1,8 @@
 name: Test Suite
 
+# This workflow runs all tests and ensures code quality
+# It serves as a quality gate for pull requests and pushes to main branches
+
 on:
   push:
     branches: [ main, develop ]
@@ -9,13 +12,19 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    name: Tests (Node ${{ matrix.node-version }})
 
     strategy:
       matrix:
         node-version: [16.x, 18.x]
+      # Don't cancel all jobs if one fails
+      fail-fast: false
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history for proper git history analysis
     
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
@@ -27,16 +36,70 @@ jobs:
       run: npm ci
     
     - name: Run unit and integration tests
+      id: unit-integration
       run: npm run test:unit && npm run test:integration
     
     - name: Run e2e tests
+      id: e2e
       run: npm run test:e2e
       
-    - name: Generate coverage report
+    - name: Check test coverage
+      id: coverage
       run: npm run test:coverage
-      
+    
     - name: Upload coverage report
       uses: actions/upload-artifact@v3
       with:
-        name: coverage-report
+        name: coverage-report-node-${{ matrix.node-version }}
         path: coverage/
+        
+    - name: Check coverage thresholds
+      run: |
+        COVERAGE_REPORT=$(cat coverage/coverage-summary.json)
+        
+        # Extract coverage percentages
+        LINES_PCT=$(echo $COVERAGE_REPORT | grep -o '"lines":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9.]*' | grep -o 'pct":[0-9.]*' | cut -d ':' -f2)
+        STATEMENTS_PCT=$(echo $COVERAGE_REPORT | grep -o '"statements":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9.]*' | grep -o 'pct":[0-9.]*' | cut -d ':' -f2)
+        FUNCTIONS_PCT=$(echo $COVERAGE_REPORT | grep -o '"functions":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9.]*' | grep -o 'pct":[0-9.]*' | cut -d ':' -f2)
+        BRANCHES_PCT=$(echo $COVERAGE_REPORT | grep -o '"branches":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9.]*' | grep -o 'pct":[0-9.]*' | cut -d ':' -f2)
+        
+        echo "Lines coverage: $LINES_PCT%"
+        echo "Statements coverage: $STATEMENTS_PCT%"
+        echo "Functions coverage: $FUNCTIONS_PCT%"
+        echo "Branches coverage: $BRANCHES_PCT%"
+        
+        # Check if coverage meets thresholds
+        if (( $(echo "$LINES_PCT < 70" | bc -l) )); then
+          echo "Lines coverage ($LINES_PCT%) is below the 70% threshold!"
+          exit 1
+        fi
+        
+        if (( $(echo "$FUNCTIONS_PCT < 70" | bc -l) )); then
+          echo "Functions coverage ($FUNCTIONS_PCT%) is below the 70% threshold!"
+          exit 1
+        fi
+        
+        echo "All coverage thresholds passed!"
+      continue-on-error: true  # Don't fail the build yet, just as a warning
+      
+  # Add a job summary that reports test status
+  report:
+    needs: test
+    runs-on: ubuntu-latest
+    name: Test Report
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Create test summary
+        run: |
+          echo "# Test Results Summary" > test-summary.md
+          echo "✅ All tests have passed" >> test-summary.md
+          echo "📊 Coverage reports have been uploaded as artifacts" >> test-summary.md
+          
+      - name: Publish test summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-summary
+          path: test-summary.md
