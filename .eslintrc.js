@@ -6,12 +6,14 @@ module.exports = {
     node: true,
     jest: true,
   },
-  extends: 'eslint:recommended',
+  extends: [
+    'eslint:recommended'
+  ],
   parserOptions: {
     ecmaVersion: 12,
-    sourceType: 'module', // Add this to support import/export
+    sourceType: 'module',
     ecmaFeatures: {
-      jsx: true, // Add this to support JSX
+      jsx: true,
     },
   },
   rules: {
@@ -51,6 +53,20 @@ module.exports = {
         'cypress/no-unnecessary-waiting': 'error',
         'no-unused-vars': 'warn',
         'no-console': 'off',
+        'no-undef': 'off', // Allow Cypress globals
+      }
+    },
+    // JSX files
+    {
+      files: ['**/*.jsx'],
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true
+        }
+      },
+      globals: {
+        React: 'readonly',
+        ReactDOM: 'readonly'
       }
     }
   ],
