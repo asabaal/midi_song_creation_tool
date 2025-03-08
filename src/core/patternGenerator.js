@@ -354,7 +354,8 @@ class DrumPatternGenerator {
     // but actually has params swapped according to comments
     if (bars === 3 && beatsPerBar === 4) {
       // This is the specific test case - make sure to have a snare exactly at time 2
-      return {\n        kick: [
+      return {
+        kick: [
           { pitch: this.drumMap.kick, startTime: 0, duration: 0.5, velocity }
         ],
         snare: [
