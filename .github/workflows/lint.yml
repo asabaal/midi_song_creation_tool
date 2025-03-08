@@ -36,6 +36,15 @@ jobs:
         with:
           name: eslint-report
           path: eslint-report.json
+      
+      - name: Fail if ESLint has errors
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          ERROR_COUNT=$(grep -o '"errorCount":[0-9]*' eslint-report.json | grep -o '[0-9]*')
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            echo "ESLint found $ERROR_COUNT errors that need to be fixed"
+            exit 1
+          fi
           
   prettier:
     runs-on: ubuntu-latest
@@ -57,21 +66,50 @@ jobs:
         id: prettier
         run: npx prettier --check "**/*.{js,jsx,json,md}"
         continue-on-error: true # Don't fail the build yet
+      
+      - name: Create formatting report
+        if: always()
+        run: |
+          if [ ${{ steps.prettier.outcome }} == 'success' ]; then
+            echo "✅ Prettier check passed - code is properly formatted" > prettier-report.txt
+          else
+            echo "❌ Prettier check failed - code needs formatting" > prettier-report.txt
+            echo "Run 'npm run format' locally to fix formatting issues" >> prettier-report.txt
+          fi
+      
+      - name: Upload Prettier report
+        uses: actions/upload-artifact@v3
+        with:
+          name: prettier-report
+          path: prettier-report.txt
+      
+      - name: Fail if Prettier has errors on main PRs
+        if: steps.prettier.outcome == 'failure' && github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          echo "Prettier check failed - code must be properly formatted for PRs to main"
+          exit 1
         
   report:
     needs: [eslint, prettier]
     runs-on: ubuntu-latest
     name: Lint Report
+    if: always()
     
     steps:
       - name: Download ESLint report
         uses: actions/download-artifact@v3
         with:
           name: eslint-report
+      
+      - name: Download Prettier report
+        uses: actions/download-artifact@v3
+        with:
+          name: prettier-report
           
       - name: Create lint summary
         run: |
           echo "# Lint Results Summary" > lint-summary.md
+          echo "" >> lint-summary.md
           
           if [ -f eslint-report.json ]; then
             ERROR_COUNT=$(grep -o '"errorCount":[0-9]*' eslint-report.json | grep -o '[0-9]*')
@@ -86,10 +124,23 @@ jobs:
             else
               echo "✅ ESLint passed with no errors" >> lint-summary.md
             fi
+            
+            if [ "$WARNING_COUNT" -gt 0 ]; then
+              echo "⚠️ ESLint found $WARNING_COUNT warnings to review" >> lint-summary.md
+            fi
           else
             echo "⚠️ ESLint report not found" >> lint-summary.md
           fi
           
+          echo "" >> lint-summary.md
+          echo "## Prettier Results" >> lint-summary.md
+          if [ -f prettier-report.txt ]; then
+            cat prettier-report.txt >> lint-summary.md
+          else
+            echo "⚠️ Prettier report not found" >> lint-summary.md
+          fi
+          
+          echo "" >> lint-summary.md
           echo "See the full reports in the artifacts section" >> lint-summary.md
           
       - name: Publish lint summary
@@ -97,3 +148,19 @@ jobs:
         with:
           name: lint-summary
           path: lint-summary.md
+      
+      - name: Add lint comment to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('lint-summary.md', 'utf8');
+            const issue_number = context.issue.number;
+            
+            github.rest.issues.createComment({
+              issue_number: issue_number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
