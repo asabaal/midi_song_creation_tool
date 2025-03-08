@@ -12,35 +12,48 @@ const MidiWriter = require('midi-writer-js');
  */
 function sequenceToMidiFile(sequence) {
   try {
+    console.log('Creating MIDI file from sequence:', sequence.id);
+    
     // Create a MIDI Writer track
     const track = new MidiWriter.Track();
     
-    // Set tempo
-    track.setTempo(sequence.tempo || 120);
+    // Set tempo - default to 120 if not specified
+    const tempo = sequence.tempo || 120;
+    track.setTempo(tempo);
+    console.log('Set tempo to:', tempo);
     
     // Set time signature if available
     if (sequence.timeSignature) {
       const { numerator, denominator } = sequence.timeSignature;
-      track.setTimeSignature(numerator, denominator);
+      if (numerator && denominator) {
+        track.setTimeSignature(numerator, denominator);
+        console.log('Set time signature to:', numerator, '/', denominator);
+      }
     }
     
-    // Process notes
-    if (sequence.notes && Array.isArray(sequence.notes)) {
+    // Process notes - make sure notes array exists and has elements
+    if (sequence.notes && Array.isArray(sequence.notes) && sequence.notes.length > 0) {
+      console.log('Processing', sequence.notes.length, 'notes');
+      
       // Group notes by channel
       const channelNotes = {};
       
       sequence.notes.forEach(note => {
-        const channel = note.channel || 0;
+        if (!note) return; // Skip undefined notes
+        
+        // Ensure channel is a number
+        const channel = typeof note.channel === 'number' ? note.channel : 0;
+        
         if (!channelNotes[channel]) {
           channelNotes[channel] = [];
         }
         channelNotes[channel].push(note);
       });
       
-      // Add notes by channel
+      // Process each channel separately
       Object.entries(channelNotes).forEach(([channel, notes]) => {
-        // Set the instrument for the channel (use default program 0 for now)
-        const channelNum = parseInt(channel);
+        const channelNum = parseInt(channel, 10);
+        console.log('Processing channel', channelNum, 'with', notes.length, 'notes');
         
         // Special handling for drum channel (channel 9)
         if (channelNum === 9) {
@@ -55,36 +68,76 @@ function sequenceToMidiFile(sequence) {
         // Sort notes by start time
         notes.sort((a, b) => a.startTime - b.startTime);
         
+        // Keep track of the current time
         let currentTime = 0;
         
-        // Add notes
+        // Add each note
         notes.forEach(note => {
-          // Calculate wait time (delta) before this note
-          const delta = note.startTime - currentTime;
-          currentTime = note.startTime;
-          
-          // Add note event
-          const noteEvent = new MidiWriter.NoteEvent({
-            pitch: [note.pitch], // Note: pitch must be an array for midi-writer-js
-            duration: durationToTicks(note.duration),
-            velocity: note.velocity || 100,
-            channel: channelNum + 1, // MIDI channels are 1-based
-            wait: delta > 0 ? convertToTickDuration(delta) : undefined // Add wait if needed
-          });
-          
-          track.addEvent(noteEvent);
-          
-          // Update current time to after this note
-          currentTime = note.startTime + note.duration;
+          try {
+            // Validate pitch - must be a number
+            if (typeof note.pitch !== 'number') {
+              console.log('Skipping note with invalid pitch:', note);
+              return;
+            }
+            
+            // Calculate wait time
+            const waitDuration = note.startTime - currentTime;
+            if (waitDuration > 0) {
+              // Add a rest if needed
+              const restEvent = new MidiWriter.NoteEvent({
+                rest: true,
+                duration: convertToMidiDuration(waitDuration),
+                channel: channelNum + 1
+              });
+              track.addEvent(restEvent);
+              console.log('Added rest of duration', waitDuration);
+            }
+            
+            // Update current time
+            currentTime = note.startTime;
+            
+            // Add the note
+            const noteEvent = new MidiWriter.NoteEvent({
+              pitch: [note.pitch], // Note: pitch must be an array
+              duration: convertToMidiDuration(note.duration || 1),
+              velocity: note.velocity || 100,
+              channel: channelNum + 1  // MIDI channels are 1-based
+            });
+            
+            track.addEvent(noteEvent);
+            console.log('Added note', note.pitch, 'with duration', note.duration);
+            
+            // Update current time to after this note
+            currentTime = note.startTime + note.duration;
+          } catch (noteError) {
+            console.error('Error processing note:', noteError);
+            // Continue with other notes
+          }
         });
       });
+    } else {
+      console.log('No notes found in sequence or notes is not an array');
     }
+    
+    // Add an end-of-track meta event
+    track.addEvent([
+      new MidiWriter.MetaEvent({
+        data: [0x2F, 0x00], // End of track
+        type: 0x2F
+      })
+    ]);
     
     // Create a MIDI file with the track
     const writer = new MidiWriter.Writer([track]);
     
     // Get the MIDI file data as a Buffer
-    return Buffer.from(writer.buildFile());
+    const midiData = writer.buildFile();
+    
+    if (!midiData) {
+      throw new Error('MidiWriter failed to build file - output is empty');
+    }
+    
+    return Buffer.from(midiData);
   } catch (error) {
     console.error('Error creating MIDI file:', error);
     throw new Error(`Failed to create MIDI file: ${error.message}`);
@@ -92,56 +145,46 @@ function sequenceToMidiFile(sequence) {
 }
 
 /**
- * Converts note duration to MIDI duration string
+ * Converts a duration value to MIDI duration format
  * @param {number} duration - Duration in beats
- * @returns {string} - Duration in MIDI format
+ * @returns {string[]} - Duration in MIDI format (array of duration strings)
  */
-function durationToTicks(duration) {
-  // Convert duration to a valid note duration format
-  if (duration >= 4) return ['1']; // Whole note (4 beats)
-  if (duration >= 2) return ['2']; // Half note (2 beats)
-  if (duration >= 1) return ['4']; // Quarter note (1 beat)
-  if (duration >= 0.5) return ['8']; // Eighth note (1/2 beat)
-  if (duration >= 0.25) return ['16']; // Sixteenth note (1/4 beat)
-  if (duration >= 0.125) return ['32']; // Thirty-second note (1/8 beat)
+function convertToMidiDuration(duration) {
+  if (duration === undefined || duration === null || isNaN(duration)) {
+    return ['4']; // Default to quarter note if duration is invalid
+  }
   
-  // For unusual durations, use an array of dotted notes
-  return calculateComplexDuration(duration);
-}
-
-/**
- * Calculates a complex duration for unusual note lengths
- * @param {number} duration - Duration in beats
- * @returns {string[]} - Array of durations that add up to the specified duration
- */
-function calculateComplexDuration(duration) {
-  // For very short notes, default to 32nd note
-  if (duration < 0.125) {
+  // For whole notes (4 beats)
+  if (duration >= 4) {
+    return ['1'];
+  }
+  
+  // For half notes (2 beats)
+  if (duration >= 2) {
+    return ['2'];
+  }
+  
+  // For quarter notes (1 beat)
+  if (duration >= 1) {
+    return ['4'];
+  }
+  
+  // For eighth notes (1/2 beat)
+  if (duration >= 0.5) {
+    return ['8'];
+  }
+  
+  // For sixteenth notes (1/4 beat)
+  if (duration >= 0.25) {
+    return ['16'];
+  }
+  
+  // For thirty-second notes (1/8 beat)
+  if (duration >= 0.125) {
     return ['32'];
   }
   
-  // For unusual durations, try to use a combination of notes
-  // This is a simplification - a more sophisticated algorithm could be implemented
-  return ['8']; // Default to eighth note as a fallback
-}
-
-/**
- * Converts a time delta to a wait duration
- * @param {number} delta - Time to wait in beats
- * @returns {string[]} - Wait duration in MIDI format
- */
-function convertToTickDuration(delta) {
-  if (delta <= 0) return undefined;
-  
-  // Similar logic to durationToTicks but for wait time
-  if (delta >= 4) return ['1']; // Whole note wait
-  if (delta >= 2) return ['2']; // Half note wait
-  if (delta >= 1) return ['4']; // Quarter note wait
-  if (delta >= 0.5) return ['8']; // Eighth note wait
-  if (delta >= 0.25) return ['16']; // Sixteenth note wait
-  if (delta >= 0.125) return ['32']; // Thirty-second note wait
-  
-  // Default to smallest practical division for very short waits
+  // For very short durations
   return ['32'];
 }
 
