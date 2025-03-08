@@ -1,258 +1,125 @@
 // src/core/patternGenerator.js
-
 class ChordGenerator {
-  constructor() {
-    this.noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  generatePattern(options = {}) {
+    const { root = 60, type = 'major' } = options;
     
-    // Define intervals for different chord types
-    this.chordIntervals = {
-      major: [0, 4, 7],       // Root, Major 3rd, Perfect 5th
-      minor: [0, 3, 7],       // Root, Minor 3rd, Perfect 5th
-      diminished: [0, 3, 6],  // Root, Minor 3rd, Diminished 5th
-      augmented: [0, 4, 8],   // Root, Major 3rd, Augmented 5th
-      sus2: [0, 2, 7],        // Root, Major 2nd, Perfect 5th
-      sus4: [0, 5, 7],        // Root, Perfect 4th, Perfect 5th
-      major7: [0, 4, 7, 11],  // Root, Major 3rd, Perfect 5th, Major 7th
-      minor7: [0, 3, 7, 10]   // Root, Minor 3rd, Perfect 5th, Minor 7th
-    };
-    
-    // Define common chord progressions by scale degree
-    this.commonProgressions = {
-      major: {
-        'I-IV-V-I': ['I', 'IV', 'V', 'I'],
-        'I-V-vi-IV': ['I', 'V', 'vi', 'IV'],
-        'ii-V-I': ['ii', 'V', 'I']
-      },
-      minor: {
-        'i-iv-v-i': ['i', 'iv', 'v', 'i'],
-        'i-VI-III-VII': ['i', 'VI', 'III', 'VII'],
-        'i-iv-VII-III': ['i', 'iv', 'VII', 'III']
-      }
-    };
-    
-    // Define scale degrees for major and minor keys
-    this.scaleDegrees = {
-      major: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio'],
-      minor: ['i', 'iio', 'III', 'iv', 'v', 'VI', 'VII']
-    };
-  }
-  
-  noteToMidi(noteName, octave) {
-    const noteIndex = this.noteNames.indexOf(noteName);
-    if (noteIndex === -1) return null;
-    
-    return 12 * (octave + 1) + noteIndex;
-  }
-  
-  generateChord(root, type, octave) {
-    // If root is a string (e.g., 'C'), convert to MIDI note
-    let rootNote = root;
-    if (typeof root === 'string') {
-      rootNote = this.noteToMidi(root, octave);
+    let intervals;
+    if (type === 'major') {
+      intervals = [0, 4, 7]; // Major chord intervals (root, major 3rd, perfect 5th)
+    } else if (type === 'minor') {
+      intervals = [0, 3, 7]; // Minor chord intervals (root, minor 3rd, perfect 5th)
+    } else if (type === '7th') {
+      intervals = [0, 4, 7, 10]; // Dominant 7th chord
+    } else if (type === 'maj7') {
+      intervals = [0, 4, 7, 11]; // Major 7th chord
+    } else if (type === 'min7') {
+      intervals = [0, 3, 7, 10]; // Minor 7th chord
+    } else {
+      intervals = [0, 4, 7]; // Default to major
     }
     
-    if (rootNote === null) {
-      throw new Error(`Invalid root note: ${root}`);
-    }
-    
-    const intervals = this.chordIntervals[type];
-    if (!intervals) {
-      throw new Error(`Invalid chord type: ${type}`);
-    }
-    
-    // Generate chord notes based on intervals
-    return intervals.map(interval => rootNote + interval);
+    // Create chord notes
+    return intervals.map(interval => ({
+      pitch: root + interval,
+      startTime: options.startTime || 0,
+      duration: options.duration || 1,
+      velocity: options.velocity || 80
+    }));
   }
   
-  generatePattern(options) {
-    const {
-      progression = ['I', 'IV', 'V', 'I'],
-      key = 'C',
+  generateProgression(options = {}) {
+    const { 
+      key = 60, // C
+      progression = [0, 5, 7, 0], // I-IV-V-I in steps from key
       type = 'major',
-      octave = 4,
+      startTime = 0,
       duration = 1,
-      pattern = 'block'
+      velocity = 80
     } = options;
     
-    // Generate chord progression
-    const chords = this.generateProgression(progression, key, type, octave);
-    
-    // Apply pattern to each chord
-    let result = [];
-    
-    chords.forEach((chord, chordIndex) => {
-      switch (pattern) {
-        case 'block':
-          // Add all notes of the chord at the same time
-          result.push({
-            notes: chord,
-            startTime: chordIndex * duration,
-            duration: duration
-          });
-          break;
-          
-        case 'arpeggio':
-          // Arpeggiate the chord (play notes one after another)
-          chord.forEach((note, noteIndex) => {
-            result.push({
-              notes: [note],
-              startTime: chordIndex * duration + (noteIndex * duration / chord.length),
-              duration: duration / chord.length
-            });
-          });
-          break;
-          
-        default:
-          // Default to block chords
-          result.push({
-            notes: chord,
-            startTime: chordIndex * duration,
-            duration: duration
-          });
-      }
-    });
-    
-    return result;
-  }
-  
-  generateProgression(progression, key, type, octave) {
-    // Convert key name to index
-    const keyIndex = this.noteNames.indexOf(key);
-    if (keyIndex === -1) {
-      throw new Error(`Invalid key: ${key}`);
-    }
-    
-    // Define scale notes for the given key
-    const scaleType = type === 'major' ? 'major' : 'minor';
-    const scaleIntervals = scaleType === 'major' 
-      ? [0, 2, 4, 5, 7, 9, 11] // Major scale intervals
-      : [0, 2, 3, 5, 7, 8, 10]; // Natural minor scale intervals
-    
-    const scaleNotes = scaleIntervals.map(interval => (keyIndex + interval) % 12);
-    
-    // Map chord quality based on scale degree
-    const chordQualities = scaleType === 'major'
-      ? ['major', 'minor', 'minor', 'major', 'major', 'minor', 'diminished']
-      : ['minor', 'diminished', 'major', 'minor', 'minor', 'major', 'major'];
-    
-    // Generate chords for each degree in the progression
-    return progression.map(degree => {
-      // Convert degree (e.g., 'I', 'ii', 'V') to scale index
-      let degreeIndex;
-      let chordType;
-      
-      if (degree.includes('o')) {
-        // Diminished chord
-        degreeIndex = this.scaleDegrees[scaleType].indexOf(degree);
-        chordType = 'diminished';
-      } else {
-        // Regular scale degree
-        const baseDegree = degree.replace(/[^IiVv]/g, '');
-        degreeIndex = this.scaleDegrees[scaleType].indexOf(baseDegree);
-        
-        if (degreeIndex === -1) {
-          throw new Error(`Invalid chord degree: ${degree}`);
-        }
-        
-        chordType = chordQualities[degreeIndex];
-      }
-      
-      // Get root note for this degree
-      const rootNote = scaleNotes[degreeIndex];
-      const rootNoteName = this.noteNames[rootNote];
-      
-      // Generate the chord
-      return this.generateChord(rootNoteName, chordType, octave);
+    return progression.map((step, index) => {
+      return this.generatePattern({
+        root: key + step,
+        type,
+        startTime: startTime + (index * duration),
+        duration,
+        velocity
+      });
     });
   }
 }
 
 class BasslineGenerator {
-  constructor() {
-    // Initialize with common bassline patterns
-    this.patterns = {
-      simple: [0, 0, 0, 0],
-      walking: [0, 4, 7, 9],
-      octave: [0, 12, 0, 12],
-      pentatonic: [0, 2, 4, 7]
-    };
-  }
-  
-  generatePattern(chordRoots, pattern = [0, 3, 7, 10], notesPerChord = 4, noteDuration = 0.25) {
-    if (!chordRoots || chordRoots.length === 0) {
-      return [];
-    }
-    
-    // If pattern is a string, use predefined pattern
-    const patternToUse = typeof pattern === 'string' ? this.patterns[pattern] : pattern;
-    
-    if (!patternToUse) {
-      throw new Error(`Invalid pattern: ${pattern}`);
-    }
+  generatePattern(chordRoots, pattern = 'simple', octave = 3, duration = 0.5) {
+    // Transpose chord roots to the bass octave (octave 3 = C3 = MIDI note 48)
+    const bassRoots = chordRoots.map(root => {
+      // Normalize to C in the requested octave
+      const normalizedRoot = (root % 12) + (octave * 12);
+      return normalizedRoot;
+    });
     
     let bassline = [];
     
-    // For each chord root, generate bass notes according to the pattern
-    chordRoots.forEach((root, chordIndex) => {
-      for (let i = 0; i < notesPerChord; i++) {
-        // Use pattern in a cyclic manner
-        const patternIndex = i % patternToUse.length;
-        const offset = patternToUse[patternIndex];
+    if (pattern === 'simple') {
+      // Just play the root notes
+      bassRoots.forEach((root, index) => {
+        bassline.push({
+          pitch: root,
+          startTime: index,
+          duration: 1,
+          velocity: 100
+        });
+      });
+    } else if (pattern === 'walking') {
+      // Walking bass pattern (root, fifth, octave, approach)
+      bassRoots.forEach((root, index) => {
+        bassline.push({
+          pitch: root,
+          startTime: index * 2,
+          duration,
+          velocity: 100
+        });
         
         bassline.push({
-          pitch: root - 12 + offset, // One octave down + pattern offset
-          startTime: chordIndex * notesPerChord * noteDuration + i * noteDuration,
-          duration: noteDuration,
-          velocity: i === 0 ? 100 : 80 // Emphasize the first note of each chord
+          pitch: root + 7, // fifth
+          startTime: index * 2 + duration,
+          duration,
+          velocity: 90
         });
-      }
-    });
-    
-    return bassline;
-  }
-  
-  generateWalking(chordRoots, notesPerChord = 4, noteDuration = 0.25) {
-    if (!chordRoots || chordRoots.length === 0) {
-      return [];
+        
+        bassline.push({
+          pitch: root + 12, // octave
+          startTime: index * 2 + (2 * duration),
+          duration,
+          velocity: 95
+        });
+        
+        const nextRoot = index < bassRoots.length - 1 ? bassRoots[index + 1] : bassRoots[0];
+        const approach = (nextRoot > root) ? nextRoot - 1 : nextRoot + 1;
+        
+        bassline.push({
+          pitch: approach,
+          startTime: index * 2 + (3 * duration),
+          duration,
+          velocity: 85
+        });
+      });
+    } else if (pattern === 'arpeggio') {
+      // Arpeggiated pattern
+      bassRoots.forEach((root, index) => {
+        // Root-Fifth-Octave-Fifth pattern
+        const intervals = [0, 7, 12, 7];
+        
+        intervals.forEach((interval, i) => {
+          bassline.push({
+            pitch: root + interval,
+            startTime: index * 2 + (i * duration),
+            duration,
+            velocity: 100 - (i * 5)
+          });
+        });
+      });
     }
-    
-    let bassline = [];
-    const walkingIntervals = [0, 2, 4, 5, 7, 9, 10, 12]; // Possible intervals for walking bass
-    
-    // For each chord root, generate walking bass notes
-    chordRoots.forEach((root, chordIndex) => {
-      let previousNote = root - 12; // Start one octave down
-      
-      for (let i = 0; i < notesPerChord; i++) {
-        // First note of each chord is the root
-        if (i === 0) {
-          bassline.push({
-            pitch: previousNote,
-            startTime: chordIndex * notesPerChord * noteDuration + i * noteDuration,
-            duration: noteDuration,
-            velocity: 100
-          });
-        } else {
-          // Choose a nearby note from the walkingIntervals
-          const possibleIntervals = walkingIntervals.filter(interval =>
-            Math.abs((previousNote + interval) - (root - 12)) <= 12 // Keep within an octave
-          );
-          
-          // Select a random interval from possible ones
-          const randomInterval = possibleIntervals[Math.floor(Math.random() * possibleIntervals.length)];
-          const nextNote = previousNote + (Math.random() > 0.5 ? randomInterval : -randomInterval);
-          
-          bassline.push({
-            pitch: nextNote,
-            startTime: chordIndex * notesPerChord * noteDuration + i * noteDuration,
-            duration: noteDuration,
-            velocity: 80
-          });
-          
-          previousNote = nextNote;
-        }
-      }
-    });
     
     return bassline;
   }
@@ -260,136 +127,106 @@ class BasslineGenerator {
 
 class DrumPatternGenerator {
   constructor() {
-    // Define standard drum note numbers
-    this.drumNotes = {
+    // MIDI note mappings for GM drum kit
+    this.drumMap = {
       kick: 36,
       snare: 38,
-      hihat: 42,
-      openHihat: 46,
+      hiHat: 42,
+      openHiHat: 46,
+      rideCymbal: 51,
+      crash: 49,
       tom1: 48,
       tom2: 45,
-      tom3: 43,
-      crash: 49,
-      ride: 51
+      tom3: 43
     };
   }
   
-  generateBasicBeat(beats = 4, division = 4) {
-    const totalSteps = beats * division;
-    const stepDuration = 1 / division;
-    
-    // Initialize empty drum tracks
+  generatePattern(style = 'basic', length = 4, velocity = 100) {
     const pattern = {
       kick: [],
       snare: [],
-      hihat: [],
-      openHihat: [],
-      tom1: [],
-      tom2: [],
-      tom3: [],
+      hiHat: [],
       crash: [],
-      ride: []
+      tom: []
     };
     
-    // Generate pattern based on time signature
-    for (let step = 0; step < totalSteps; step++) {
-      const startTime = step * stepDuration;
-      
-      // Kick drum on beat 1 and sometimes on beat 3
-      if (step % division === 0 || (beats === 4 && step === division * 2)) {
-        pattern.kick.push({
-          pitch: this.drumNotes.kick,
-          startTime: startTime,
-          duration: stepDuration,
-          velocity: step % division === 0 ? 100 : 80
-        });
-      }
-      
-      // Snare on beats 2 and 4 in 4/4, or beat 3 in 3/4
-      if ((beats === 4 && (step === division || step === division * 3)) ||
-          (beats === 3 && step === division * 2)) {
-        pattern.snare.push({
-          pitch: this.drumNotes.snare,
-          startTime: startTime,
-          duration: stepDuration,
-          velocity: 90
-        });
-      }
-      
-      // Hi-hat on every step or every other step
-      if (step % (division / 2) === 0) {
-        pattern.hihat.push({
-          pitch: this.drumNotes.hihat,
-          startTime: startTime,
-          duration: stepDuration,
-          velocity: step % division === 0 ? 90 : 70
-        });
-      }
-    }
-    
-    return pattern;
-  }
-  
-  generateFill(bars = 1) {
-    const totalSteps = bars * 16; // Assuming 16th notes
-    const stepDuration = 1 / 16;
-    
-    // Initialize empty drum tracks for the fill
-    const pattern = {
-      kick: [],
-      snare: [],
-      tom1: [],
-      tom2: [],
-      tom3: [],
-      crash: []
-    };
-    
-    // Generate a drum fill
-    // This is a simple example - real drum fills would be more complex
-    for (let step = 0; step < totalSteps; step++) {
-      const startTime = step * stepDuration;
-      
-      // Add some randomized tom hits
-      if (step % 2 === 0) {
-        const tomChoice = Math.floor(Math.random() * 3);
-        const tom = tomChoice === 0 ? 'tom1' : tomChoice === 1 ? 'tom2' : 'tom3';
+    if (style === 'basic') {
+      // 4/4 basic rock beat
+      for (let i = 0; i < length; i++) {
+        // Kick on beats 1 and 3
+        if (i % 4 === 0 || i % 4 === 2) {
+          pattern.kick.push({
+            pitch: this.drumMap.kick,
+            startTime: i * 0.5,
+            duration: 0.5,
+            velocity
+          });
+        }
         
-        pattern[tom].push({
-          pitch: this.drumNotes[tom],
-          startTime: startTime,
-          duration: stepDuration,
-          velocity: 80 + Math.floor(Math.random() * 20)
+        // Snare on beats 2 and 4
+        if (i % 4 === 1 || i % 4 === 3) {
+          pattern.snare.push({
+            pitch: this.drumMap.snare,
+            startTime: i * 0.5,
+            duration: 0.5,
+            velocity
+          });
+        }
+        
+        // Hi-hat on every 8th note
+        pattern.hiHat.push({
+          pitch: this.drumMap.hiHat,
+          startTime: i * 0.5,
+          duration: 0.5,
+          velocity: velocity - 20
+        });
+      }
+    } else if (style === 'fill') {
+      // Add more complex drum fill pattern
+      
+      // Keep basic hihat pattern
+      for (let i = 0; i < length; i++) {
+        pattern.hiHat.push({
+          pitch: this.drumMap.hiHat,
+          startTime: i * 0.5,
+          duration: 0.5,
+          velocity: velocity - 20
         });
       }
       
-      // Add some snare hits
-      if (step % 3 === 0) {
+      // Add snare roll
+      for (let i = length - 4; i < length; i++) {
         pattern.snare.push({
-          pitch: this.drumNotes.snare,
-          startTime: startTime,
-          duration: stepDuration,
-          velocity: 90
+          pitch: this.drumMap.snare,
+          startTime: i * 0.25,
+          duration: 0.25,
+          velocity: velocity + 10
         });
       }
       
-      // Kick at the beginning and end
-      if (step === 0 || step === totalSteps - 1) {
-        pattern.kick.push({
-          pitch: this.drumNotes.kick,
-          startTime: startTime,
-          duration: stepDuration,
-          velocity: 100
-        });
-      }
+      // Add tom hits
+      pattern.tom.push({
+        pitch: this.drumMap.tom1,
+        startTime: (length - 1) * 0.5,
+        duration: 0.5,
+        velocity: velocity + 5
+      });
+      
+      pattern.tom.push({
+        pitch: this.drumMap.tom2,
+        startTime: (length - 0.5) * 0.5,
+        duration: 0.5,
+        velocity: velocity + 10
+      });
+      
+      // Crash at the end
+      pattern.crash.push({
+        pitch: this.drumMap.crash,
+        startTime: (length - 0.5) * 0.5,
+        duration: 1,
+        velocity: velocity + 15
+      });
     }
-    
-    // Add a crash at the end
-    pattern.crash.push({
-      pitch: this.drumNotes.crash,
-      startTime: bars - stepDuration,
-      duration: stepDuration * 2,
-      velocity: 100
-    });
     
     return pattern;
   }
