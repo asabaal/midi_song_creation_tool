@@ -21,6 +21,13 @@ This guide provides steps for testing and debugging the MIDI Song Creation Tool.
 
 4. Open your browser to [http://localhost:3003](http://localhost:3003)
 
+## Key Features
+
+- Create chord progressions, basslines, and drum patterns
+- Visualize music with a piano roll interface
+- Play back MIDI sequences in the browser
+- Export to standard MIDI files compatible with DAWs
+
 ## Debugging Tools
 
 ### API Test Endpoint
@@ -46,6 +53,30 @@ The following endpoints can help diagnose issues:
   ```
   GET /api/debug/pattern-generators
   ```
+
+## MIDI Export
+
+The export functionality allows creating standard MIDI files (.mid) that can be imported into any DAW.
+
+### Export Endpoints
+
+- Export current sequence:
+  ```
+  GET /api/sessions/:sessionId/export/midi
+  ```
+
+- Export specific sequence:
+  ```
+  GET /api/sessions/:sessionId/sequences/:sequenceId/export/midi
+  ```
+
+### Troubleshooting Export
+
+If export isn't working:
+1. Check that midi-writer-js is installed: `npm list midi-writer-js`
+2. Try accessing the export endpoint directly in your browser (will trigger download)
+3. Check browser console for errors during download
+4. Examine the server logs for MIME type or file generation errors
 
 ## Common Issues
 
@@ -81,5 +112,6 @@ Key files:
 - `midi-api.js` - Main API server
 - `midi-framework.js` - Core MIDI functionality
 - `fixed-patterns.js` - Pattern generators with fixes
+- `midi-exporter.js` - MIDI file export functionality
 - `public/index.html` - Web interface
 - `public/debug.html` - Debugging interface
