@@ -11,9 +11,11 @@
              border-radius: 4px; cursor: pointer; margin: 5px; }
     button.blue { background: #2196F3; }
     button.red { background: #F44336; }
+    button.purple { background: #9C27B0; }
+    button.orange { background: #FF9800; }
     button:disabled { background: #cccccc; cursor: not-allowed; }
     .card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
-    .controls { display: flex; gap: 10px; margin-bottom: 10px; }
+    .controls { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     #piano-roll { height: 400px; background: #f5f5f5; overflow: auto; position: relative; }
     .piano-key { position: absolute; height: 20px; border-bottom: 1px solid #ddd; display: flex;
                 align-items: center; padding-left: 10px; font-size: 12px; width: 100px; }
@@ -29,6 +31,9 @@
           font-family: monospace; margin-top: 10px; }
     .success { color: green; }
     .error { color: red; }
+    textarea { width: 100%; height: 100px; margin-top: 10px; font-family: monospace; }
+    .hidden { display: none; }
+    .info-text { font-size: 0.9em; color: #666; margin: 5px 0; }
   </style>
 </head>
 <body>
@@ -61,6 +66,33 @@
       <span id="playStatus">Nothing to play</span>
     </div>
   </div>
+
+  <div class="card">
+    <h2>4. Import/Export</h2>
+    <div class="controls">
+      <button id="exportMidiBtn" class="purple" disabled>💾 Export to MIDI File</button>
+      <button id="exportJsonBtn" class="purple" disabled>📄 Export as JSON</button>
+      <button id="importBtn" class="orange" disabled>📂 Import</button>
+      <span id="exportStatus">Create music to export</span>
+    </div>
+    <p class="info-text">Export your song as a .mid file to open in any DAW (Ableton, Logic, FL Studio, etc.) or as JSON for sharing and reimporting.</p>
+    
+    <div id="exportArea" class="hidden">
+      <p>Exported MIDI Data (JSON format):</p>
+      <textarea id="exportText" readonly></textarea>
+      <p>Save this JSON data or copy it to import later.</p>
+      <button id="copyJsonBtn" class="blue">Copy to Clipboard</button>
+      <button id="saveJsonBtn" class="blue">Save as File</button>
+    </div>
+    
+    <div id="importArea" class="hidden">
+      <p>Paste MIDI Data (JSON format) to import:</p>
+      <textarea id="importText"></textarea>
+      <button id="processImportBtn" class="orange">Process Import</button>
+      <p>Or upload a JSON file:</p>
+      <input type="file" id="fileInput" accept=".json">
+    </div>
+  </div>
   
   <div class="card">
     <h2>Piano Roll</h2>
@@ -84,9 +116,15 @@
     // DOM elements
     const setupStatus = document.getElementById('setupStatus');
     const playStatus = document.getElementById('playStatus');
+    const exportStatus = document.getElementById('exportStatus');
     const pianoRoll = document.getElementById('piano-roll');
     const statusBar = document.querySelector('.status');
     const logElement = document.getElementById('log');
+    const exportText = document.getElementById('exportText');
+    const importText = document.getElementById('importText');
+    const exportArea = document.getElementById('exportArea');
+    const importArea = document.getElementById('importArea');
+    const fileInput = document.getElementById('fileInput');
     
     // Buttons
     const setupBtn = document.getElementById('setupBtn');
@@ -96,6 +134,12 @@
     const clearBtn = document.getElementById('clearBtn');
     const playBtn = document.getElementById('playBtn');
     const stopBtn = document.getElementById('stopBtn');
+    const exportMidiBtn = document.getElementById('exportMidiBtn');
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+    const importBtn = document.getElementById('importBtn');
+    const processImportBtn = document.getElementById('processImportBtn');
+    const copyJsonBtn = document.getElementById('copyJsonBtn');
+    const saveJsonBtn = document.getElementById('saveJsonBtn');
     
     // Logging function
     function log(message, type = 'info') {
@@ -131,6 +175,11 @@
           const errorText = await response.text();
           log(`API error (${response.status}): ${errorText}`, 'error');
           return null;
+        }
+        
+        // For binary responses (like MIDI files), return the Response object
+        if (response.headers.get('Content-Type') === 'audio/midi') {
+          return response;
         }
         
         const data = await response.json();
@@ -192,6 +241,9 @@
       bassBtn.disabled = false;
       drumBtn.disabled = false;
       clearBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
+      importBtn.disabled = false;
       
       // Get piano roll ready
       initPianoRoll();
@@ -228,10 +280,13 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Enable play button
+      // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export`;
     }
     
     // Generate bassline
@@ -263,10 +318,13 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Enable play button
+      // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export`;
     }
     
     // Generate drums
@@ -295,10 +353,13 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Enable play button
+      // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export`;
     }
     
     // Clear all notes
@@ -324,10 +385,208 @@
       // Refresh piano roll
       refreshPianoRoll();
       
-      // Disable play button
+      // Disable play and export buttons
       playBtn.disabled = true;
       stopBtn.disabled = true;
+      exportMidiBtn.disabled = true;
+      exportJsonBtn.disabled = true;
       playStatus.textContent = 'Nothing to play';
+      exportStatus.textContent = 'Create music to export';
+    }
+    
+    // Export MIDI file
+    async function exportMidiFile() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      if (state.noteCount === 0) {
+        log('No notes to export', 'error');
+        updateStatus('No notes to export');
+        return;
+      }
+      
+      updateStatus('Exporting MIDI file...');
+      
+      try {
+        // Trigger file download using the export endpoint
+        const response = await callApi(`/sessions/${state.sessionId}/export/midi`);
+        
+        if (!response) {
+          throw new Error('Failed to get MIDI file from server');
+        }
+        
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Extract filename from the Content-Disposition header if possible
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = 'my_music.mid';
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) { 
+            filename = matches[1].replace(/['"]/g, '');
+          }
+        }
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        updateStatus(`Exported MIDI file successfully: ${filename}`);
+        log(`Exported MIDI file: ${filename}`, 'success');
+        exportStatus.textContent = `MIDI file exported successfully`;
+      } catch (error) {
+        console.error(error);
+        log(`Error exporting MIDI: ${error.message}`, 'error');
+        updateStatus('Failed to export MIDI file');
+      }
+    }
+    
+    // Export as JSON
+    async function exportJson() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Exporting JSON data...');
+      
+      const data = await callApi(`/sessions/${state.sessionId}/export/json`, 'GET');
+      
+      if (!data) {
+        updateStatus('Failed to export JSON data');
+        return;
+      }
+      
+      // Show exported data in textarea
+      exportText.value = JSON.stringify(data.data, null, 2);
+      exportArea.classList.remove('hidden');
+      importArea.classList.add('hidden');
+      
+      updateStatus(`Exported ${data.noteCount} notes to JSON format`);
+      log(`Exported sequence ${data.sequenceId}`, 'success');
+    }
+    
+    // Copy JSON to clipboard
+    function copyJsonToClipboard() {
+      exportText.select();
+      document.execCommand('copy');
+      log('JSON data copied to clipboard', 'success');
+    }
+    
+    // Save JSON to file
+    function saveJsonToFile() {
+      const blob = new Blob([exportText.value], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'midi_sequence.json';
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      log('JSON data saved to file', 'success');
+    }
+    
+    // Show import area
+    function showImportArea() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      exportArea.classList.add('hidden');
+      importArea.classList.remove('hidden');
+      importText.value = '';
+      importText.focus();
+      
+      updateStatus('Ready to import data');
+    }
+    
+    // Process import
+    async function processImport() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      const jsonData = importText.value.trim();
+      if (!jsonData) {
+        log('No data to import', 'error');
+        return;
+      }
+      
+      updateStatus('Importing data...');
+      
+      // Parse JSON to validate it first
+      try {
+        JSON.parse(jsonData);
+      } catch (e) {
+        log(`Invalid JSON data: ${e.message}`, 'error');
+        updateStatus('Invalid JSON data');
+        return;
+      }
+      
+      const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', {
+        data: jsonData
+      });
+      
+      if (!data) {
+        updateStatus('Failed to import data');
+        return;
+      }
+      
+      state.sequenceId = data.sequenceId;
+      state.noteCount = data.sequence.noteCount;
+      
+      updateStatus(`Imported ${data.sequence.noteCount} notes successfully`);
+      log(`Imported sequence ${data.sequenceId}`, 'success');
+      
+      // Hide import area
+      importArea.classList.add('hidden');
+      
+      // Refresh piano roll and update UI
+      refreshPianoRoll();
+      
+      // Enable play button if notes were imported
+      playBtn.disabled = data.sequence.noteCount === 0;
+      stopBtn.disabled = data.sequence.noteCount === 0;
+      exportMidiBtn.disabled = data.sequence.noteCount === 0;
+      exportJsonBtn.disabled = data.sequence.noteCount === 0;
+      playStatus.textContent = data.sequence.noteCount > 0 ? 
+        `${data.sequence.noteCount} notes ready to play` : 'Nothing to play';
+      exportStatus.textContent = data.sequence.noteCount > 0 ?
+        `Ready to export` : 'Create music to export';
+    }
+    
+    // Handle file upload
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        importText.value = e.target.result;
+        log(`File loaded: ${file.name}`, 'success');
+      };
+      reader.onerror = function(e) {
+        log(`Error reading file: ${e.target.error}`, 'error');
+      };
+      reader.readAsText(file);
     }
     
     // Initialize piano roll
@@ -523,6 +782,13 @@
     clearBtn.addEventListener('click', clearNotes);
     playBtn.addEventListener('click', playSequence);
     stopBtn.addEventListener('click', stopPlayback);
+    exportMidiBtn.addEventListener('click', exportMidiFile);
+    exportJsonBtn.addEventListener('click', exportJson);
+    importBtn.addEventListener('click', showImportArea);
+    processImportBtn.addEventListener('click', processImport);
+    copyJsonBtn.addEventListener('click', copyJsonToClipboard);
+    saveJsonBtn.addEventListener('click', saveJsonToFile);
+    fileInput.addEventListener('change', handleFileUpload);
     
     // Initialize
     updateStatus('Ready - click "Set Up" to begin');

@@ -1,0 +1,23 @@
+[2025-03-08T02:26:21.343Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:26:21.343Z] ERROR: Error generating MIDI file: Failed to create MIDI file: w is not a valid duration.
+[2025-03-08T02:26:27.034Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:26:27.034Z] ERROR: Error generating MIDI file: Failed to create MIDI file: w is not a valid duration.
+[2025-03-08T02:26:37.933Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:26:37.933Z] ERROR: Error generating MIDI file: Failed to create MIDI file: w is not a valid duration.
+[2025-03-08T02:26:43.948Z] ERROR: Error importing sequence: Cannot read properties of undefined (reading 'map')
+[2025-03-08T02:35:06.830Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:35:06.830Z] ERROR: Error generating MIDI file: Failed to create MIDI file: Cannot read properties of undefined (reading 'toString')
+[2025-03-08T02:35:09.442Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:35:09.442Z] ERROR: Error generating MIDI file: Failed to create MIDI file: Cannot read properties of undefined (reading 'toString')
+[2025-03-08T02:35:09.913Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:35:09.913Z] ERROR: Error generating MIDI file: Failed to create MIDI file: Cannot read properties of undefined (reading 'toString')
+[2025-03-08T02:35:10.129Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:35:10.129Z] ERROR: Error generating MIDI file: Failed to create MIDI file: Cannot read properties of undefined (reading 'toString')
+[2025-03-08T02:35:10.313Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:35:10.314Z] ERROR: Error generating MIDI file: Failed to create MIDI file: Cannot read properties of undefined (reading 'toString')
+[2025-03-08T02:35:10.433Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:35:10.433Z] ERROR: Error generating MIDI file: Failed to create MIDI file: Cannot read properties of undefined (reading 'toString')
+[2025-03-08T02:38:35.080Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:38:35.080Z] ERROR: Error generating MIDI file: Failed to create MIDI file: MidiWriter.MetaEvent is not a constructor
+[2025-03-08T02:38:56.387Z] ERROR: Error creating MIDI file:
+[2025-03-08T02:38:56.387Z] ERROR: Error generating MIDI file: Failed to create MIDI file: MidiWriter.MetaEvent is not a constructor
