@@ -7,6 +7,7 @@ An agentic framework for creating and manipulating MIDI music via a web interfac
 - Create chord progressions, basslines, and drum patterns
 - Visualize music with a piano roll interface
 - Play back MIDI sequences in the browser
+- Export to standard MIDI files compatible with any DAW (Ableton, Logic, FL Studio, etc.)
 - API for AI assistant integration
 
 ## Getting Started
@@ -49,6 +50,25 @@ The web interface provides a simple way to:
 2. Generate music (chord progressions, basslines, drum patterns)
 3. Play back the music
 4. Visualize notes on the piano roll
+5. Export to standard MIDI files
+
+### Creating Music
+
+1. Click "Set Up" to create a session
+2. Use "Add Chord Progression", "Add Bassline", and "Add Drums" buttons to create parts
+3. Click "Play" to hear your music
+4. When satisfied, click "Export to MIDI" to save your song
+
+### Export to DAW
+
+The export feature creates standard MIDI files (.mid) compatible with:
+- Ableton Live
+- Logic Pro
+- FL Studio
+- Pro Tools
+- Cubase
+- GarageBand
+- Any other DAW that supports MIDI
 
 ### API Endpoints
 
@@ -60,6 +80,7 @@ The tool provides the following key API endpoints:
 - **Generate bassline**: `POST /api/sessions/:sessionId/patterns/bassline`
 - **Generate drums**: `POST /api/sessions/:sessionId/patterns/drums`
 - **Clear notes**: `DELETE /api/sessions/:sessionId/notes`
+- **Export to MIDI**: `GET /api/sessions/:sessionId/export/midi`
 
 See the [DEVELOPER.md](DEVELOPER.md) file for detailed API documentation.
 
@@ -75,10 +96,10 @@ Key debugging tools:
 
 ## Future Plans
 
-- Export to standard MIDI files
 - More pattern generation options
-- Integration with AI tools
+- Integration with advanced AI tools
 - Support for multiple simultaneous sessions
+- MIDI import functionality
 
 ## License
 
@@ -88,3 +109,4 @@ ISC License
 
 - Web Audio API
 - Express.js
+- midi-writer-js
