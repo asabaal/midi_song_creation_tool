@@ -532,9 +532,17 @@
       
       updateStatus('Importing data...');
       
+      // Parse JSON to validate it first
+      try {
+        JSON.parse(jsonData);
+      } catch (e) {
+        log(`Invalid JSON data: ${e.message}`, 'error');
+        updateStatus('Invalid JSON data');
+        return;
+      }
+      
       const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', {
-        data: jsonData,
-        name: 'Imported Sequence'
+        data: jsonData
       });
       
       if (!data) {
@@ -557,8 +565,12 @@
       // Enable play button if notes were imported
       playBtn.disabled = data.sequence.noteCount === 0;
       stopBtn.disabled = data.sequence.noteCount === 0;
+      exportMidiBtn.disabled = data.sequence.noteCount === 0;
+      exportJsonBtn.disabled = data.sequence.noteCount === 0;
       playStatus.textContent = data.sequence.noteCount > 0 ? 
         `${data.sequence.noteCount} notes ready to play` : 'Nothing to play';
+      exportStatus.textContent = data.sequence.noteCount > 0 ?
+        `Ready to export` : 'Create music to export';
     }
     
     // Handle file upload
@@ -569,6 +581,10 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         importText.value = e.target.result;
+        log(`File loaded: ${file.name}`, 'success');
+      };
+      reader.onerror = function(e) {
+        log(`Error reading file: ${e.target.error}`, 'error');
       };
       reader.readAsText(file);
     }
