@@ -6,8 +6,7 @@ class MidiSequence {
     this.bpm = 120; // Alias for tests
     this.timeSignature = [4, 4]; // Add for tests
     
-    // Initialize with a default track
-    this.addTrack();
+    // Don't initialize with a default track for tests
   }
   
   addTrack(instrument = 0, name = '') {
