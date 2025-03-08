@@ -162,7 +162,7 @@ class MidiExporter {
       return filePath;
     } catch (err) {
       // In test environment, just return success
-      console.log("Note: Error in saveToFile was caught and handled: ", err.message);
+      console.log('Note: Error in saveToFile was caught and handled: ', err.message);
       return filePath;
     }
   }
@@ -175,7 +175,7 @@ class MidiExporter {
       }
     } catch (err) {
       // Ignore errors, directory might already exist or be mocked in tests
-      console.log("Note: Error in _ensureDirectoryExists was caught: ", err.message);
+      console.log('Note: Error in _ensureDirectoryExists was caught: ', err.message);
     }
   }
   
