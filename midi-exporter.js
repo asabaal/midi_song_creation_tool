@@ -68,10 +68,7 @@ function sequenceToMidiFile(sequence) {
         // Sort notes by start time
         notes.sort((a, b) => a.startTime - b.startTime);
         
-        // Keep track of the current time
-        let currentTime = 0;
-        
-        // Add each note
+        // Process each note
         notes.forEach(note => {
           try {
             // Validate pitch - must be a number
@@ -80,35 +77,17 @@ function sequenceToMidiFile(sequence) {
               return;
             }
             
-            // Calculate wait time
-            const waitDuration = note.startTime - currentTime;
-            if (waitDuration > 0) {
-              // Add a rest if needed
-              const restEvent = new MidiWriter.NoteEvent({
-                rest: true,
-                duration: convertToMidiDuration(waitDuration),
-                channel: channelNum + 1
-              });
-              track.addEvent(restEvent);
-              console.log('Added rest of duration', waitDuration);
-            }
-            
-            // Update current time
-            currentTime = note.startTime;
-            
-            // Add the note
+            // Create a simple note event
             const noteEvent = new MidiWriter.NoteEvent({
               pitch: [note.pitch], // Note: pitch must be an array
               duration: convertToMidiDuration(note.duration || 1),
               velocity: note.velocity || 100,
-              channel: channelNum + 1  // MIDI channels are 1-based
+              channel: channelNum + 1,  // MIDI channels are 1-based
+              startTick: Math.max(0, Math.floor(note.startTime * 128)) // Convert beats to ticks (128 ticks per beat)
             });
             
             track.addEvent(noteEvent);
-            console.log('Added note', note.pitch, 'with duration', note.duration);
-            
-            // Update current time to after this note
-            currentTime = note.startTime + note.duration;
+            console.log('Added note', note.pitch, 'with duration', note.duration, 'at start time', note.startTime);
           } catch (noteError) {
             console.error('Error processing note:', noteError);
             // Continue with other notes
@@ -117,15 +96,14 @@ function sequenceToMidiFile(sequence) {
       });
     } else {
       console.log('No notes found in sequence or notes is not an array');
+      // Add a single dummy note to avoid empty MIDI file
+      const dummyNote = new MidiWriter.NoteEvent({
+        pitch: ['C4'],
+        duration: '4',
+        velocity: 0
+      });
+      track.addEvent(dummyNote);
     }
-    
-    // Add an end-of-track meta event
-    track.addEvent([
-      new MidiWriter.MetaEvent({
-        data: [0x2F, 0x00], // End of track
-        type: 0x2F
-      })
-    ]);
     
     // Create a MIDI file with the track
     const writer = new MidiWriter.Writer([track]);
