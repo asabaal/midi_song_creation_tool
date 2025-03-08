@@ -1,70 +1,90 @@
 # MIDI Song Creation Tool
 
-An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.
-
-## Overview
-
-This framework provides a robust set of tools for working with MIDI data programmatically. It includes core modules for music theory, note manipulation, pattern generation, and sequence operations.
+An agentic framework for creating and manipulating MIDI music via a web interface and API. This tool enables AI assistants like Claude to compose and edit music.
 
 ## Features
 
-- Creating and manipulating MIDI note sequences
-- Working with musical scales, chords, and progressions
-- Generating rhythmic patterns for different instruments
-- Exporting/importing standard MIDI files
-- API for Claude to access programmatically
+- Create chord progressions, basslines, and drum patterns
+- Visualize music with a piano roll interface
+- Play back MIDI sequences in the browser
+- API for AI assistant integration
 
-## Components
+## Getting Started
 
-The framework consists of three main components:
+### Prerequisites
 
-1. **Core MIDI Framework** (`midi-framework.js`): Handles note creation, manipulation and basic music theory
-2. **API Layer** (`midi-api.js`): Provides structured endpoints for Claude to interact with
-3. **Web Interface** (`public/index.html`): Simple UI for human testing and visualization
+- Node.js 16+ installed
+- A modern web browser (Chrome, Firefox, Edge)
 
-## Setup Instructions
+### Installation
 
-1. **Install Dependencies**:
+1. Clone the repository:
    ```bash
-   npm init -y
-   npm install express body-parser cors
+   git clone https://github.com/asabaal/midi_song_creation_tool.git
+   cd midi_song_creation_tool
    ```
 
-2. **File Structure**:
-   - Create `midi-framework.js` (core music theory and MIDI operations)
-   - Create `midi-api.js` (RESTful API endpoints)
-   - Create `public/index.html` (web interface)
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-3. **Start the Server**:
+3. Start the server:
    ```bash
    node midi-api.js
    ```
 
-4. **Access the UI**: Open `http://localhost:3000` in your browser
+4. Open your browser to:
+   ```
+   http://localhost:3003
+   ```
 
-## API Documentation
+## Usage
 
-The API provides endpoints for:
+### Web Interface
 
-- Session management
-- Sequence creation and modification
-- Note manipulation
-- Music theory operations (scales, chords, progressions)
-- Pattern generation (chord progressions, arpeggios, basslines, drums)
-- Sequence operations (variations, quantization, merging)
+The web interface provides a simple way to:
 
-All endpoints support JSON and follow RESTful conventions.
+1. Create a session
+2. Generate music (chord progressions, basslines, drum patterns)
+3. Play back the music
+4. Visualize notes on the piano roll
 
-## Claude Integration
+### API Endpoints
 
-Claude can interact with this framework to help with music creation tasks including:
+The tool provides the following key API endpoints:
 
-- Creating chord progressions in specific keys
-- Generating drum patterns in various styles
-- Building arpeggios and basslines
-- Applying music theory principles to compositions
-- Creating variations and transformations of musical ideas
+- **Create a session**: `POST /api/sessions`
+- **Create a sequence**: `POST /api/sessions/:sessionId/sequences`
+- **Generate chord progression**: `POST /api/sessions/:sessionId/patterns/chord-progression`
+- **Generate bassline**: `POST /api/sessions/:sessionId/patterns/bassline`
+- **Generate drums**: `POST /api/sessions/:sessionId/patterns/drums`
+- **Clear notes**: `DELETE /api/sessions/:sessionId/notes`
+
+See the [DEVELOPER.md](DEVELOPER.md) file for detailed API documentation.
+
+## Debugging
+
+If you encounter issues, see the [DEBUG_GUIDE.md](DEBUG_GUIDE.md) file for debugging tips.
+
+Key debugging tools:
+- `/debug.html` interface
+- `/api/test` endpoint
+- `/api/debug/files` for file system checking
+- Logs in the console and error.log
+
+## Future Plans
+
+- Export to standard MIDI files
+- More pattern generation options
+- Integration with AI tools
+- Support for multiple simultaneous sessions
 
 ## License
 
-MIT
+ISC License
+
+## Acknowledgments
+
+- Web Audio API
+- Express.js

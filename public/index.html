@@ -3,1633 +3,530 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MIDI Song Creation Tool</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>Super Simple MIDI Player</title>
   <style>
-    body {
-      padding-top: 20px;
-    }
-    .piano-roll {
-      width: 100%;
-      height: 300px;
-      overflow: auto;
-      position: relative;
-      background-color: #f0f0f0;
-      border: 1px solid #ccc;
-    }
-    .piano-roll-grid {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-    .piano-key {
-      position: absolute;
-      left: 0;
-      height: 20px;
-      width: 100px;
-      border-bottom: 1px solid #ddd;
-      display: flex;
-      align-items: center;
-      padding-left: 5px;
-      font-size: 12px;
-      color: #666;
-    }
-    .piano-key.black-key {
-      background-color: #f8f8f8;
-    }
-    .piano-note {
-      position: absolute;
-      height: 18px;
-      background-color: #4285f4;
-      border-radius: 3px;
-      opacity: 0.8;
-      cursor: pointer;
-    }
-    .transport-controls {
-      margin: 10px 0;
-    }
-    .sequence-list {
-      height: 300px;
-      overflow-y: auto;
-    }
-    .sequence-item {
-      cursor: pointer;
-    }
-    .sequence-item.active {
-      background-color: #e9ecef;
-    }
-    .badge {
-      margin-left: 5px;
-    }
-    #statusBar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: #f8f9fa;
-      border-top: 1px solid #dee2e6;
-      padding: 5px 15px;
-      font-size: 14px;
-    }
+    body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    h1, h2 { color: #333; }
+    button { background: #4CAF50; color: white; border: none; padding: 10px 15px; 
+             border-radius: 4px; cursor: pointer; margin: 5px; }
+    button.blue { background: #2196F3; }
+    button.red { background: #F44336; }
+    button:disabled { background: #cccccc; cursor: not-allowed; }
+    .card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
+    .controls { display: flex; gap: 10px; margin-bottom: 10px; }
+    #piano-roll { height: 400px; background: #f5f5f5; overflow: auto; position: relative; }
+    .piano-key { position: absolute; height: 20px; border-bottom: 1px solid #ddd; display: flex;
+                align-items: center; padding-left: 10px; font-size: 12px; width: 100px; }
+    .piano-key.white { background: white; }
+    .piano-key.black { background: #f8f8f8; }
+    .piano-note { position: absolute; height: 18px; background: #4285f4; border-radius: 3px; opacity: 0.8; 
+                 cursor: pointer; color: white; font-size: 10px; display: flex; align-items: center; 
+                 justify-content: center; overflow: hidden; }
+    .bassline-note { background: #0f9d58; }
+    .drum-note { background: #db4437; }
+    .status { padding: 10px; background: #f1f1f1; margin-top: 20px; border-radius: 4px; }
+    .log { height: 100px; overflow: auto; background: #f1f1f1; padding: 10px; 
+          font-family: monospace; margin-top: 10px; }
+    .success { color: green; }
+    .error { color: red; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="row mb-4">
-      <div class="col-md-6">
-        <h1>MIDI Song Creation Tool</h1>
-      </div>
-      <div class="col-md-6 text-end">
-        <button id="newSessionBtn" class="btn btn-primary">New Session</button>
-        <button id="saveSessionBtn" class="btn btn-secondary">Save Session</button>
-        <button id="loadSessionBtn" class="btn btn-secondary">Load Session</button>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Sequences</h5>
-            <button id="newSequenceBtn" class="btn btn-sm btn-primary">New</button>
-          </div>
-          <div class="card-body p-0">
-            <ul id="sequenceList" class="list-group sequence-list">
-              <!-- Sequences will be listed here -->
-              <li class="list-group-item text-center text-muted">No sequences yet</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card mt-3">
-          <div class="card-header">
-            <h5 class="mb-0">Sequence Properties</h5>
-          </div>
-          <div class="card-body">
-            <form id="sequencePropertiesForm">
-              <div class="mb-3">
-                <label for="sequenceName" class="form-label">Name</label>
-                <input type="text" class="form-control" id="sequenceName" placeholder="Untitled Sequence">
-              </div>
-              <div class="mb-3">
-                <label for="sequenceTempo" class="form-label">Tempo (BPM)</label>
-                <input type="number" class="form-control" id="sequenceTempo" min="20" max="300" value="120">
-              </div>
-              <div class="mb-3">
-                <label for="sequenceKey" class="form-label">Key</label>
-                <input type="text" class="form-control" id="sequenceKey" placeholder="C major">
-              </div>
-              <div class="mb-3">
-                <label class="form-label">Time Signature</label>
-                <div class="input-group">
-                  <input type="number" class="form-control" id="timeSigNumerator" min="1" max="16" value="4">
-                  <span class="input-group-text">/</span>
-                  <input type="number" class="form-control" id="timeSigDenominator" min="1" max="16" value="4">
-                </div>
-              </div>
-              <button type="submit" class="btn btn-primary">Update</button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-9">
-        <div class="card">
-          <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs" id="editorTabs" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="piano-roll-tab" data-bs-toggle="tab" data-bs-target="#piano-roll-panel" type="button" role="tab" aria-controls="piano-roll-panel" aria-selected="true">Piano Roll</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="pattern-generator-tab" data-bs-toggle="tab" data-bs-target="#pattern-generator-panel" type="button" role="tab" aria-controls="pattern-generator-panel" aria-selected="false">Pattern Generator</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tools-tab" data-bs-toggle="tab" data-bs-target="#tools-panel" type="button" role="tab" aria-controls="tools-panel" aria-selected="false">Tools</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="json-view-tab" data-bs-toggle="tab" data-bs-target="#json-view-panel" type="button" role="tab" aria-controls="json-view-panel" aria-selected="false">JSON</button>
-              </li>
-            </ul>
-          </div>
-
-          <div class="card-body">
-            <div class="tab-content" id="editorTabContent">
-              <!-- Piano Roll Tab -->
-              <div class="tab-pane fade show active" id="piano-roll-panel" role="tabpanel" aria-labelledby="piano-roll-tab">
-                <div class="transport-controls">
-                  <button id="playBtn" class="btn btn-primary">Play</button>
-                  <button id="stopBtn" class="btn btn-secondary">Stop</button>
-                  <button id="clearBtn" class="btn btn-danger">Clear Notes</button>
-                </div>
-                <div id="pianoRoll" class="piano-roll">
-                  <div class="piano-roll-grid" id="pianoRollGrid"></div>
-                </div>
-              </div>
-
-              <!-- Pattern Generator Tab -->
-              <div class="tab-pane fade" id="pattern-generator-panel" role="tabpanel" aria-labelledby="pattern-generator-tab">
-                <div class="row">
-                  <div class="col-md-4">
-                    <div class="list-group">
-                      <a href="#" class="list-group-item list-group-item-action pattern-type" data-pattern="chord-progression">Chord Progression</a>
-                      <a href="#" class="list-group-item list-group-item-action pattern-type" data-pattern="bassline">Bassline</a>
-                      <a href="#" class="list-group-item list-group-item-action pattern-type" data-pattern="arpeggio">Arpeggio</a>
-                      <a href="#" class="list-group-item list-group-item-action pattern-type" data-pattern="drums">Drum Pattern</a>
-                      <a href="#" class="list-group-item list-group-item-action pattern-type" data-pattern="rhythmic">Rhythmic Pattern</a>
-                    </div>
-                  </div>
-                  <div class="col-md-8">
-                    <!-- Chord Progression Form -->
-                    <div id="chord-progression-form" class="pattern-form">
-                      <h4>Chord Progression Generator</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="progressionKey" class="form-label">Key</label>
-                          <input type="text" class="form-control" id="progressionKey" value="C">
-                        </div>
-                        <div class="mb-3">
-                          <label for="progressionType" class="form-label">Progression</label>
-                          <select class="form-select" id="progressionType">
-                            <option value="1-4-5">I-IV-V</option>
-                            <option value="1-5-6-4">I-V-vi-IV</option>
-                            <option value="1-6-4-5">I-vi-IV-V</option>
-                            <option value="2-5-1">ii-V-I</option>
-                            <option value="canon">Canon</option>
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="progressionScaleType" class="form-label">Scale Type</label>
-                          <select class="form-select" id="progressionScaleType">
-                            <option value="major">Major</option>
-                            <option value="minor">Minor</option>
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="progressionOctave" class="form-label">Octave</label>
-                          <input type="number" class="form-control" id="progressionOctave" min="1" max="7" value="4">
-                        </div>
-                        <button type="button" id="generateChordProgressionBtn" class="btn btn-primary">Generate</button>
-                      </form>
-                    </div>
-
-                    <!-- Bassline Form -->
-                    <div id="bassline-form" class="pattern-form" style="display: none;">
-                      <h4>Bassline Generator</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="basslineKey" class="form-label">Key</label>
-                          <input type="text" class="form-control" id="basslineKey" value="C">
-                        </div>
-                        <div class="mb-3">
-                          <label for="basslineProgression" class="form-label">Progression</label>
-                          <select class="form-select" id="basslineProgression">
-                            <option value="1-4-5">I-IV-V</option>
-                            <option value="1-5-6-4">I-V-vi-IV</option>
-                            <option value="1-6-4-5">I-vi-IV-V</option>
-                            <option value="2-5-1">ii-V-I</option>
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="basslineScaleType" class="form-label">Scale Type</label>
-                          <select class="form-select" id="basslineScaleType">
-                            <option value="major">Major</option>
-                            <option value="minor">Minor</option>
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="basslineOctave" class="form-label">Octave</label>
-                          <input type="number" class="form-control" id="basslineOctave" min="1" max="7" value="3">
-                        </div>
-                        <button type="button" id="generateBasslineBtn" class="btn btn-primary">Generate</button>
-                      </form>
-                    </div>
-
-                    <!-- Arpeggio Form -->
-                    <div id="arpeggio-form" class="pattern-form" style="display: none;">
-                      <h4>Arpeggio Generator</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="arpeggioRoot" class="form-label">Root Note</label>
-                          <input type="text" class="form-control" id="arpeggioRoot" value="C">
-                        </div>
-                        <div class="mb-3">
-                          <label for="arpeggioChordType" class="form-label">Chord Type</label>
-                          <select class="form-select" id="arpeggioChordType">
-                            <option value="major">Major</option>
-                            <option value="minor">Minor</option>
-                            <option value="dominant7">Dominant 7th</option>
-                            <option value="major7">Major 7th</option>
-                            <option value="minor7">Minor 7th</option>
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="arpeggioPattern" class="form-label">Pattern</label>
-                          <select class="form-select" id="arpeggioPattern">
-                            <option value="up">Up</option>
-                            <option value="down">Down</option>
-                            <option value="updown">Up-Down</option>
-                            <option value="random">Random</option>
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="arpeggioOctave" class="form-label">Start Octave</label>
-                          <input type="number" class="form-control" id="arpeggioOctave" min="1" max="7" value="4">
-                        </div>
-                        <div class="mb-3">
-                          <label for="arpeggioOctaveRange" class="form-label">Octave Range</label>
-                          <input type="number" class="form-control" id="arpeggioOctaveRange" min="1" max="4" value="2">
-                        </div>
-                        <div class="mb-3">
-                          <label for="arpeggioRepeats" class="form-label">Repeats</label>
-                          <input type="number" class="form-control" id="arpeggioRepeats" min="1" max="16" value="4">
-                        </div>
-                        <button type="button" id="generateArpeggioBtn" class="btn btn-primary">Generate</button>
-                      </form>
-                    </div>
-
-                    <!-- Drum Pattern Form -->
-                    <div id="drums-form" class="pattern-form" style="display: none;">
-                      <h4>Drum Pattern Generator</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="drumPatternType" class="form-label">Pattern Type</label>
-                          <select class="form-select" id="drumPatternType">
-                            <option value="basic">Basic</option>
-                            <option value="rock">Rock</option>
-                            <option value="funk">Funk</option>
-                          </select>
-                        </div>
-                        <div class="mb-3">
-                          <label for="drumMeasures" class="form-label">Measures</label>
-                          <input type="number" class="form-control" id="drumMeasures" min="1" max="8" value="2">
-                        </div>
-                        <button type="button" id="generateDrumPatternBtn" class="btn btn-primary">Generate</button>
-                      </form>
-                    </div>
-
-                    <!-- Rhythmic Pattern Form -->
-                    <div id="rhythmic-form" class="pattern-form" style="display: none;">
-                      <h4>Rhythmic Pattern Generator</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="rhythmicNoteValues" class="form-label">Note Values (comma-separated)</label>
-                          <input type="text" class="form-control" id="rhythmicNoteValues" value="1,0.5,0.5,1" placeholder="e.g., 1,0.5,0.5,1">
-                          <small class="form-text text-muted">Duration in beats, -1 for rest</small>
-                        </div>
-                        <div class="mb-3">
-                          <label for="rhythmicNotePitches" class="form-label">Note Pitches (comma-separated)</label>
-                          <input type="text" class="form-control" id="rhythmicNotePitches" value="60,64,67" placeholder="e.g., 60,64,67">
-                          <small class="form-text text-muted">MIDI note numbers (60 = middle C)</small>
-                        </div>
-                        <div class="mb-3">
-                          <label for="rhythmicRepeats" class="form-label">Repeats</label>
-                          <input type="number" class="form-control" id="rhythmicRepeats" min="1" max="16" value="4">
-                        </div>
-                        <button type="button" id="generateRhythmicPatternBtn" class="btn btn-primary">Generate</button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Tools Tab -->
-              <div class="tab-pane fade" id="tools-panel" role="tabpanel" aria-labelledby="tools-tab">
-                <div class="row">
-                  <div class="col-md-4">
-                    <div class="list-group">
-                      <a href="#" class="list-group-item list-group-item-action tool-type" data-tool="variation">Create Variation</a>
-                      <a href="#" class="list-group-item list-group-item-action tool-type" data-tool="quantize">Quantize Notes</a>
-                      <a href="#" class="list-group-item list-group-item-action tool-type" data-tool="change-rhythm">Change Rhythm</a>
-                      <a href="#" class="list-group-item list-group-item-action tool-type" data-tool="merge">Merge Sequences</a>
-                    </div>
-                  </div>
-                  <div class="col-md-8">
-                    <!-- Variation Form -->
-                    <div id="variation-form" class="tool-form">
-                      <h4>Create Variation</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="variationName" class="form-label">Variation Name</label>
-                          <input type="text" class="form-control" id="variationName" placeholder="Variation">
-                        </div>
-                        <div class="mb-3">
-                          <label for="variationTranspose" class="form-label">Transpose (semitones)</label>
-                          <input type="number" class="form-control" id="variationTranspose" min="-24" max="24" value="0">
-                        </div>
-                        <div class="mb-3">
-                          <label for="variationVelocity" class="form-label">Velocity Change</label>
-                          <input type="number" class="form-control" id="variationVelocity" min="-50" max="50" value="0">
-                        </div>
-                        <div class="mb-3">
-                          <label for="variationTiming" class="form-label">Timing Variation (0-1)</label>
-                          <input type="number" class="form-control" id="variationTiming" min="0" max="1" step="0.05" value="0.1">
-                        </div>
-                        <div class="mb-3">
-                          <label for="variationAddition" class="form-label">Note Addition Rate (0-1)</label>
-                          <input type="number" class="form-control" id="variationAddition" min="0" max="1" step="0.05" value="0.1">
-                        </div>
-                        <div class="mb-3">
-                          <label for="variationRemoval" class="form-label">Note Removal Rate (0-1)</label>
-                          <input type="number" class="form-control" id="variationRemoval" min="0" max="1" step="0.05" value="0">
-                        </div>
-                        <button type="button" id="createVariationBtn" class="btn btn-primary">Create Variation</button>
-                      </form>
-                    </div>
-
-                    <!-- Quantize Form -->
-                    <div id="quantize-form" class="tool-form" style="display: none;">
-                      <h4>Quantize Notes</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="quantizeGrid" class="form-label">Grid Size (beats)</label>
-                          <select class="form-select" id="quantizeGrid">
-                            <option value="0.25">1/16 Note (0.25)</option>
-                            <option value="0.5">1/8 Note (0.5)</option>
-                            <option value="1">1/4 Note (1.0)</option>
-                            <option value="2">1/2 Note (2.0)</option>
-                          </select>
-                        </div>
-                        <button type="button" id="quantizeNotesBtn" class="btn btn-primary">Quantize</button>
-                      </form>
-                    </div>
-
-                    <!-- Change Rhythm Form -->
-                    <div id="change-rhythm-form" class="tool-form" style="display: none;">
-                      <h4>Change Rhythm</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="rhythmPattern" class="form-label">Rhythm Pattern (comma-separated)</label>
-                          <input type="text" class="form-control" id="rhythmPattern" value="1,0.5,0.5,1" placeholder="e.g., 1,0.5,0.5,1">
-                          <small class="form-text text-muted">Duration in beats, -1 for rest</small>
-                        </div>
-                        <button type="button" id="changeRhythmBtn" class="btn btn-primary">Apply Rhythm</button>
-                      </form>
-                    </div>
-
-                    <!-- Merge Sequences Form -->
-                    <div id="merge-form" class="tool-form" style="display: none;">
-                      <h4>Merge Sequences</h4>
-                      <form>
-                        <div class="mb-3">
-                          <label for="mergeSequences" class="form-label">Select Sequences to Merge</label>
-                          <select multiple class="form-select" id="mergeSequences" size="5">
-                            <!-- Will be populated dynamically -->
-                          </select>
-                          <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple</small>
-                        </div>
-                        <div class="mb-3">
-                          <label for="mergeName" class="form-label">Merged Sequence Name</label>
-                          <input type="text" class="form-control" id="mergeName" value="Merged Sequence">
-                        </div>
-                        <button type="button" id="mergeSequencesBtn" class="btn btn-primary">Merge</button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- JSON View Tab -->
-              <div class="tab-pane fade" id="json-view-panel" role="tabpanel" aria-labelledby="json-view-tab">
-                <div class="mb-3">
-                  <button id="refreshJsonBtn" class="btn btn-sm btn-secondary">Refresh</button>
-                  <button id="copyJsonBtn" class="btn btn-sm btn-primary">Copy to Clipboard</button>
-                </div>
-                <pre id="jsonOutput" class="bg-light p-3" style="max-height: 500px; overflow: auto;"></pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <h1>Super Simple MIDI Player</h1>
+  <p>Create music with just a few clicks:</p>
+  
+  <div class="card">
+    <h2>1. Create a Session and Sequence</h2>
+    <div class="controls">
+      <button id="setupBtn">Set Up (Create Session + Sequence)</button>
+      <span id="setupStatus">Not set up yet</span>
     </div>
   </div>
-
-  <div id="statusBar">
-    Ready
-  </div>
-
-  <!-- Audio Context Initialization Modal -->
-  <div class="modal fade" id="audioContextModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Initialize Audio</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <p>Click the button below to initialize audio playback.</p>
-          <p>Browsers require user interaction before playing audio.</p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" id="initAudioBtn" class="btn btn-primary">Initialize Audio</button>
-        </div>
-      </div>
+  
+  <div class="card">
+    <h2>2. Generate Music</h2>
+    <div class="controls">
+      <button id="chordBtn" disabled>Add Chord Progression</button>
+      <button id="bassBtn" class="blue" disabled>Add Bassline</button>
+      <button id="drumBtn" class="blue" disabled>Add Drums</button>
+      <button id="clearBtn" class="red" disabled>Clear Notes</button>
     </div>
   </div>
-
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <div class="card">
+    <h2>3. Play Music</h2>
+    <div class="controls">
+      <button id="playBtn" disabled>▶️ Play</button>
+      <button id="stopBtn" disabled>⏹️ Stop</button>
+      <span id="playStatus">Nothing to play</span>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Piano Roll</h2>
+    <div id="piano-roll"></div>
+  </div>
+  
+  <div class="status">Status: Ready</div>
+  <div class="log" id="log"></div>
+  
   <script>
-    // Constants
-    const API_URL = 'http://localhost:3000/api';
-    const NOTES_PER_OCTAVE = 12;
-    const TOTAL_OCTAVES = 8;
-    const LOWEST_OCTAVE = 1;
-    const LOWEST_NOTE = LOWEST_OCTAVE * NOTES_PER_OCTAVE;
-    const PIANO_ROLL_ZOOM = 30; // Pixels per beat
+    // Global state
+    let state = {
+      sessionId: null,
+      sequenceId: null,
+      audioContext: null,
+      isPlaying: false,
+      oscillators: [],
+      noteCount: 0
+    };
     
-    // State
-    let currentSessionId = null;
-    let currentSequenceId = null;
-    let currentSequence = null;
-    let audioContext = null;
-    let isPlaying = false;
-    let scheduledNotes = [];
-    let startTime = 0;
+    // DOM elements
+    const setupStatus = document.getElementById('setupStatus');
+    const playStatus = document.getElementById('playStatus');
+    const pianoRoll = document.getElementById('piano-roll');
+    const statusBar = document.querySelector('.status');
+    const logElement = document.getElementById('log');
     
-    // DOM Elements
-    const pianoRoll = document.getElementById('pianoRoll');
-    const pianoRollGrid = document.getElementById('pianoRollGrid');
-    const sequenceList = document.getElementById('sequenceList');
-    const jsonOutput = document.getElementById('jsonOutput');
-    const statusBar = document.getElementById('statusBar');
+    // Buttons
+    const setupBtn = document.getElementById('setupBtn');
+    const chordBtn = document.getElementById('chordBtn');
+    const bassBtn = document.getElementById('bassBtn');
+    const drumBtn = document.getElementById('drumBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const playBtn = document.getElementById('playBtn');
+    const stopBtn = document.getElementById('stopBtn');
     
-    // Initialize UI on load
-    document.addEventListener('DOMContentLoaded', () => {
-      // Show audio context initialization modal
-      const audioContextModal = new bootstrap.Modal(document.getElementById('audioContextModal'));
-      audioContextModal.show();
-      
-      // Initialize audio context when user clicks button
-      document.getElementById('initAudioBtn').addEventListener('click', () => {
-        initAudioContext();
-        audioContextModal.hide();
-      });
-      
-      // Setup event listeners
-      setupEventListeners();
-      
-      // Create initial session
-      createSession();
-      
-      // Initialize piano roll
-      initPianoRoll();
-    });
+    // Logging function
+    function log(message, type = 'info') {
+      console.log(message);
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      entry.className = type;
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+    
+    // Update status
+    function updateStatus(message) {
+      statusBar.textContent = 'Status: ' + message;
+    }
+    
+    // API helper
+    async function callApi(endpoint, method = 'GET', body = null) {
+      try {
+        const options = {
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        };
+
+        if (body) {
+          options.body = JSON.stringify(body);
+        }
+
+        log(`API Call: ${method} ${endpoint}`);
+        const response = await fetch(`/api${endpoint}`, options);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          log(`API error (${response.status}): ${errorText}`, 'error');
+          return null;
+        }
+        
+        const data = await response.json();
+
+        if (!data.success) {
+          log(`API Error: ${data.message}`, 'error');
+          return null;
+        }
+
+        return data;
+      } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        return null;
+      }
+    }
     
     // Initialize audio context
-    function initAudioContext() {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      updateStatus('Audio initialized');
+    function initAudio() {
+      try {
+        state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        log('Audio initialized', 'success');
+        return true;
+      } catch (error) {
+        log(`Audio initialization error: ${error.message}`, 'error');
+        return false;
+      }
     }
     
-    // Setup event listeners for UI elements
-    function setupEventListeners() {
-      // Session controls
-      document.getElementById('newSessionBtn').addEventListener('click', createSession);
-      document.getElementById('saveSessionBtn').addEventListener('click', saveSession);
-      document.getElementById('loadSessionBtn').addEventListener('click', loadSession);
+    // Setup (create session and sequence)
+    async function setup() {
+      // Create session
+      const sessionData = await callApi('/sessions', 'POST', {});
+      if (!sessionData) {
+        log('Failed to create session', 'error');
+        return false;
+      }
       
-      // Sequence controls
-      document.getElementById('newSequenceBtn').addEventListener('click', createSequence);
-      document.getElementById('sequencePropertiesForm').addEventListener('submit', updateSequenceProperties);
+      state.sessionId = sessionData.sessionId;
+      log(`Session created: ${state.sessionId}`, 'success');
       
-      // Piano roll controls
-      document.getElementById('playBtn').addEventListener('click', playSequence);
-      document.getElementById('stopBtn').addEventListener('click', stopPlayback);
-      document.getElementById('clearBtn').addEventListener('click', clearNotes);
-      
-      // JSON view
-      document.getElementById('refreshJsonBtn').addEventListener('click', refreshJsonView);
-      document.getElementById('copyJsonBtn').addEventListener('click', copyJsonToClipboard);
-      
-      // Pattern generator tab
-      document.querySelectorAll('.pattern-type').forEach(item => {
-        item.addEventListener('click', (e) => {
-          e.preventDefault();
-          const patternType = e.target.getAttribute('data-pattern');
-          showPatternForm(patternType);
-        });
+      // Create sequence
+      const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences`, 'POST', {
+        name: 'My Music',
+        tempo: 120,
+        key: 'C major'
       });
       
-      // Pattern generation buttons
-      document.getElementById('generateChordProgressionBtn').addEventListener('click', generateChordProgression);
-      document.getElementById('generateBasslineBtn').addEventListener('click', generateBassline);
-      document.getElementById('generateArpeggioBtn').addEventListener('click', generateArpeggio);
-      document.getElementById('generateDrumPatternBtn').addEventListener('click', generateDrumPattern);
-      document.getElementById('generateRhythmicPatternBtn').addEventListener('click', generateRhythmicPattern);
+      if (!sequenceData) {
+        log('Failed to create sequence', 'error');
+        return false;
+      }
       
-      // Tools tab
-      document.querySelectorAll('.tool-type').forEach(item => {
-        item.addEventListener('click', (e) => {
-          e.preventDefault();
-          const toolType = e.target.getAttribute('data-tool');
-          showToolForm(toolType);
-        });
-      });
+      state.sequenceId = sequenceData.sequenceId;
+      log(`Sequence created: ${state.sequenceId}`, 'success');
       
-      // Tool buttons
-      document.getElementById('createVariationBtn').addEventListener('click', createVariation);
-      document.getElementById('quantizeNotesBtn').addEventListener('click', quantizeNotes);
-      document.getElementById('changeRhythmBtn').addEventListener('click', changeRhythm);
-      document.getElementById('mergeSequencesBtn').addEventListener('click', mergeSequences);
+      // Update UI
+      setupStatus.textContent = `Ready (Session: ${state.sessionId.substring(0, 8)}...)`;
+      chordBtn.disabled = false;
+      bassBtn.disabled = false;
+      drumBtn.disabled = false;
+      clearBtn.disabled = false;
+      
+      // Get piano roll ready
+      initPianoRoll();
+      
+      return true;
     }
     
-    // ========================
-    // SESSION MANAGEMENT
-    // ========================
-    
-    // Create a new session
-    function createSession() {
-      fetch(`${API_URL}/sessions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({})
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          currentSessionId = data.sessionId;
-          updateStatus(`New session created: ${currentSessionId}`);
-          
-          // Clear sequence list
-          sequenceList.innerHTML = '<li class="list-group-item text-center text-muted">No sequences yet</li>';
-          
-          // Reset current sequence
-          currentSequenceId = null;
-          currentSequence = null;
-          
-          // Clear piano roll
-          clearPianoRoll();
-          
-          // Update JSON view
-          refreshJsonView();
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Save session (for demo purposes, just shows the JSON)
-    function saveSession() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
+    // Generate chord progression
+    async function generateChords() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
         return;
       }
       
-      fetch(`${API_URL}/sessions/${currentSessionId}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // In a real app, we would save this to a file or database
-          const sessionJson = JSON.stringify(data.session, null, 2);
-          const blob = new Blob([sessionJson], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          
-          // Create download link
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `midi-session-${currentSessionId}.json`;
-          a.click();
-          
-          updateStatus('Session saved');
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
+      updateStatus('Generating chord progression...');
+      
+      const data = await callApi(`/sessions/${state.sessionId}/patterns/chord-progression`, 'POST', {
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 4,
+        rhythmPattern: [4]
       });
-    }
-    
-    // Load session (for demo purposes, just a stub)
-    function loadSession() {
-      updateStatus('Load session functionality not implemented in this demo');
-      // In a real app, we would open a file picker and load the session
-    }
-    
-    // ========================
-    // SEQUENCE MANAGEMENT
-    // ========================
-    
-    // Create a new sequence
-    function createSequence() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
+      
+      if (!data) {
+        updateStatus('Failed to generate chord progression');
         return;
       }
       
-      const name = `Sequence ${Math.floor(Math.random() * 1000)}`;
+      state.noteCount = data.noteCount;
+      updateStatus(`Generated chord progression with ${data.noteCount} notes`);
+      log(`Added ${data.noteCount} notes`, 'success');
       
-      fetch(`${API_URL}/sessions/${currentSessionId}/sequences`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: name,
-          tempo: 120,
-          key: 'C major'
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          currentSequenceId = data.sequenceId;
-          updateStatus(`New sequence created: ${name}`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the new sequence
-          loadSequence(currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Enable play button
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
     }
     
-    // Load a sequence
-    function loadSequence(sequenceId) {
-      if (!currentSessionId) {
-        updateStatus('No active session');
+    // Generate bassline
+    async function generateBass() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
         return;
       }
       
-      // Set current sequence in the API
-      fetch(`${API_URL}/sessions/${currentSessionId}/current-sequence`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sequenceId: sequenceId
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Now get the sequence details
-          return fetch(`${API_URL}/sessions/${currentSessionId}/sequences/${sequenceId}`);
-        } else {
-          throw new Error(data.message);
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          currentSequenceId = sequenceId;
-          currentSequence = data.sequence;
-          
-          // Update sequence properties form
-          document.getElementById('sequenceName').value = currentSequence.name;
-          document.getElementById('sequenceTempo').value = currentSequence.tempo;
-          document.getElementById('sequenceKey').value = currentSequence.key;
-          document.getElementById('timeSigNumerator').value = currentSequence.timeSignature.numerator;
-          document.getElementById('timeSigDenominator').value = currentSequence.timeSignature.denominator;
-          
-          // Update piano roll
-          updatePianoRoll();
-          
-          // Update sequence list highlighting
-          document.querySelectorAll('.sequence-item').forEach(item => {
-            if (item.getAttribute('data-id') === sequenceId) {
-              item.classList.add('active');
-            } else {
-              item.classList.remove('active');
-            }
-          });
-          
-          // Update JSON view
-          refreshJsonView();
-          
-          updateStatus(`Loaded sequence: ${currentSequence.name}`);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Update sequence properties
-    function updateSequenceProperties(e) {
-      e.preventDefault();
+      updateStatus('Generating bassline...');
       
-      if (!currentSessionId || !currentSequenceId) {
-        updateStatus('No active sequence');
+      const data = await callApi(`/sessions/${state.sessionId}/patterns/bassline`, 'POST', {
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 3,
+        rhythmPattern: [1, 0.5, 0.5]
+      });
+      
+      if (!data) {
+        updateStatus('Failed to generate bassline');
         return;
       }
       
-      const name = document.getElementById('sequenceName').value;
-      const tempo = parseInt(document.getElementById('sequenceTempo').value);
-      const key = document.getElementById('sequenceKey').value;
-      const timeSignature = {
-        numerator: parseInt(document.getElementById('timeSigNumerator').value),
-        denominator: parseInt(document.getElementById('timeSigDenominator').value)
-      };
+      state.noteCount = data.noteCount;
+      updateStatus(`Added bassline (total: ${data.noteCount} notes)`);
+      log(`Sequence now has ${data.noteCount} notes`, 'success');
       
-      fetch(`${API_URL}/sessions/${currentSessionId}/sequences/${currentSequenceId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name,
-          tempo,
-          key,
-          timeSignature
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Sequence updated: ${name}`);
-          
-          // Refresh sequence list to show updated name
-          refreshSequenceList();
-          
-          // Reload the sequence to get the updated version
-          loadSequence(currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Enable play button
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
     }
     
-    // Refresh the sequence list
-    function refreshSequenceList() {
-      if (!currentSessionId) {
+    // Generate drums
+    async function generateDrums() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
         return;
       }
       
-      fetch(`${API_URL}/sessions/${currentSessionId}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          const sequences = data.session.sequences;
-          
-          if (sequences.length === 0) {
-            sequenceList.innerHTML = '<li class="list-group-item text-center text-muted">No sequences yet</li>';
-          } else {
-            sequenceList.innerHTML = '';
-            sequences.forEach(seq => {
-              const li = document.createElement('li');
-              li.className = 'list-group-item d-flex justify-content-between align-items-center sequence-item';
-              if (seq.id === currentSequenceId) {
-                li.classList.add('active');
-              }
-              li.setAttribute('data-id', seq.id);
-              
-              // Create name and badges container
-              const nameSpan = document.createElement('span');
-              nameSpan.textContent = seq.name;
-              
-              // Create badges
-              const badgeContainer = document.createElement('div');
-              
-              const notesBadge = document.createElement('span');
-              notesBadge.className = 'badge bg-primary rounded-pill';
-              notesBadge.textContent = `${seq.noteCount} notes`;
-              
-              badgeContainer.appendChild(notesBadge);
-              
-              // Add elements to list item
-              li.appendChild(nameSpan);
-              li.appendChild(badgeContainer);
-              
-              // Add click event
-              li.addEventListener('click', () => loadSequence(seq.id));
-              
-              sequenceList.appendChild(li);
-            });
-            
-            // Also update merge sequences select
-            const mergeSelect = document.getElementById('mergeSequences');
-            mergeSelect.innerHTML = '';
-            sequences.forEach(seq => {
-              const option = document.createElement('option');
-              option.value = seq.id;
-              option.textContent = seq.name;
-              mergeSelect.appendChild(option);
-            });
-          }
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
+      updateStatus('Generating drum pattern...');
+      
+      const data = await callApi(`/sessions/${state.sessionId}/patterns/drums`, 'POST', {
+        patternType: 'basic',
+        measures: 2
       });
-    }
-    
-    // Clear notes from current sequence
-    function clearNotes() {
-      if (!currentSessionId || !currentSequenceId) {
-        updateStatus('No active sequence');
+      
+      if (!data) {
+        updateStatus('Failed to generate drum pattern');
         return;
       }
       
-      fetch(`${API_URL}/sessions/${currentSessionId}/notes`, {
-        method: 'DELETE'
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus('Notes cleared');
-          
-          // Reload the sequence
-          loadSequence(currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
+      state.noteCount = data.noteCount;
+      updateStatus(`Added drums (total: ${data.noteCount} notes)`);
+      log(`Sequence now has ${data.noteCount} notes`, 'success');
+      
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Enable play button
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
     }
     
-    // ========================
-    // PIANO ROLL
-    // ========================
+    // Clear all notes
+    async function clearNotes() {
+      if (!state.sessionId || !state.sequenceId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Clearing notes...');
+      
+      const data = await callApi(`/sessions/${state.sessionId}/notes`, 'DELETE');
+      
+      if (!data) {
+        updateStatus('Failed to clear notes');
+        return;
+      }
+      
+      state.noteCount = 0;
+      updateStatus('All notes cleared');
+      log('Notes cleared', 'success');
+      
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Disable play button
+      playBtn.disabled = true;
+      stopBtn.disabled = true;
+      playStatus.textContent = 'Nothing to play';
+    }
     
     // Initialize piano roll
     function initPianoRoll() {
-      // Clear existing content
-      pianoRollGrid.innerHTML = '';
+      pianoRoll.innerHTML = '';
       
-      // Set height for piano roll based on note range
-      const totalNotes = NOTES_PER_OCTAVE * TOTAL_OCTAVES;
-      pianoRoll.style.height = `${totalNotes * 20}px`;
-      
-      // Create piano keys
+      // Create piano keys (just one octave for simplicity)
       const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       
-      for (let octave = LOWEST_OCTAVE + TOTAL_OCTAVES - 1; octave >= LOWEST_OCTAVE; octave--) {
-        for (let note = NOTES_PER_OCTAVE - 1; note >= 0; note--) {
-          const midiNote = (octave * NOTES_PER_OCTAVE) + note;
-          const noteName = `${noteNames[note]}${octave}`;
-          const isBlackKey = [1, 3, 6, 8, 10].includes(note);
+      for (let octave = 5; octave >= 2; octave--) {
+        for (let i = 11; i >= 0; i--) {
+          const note = noteNames[i];
+          const isBlack = note.includes('#');
           
           const pianoKey = document.createElement('div');
-          pianoKey.className = `piano-key ${isBlackKey ? 'black-key' : ''}`;
+          pianoKey.className = `piano-key ${isBlack ? 'black' : 'white'}`;
+          const midiNote = octave * 12 + i;
+          pianoKey.dataset.note = midiNote;
           pianoKey.style.top = `${(127 - midiNote) * 20}px`;
-          pianoKey.textContent = noteName;
-          pianoKey.setAttribute('data-note', midiNote);
+          pianoKey.textContent = `${note}${octave}`;
           
-          pianoRollGrid.appendChild(pianoKey);
+          pianoRoll.appendChild(pianoKey);
         }
       }
-      
-      // Add click event to create notes
-      pianoRoll.addEventListener('click', function(e) {
-        if (!currentSessionId || !currentSequenceId) {
-          updateStatus('No active sequence');
-          return;
-        }
-        
-        if (e.target.classList.contains('piano-key')) {
-          // If clicked on a piano key, create a new note
-          const midiNote = parseInt(e.target.getAttribute('data-note'));
-          
-          // Calculate position in beats (quantized to 0.25)
-          const rect = pianoRoll.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const beatPosition = Math.floor((x / PIANO_ROLL_ZOOM) * 4) / 4;
-          
-          // Create note with 1 beat duration
-          const note = {
-            pitch: midiNote,
-            startTime: beatPosition,
-            duration: 1,
-            velocity: 80,
-            channel: 0
-          };
-          
-          // Add note to sequence
-          addNoteToSequence(note);
-        } else if (e.target.classList.contains('piano-note')) {
-          // Handle clicking on existing note (not implemented in this demo)
-          updateStatus('Note editing not implemented in this demo');
-        }
-      });
     }
     
-    // Update piano roll with current sequence
-    function updatePianoRoll() {
-      clearPianoRoll();
-      
-      if (!currentSequence || !currentSequence.notes) {
+    // Refresh piano roll with notes
+    async function refreshPianoRoll() {
+      // Get sequence data
+      const data = await callApi(`/sessions/${state.sessionId}/sequences/${state.sequenceId}`);
+      if (!data) {
+        log('Failed to get sequence data', 'error');
         return;
       }
       
-      // Add each note to the piano roll
-      currentSequence.notes.forEach(note => {
-        const noteElement = document.createElement('div');
-        noteElement.className = 'piano-note';
-        noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`; // +1 for border
-        noteElement.style.left = `${note.startTime * PIANO_ROLL_ZOOM}px`;
-        noteElement.style.width = `${note.duration * PIANO_ROLL_ZOOM}px`;
-        
-        // Adjust opacity based on velocity
-        const opacity = 0.5 + (note.velocity / 127) * 0.5;
-        noteElement.style.opacity = opacity;
-        
-        pianoRollGrid.appendChild(noteElement);
-      });
-    }
-    
-    // Clear piano roll
-    function clearPianoRoll() {
-      // Remove all note elements
-      const notes = pianoRollGrid.querySelectorAll('.piano-note');
-      notes.forEach(note => note.remove());
-    }
-    
-    // Add a note to the current sequence
-    function addNoteToSequence(note) {
-      if (!currentSessionId || !currentSequenceId) {
-        updateStatus('No active sequence');
-        return;
-      }
+      // Clear existing notes
+      document.querySelectorAll('.piano-note').forEach(note => note.remove());
       
-      fetch(`${API_URL}/sessions/${currentSessionId}/notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          notes: [note]
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Note added at beat ${note.startTime}`);
+      // Add notes
+      if (data.sequence.notes && data.sequence.notes.length > 0) {
+        data.sequence.notes.forEach(note => {
+          const noteElement = document.createElement('div');
           
-          // Reload the sequence
-          loadSequence(currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
+          // Select class based on channel
+          if (note.channel === 9) {
+            noteElement.className = 'piano-note drum-note';
+          } else if (note.channel === 1) {
+            noteElement.className = 'piano-note bassline-note';
+          } else {
+            noteElement.className = 'piano-note';
+          }
+          
+          // Position and size
+          noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
+          noteElement.style.left = `${note.startTime * 30 + 100}px`;
+          noteElement.style.width = `${note.duration * 30}px`;
+          
+          // Add data for playback
+          noteElement.dataset.pitch = note.pitch;
+          noteElement.dataset.start = note.startTime;
+          noteElement.dataset.duration = note.duration;
+          noteElement.dataset.velocity = note.velocity;
+          noteElement.dataset.channel = note.channel;
+          
+          // Add note name for better visibility
+          noteElement.textContent = note.pitch;
+          
+          pianoRoll.appendChild(noteElement);
+        });
+        
+        log(`Displayed ${data.sequence.notes.length} notes in piano roll`, 'success');
+      }
     }
     
-    // ========================
-    // PLAYBACK
-    // ========================
-    
-    // Play the current sequence
+    // Play the sequence
     function playSequence() {
-      if (!audioContext) {
-        updateStatus('Audio not initialized');
-        return;
+      if (!state.audioContext) {
+        initAudio();
       }
       
-      if (!currentSequence || !currentSequence.notes || currentSequence.notes.length === 0) {
-        updateStatus('No notes to play');
-        return;
-      }
-      
-      if (isPlaying) {
+      if (state.isPlaying) {
         stopPlayback();
       }
       
-      // Start playback
-      isPlaying = true;
-      startTime = audioContext.currentTime;
-      updateStatus('Playing...');
-      
-      // Schedule notes
-      currentSequence.notes.forEach(note => {
-        // Calculate note timing
-        const noteStartTime = startTime + note.startTime * (60 / currentSequence.tempo);
-        const noteDuration = note.duration * (60 / currentSequence.tempo);
-        
-        // Create oscillator
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        // Set oscillator properties
-        oscillator.type = 'square';
-        oscillator.frequency.value = midiNoteToFrequency(note.pitch);
-        
-        // Set volume based on velocity
-        gainNode.gain.value = note.velocity / 127 * 0.2; // Scale down volume a bit
-        
-        // Connect nodes
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        // Schedule note start and end
-        oscillator.start(noteStartTime);
-        oscillator.stop(noteStartTime + noteDuration);
-        
-        // Fade out to prevent clicks
-        gainNode.gain.exponentialRampToValueAtTime(
-          0.001, noteStartTime + noteDuration
-        );
-        
-        // Store for later cleanup
-        scheduledNotes.push({
-          oscillator,
-          gainNode,
-          endTime: noteStartTime + noteDuration
-        });
-      });
-      
-      // Stop playback after sequence ends
-      const sequenceDuration = Math.max(...currentSequence.notes.map(note => note.startTime + note.duration));
-      const sequenceEndTime = startTime + sequenceDuration * (60 / currentSequence.tempo);
-      
-      setTimeout(() => {
-        if (isPlaying) {
-          stopPlayback();
+      // Refresh notes to make sure we have the latest
+      refreshPianoRoll().then(() => {
+        const notes = document.querySelectorAll('.piano-note');
+        if (notes.length === 0) {
+          updateStatus('No notes to play');
+          return;
         }
-      }, (sequenceEndTime - audioContext.currentTime) * 1000);
+        
+        state.isPlaying = true;
+        updateStatus('Playing...');
+        playStatus.textContent = 'Playing...';
+        
+        const startTime = state.audioContext.currentTime;
+        const tempo = 120; // beats per minute
+        const secondsPerBeat = 60 / tempo;
+        
+        notes.forEach(noteElement => {
+          // Skip drum notes for now (they sound strange)
+          if (parseInt(noteElement.dataset.channel) === 9) {
+            return;
+          }
+          
+          const pitch = parseInt(noteElement.dataset.pitch);
+          const noteStartTime = startTime + (parseFloat(noteElement.dataset.start) * secondsPerBeat);
+          const noteDuration = parseFloat(noteElement.dataset.duration) * secondsPerBeat;
+          const velocity = parseInt(noteElement.dataset.velocity) / 127;
+          
+          // Create oscillator
+          const oscillator = state.audioContext.createOscillator();
+          const gainNode = state.audioContext.createGain();
+          
+          // Configure oscillator
+          oscillator.type = parseInt(noteElement.dataset.channel) === 1 ? 'triangle' : 'sine';
+          oscillator.frequency.value = midiToFrequency(pitch);
+          
+          // Connect
+          oscillator.connect(gainNode);
+          gainNode.connect(state.audioContext.destination);
+          
+          // Set volume
+          gainNode.gain.value = velocity * 0.2;
+          
+          // Schedule note
+          oscillator.start(noteStartTime);
+          oscillator.stop(noteStartTime + noteDuration);
+          
+          // Add visual feedback
+          setTimeout(() => {
+            noteElement.style.backgroundColor = 'yellow';
+            setTimeout(() => {
+              if (noteElement.dataset.channel === '9') {
+                noteElement.style.backgroundColor = '#db4437';
+              } else if (noteElement.dataset.channel === '1') {
+                noteElement.style.backgroundColor = '#0f9d58';
+              } else {
+                noteElement.style.backgroundColor = '#4285f4';
+              }
+            }, noteDuration * 1000);
+          }, (noteStartTime - startTime) * 1000);
+          
+          // Save for cleanup
+          state.oscillators.push(oscillator);
+        });
+        
+        // Find the longest note to stop playback
+        const longestDuration = Math.max(...Array.from(notes).map(note => 
+          parseFloat(note.dataset.start) + parseFloat(note.dataset.duration)
+        ));
+        
+        // Auto-stop at end
+        setTimeout(() => {
+          if (state.isPlaying) {
+            stopPlayback();
+          }
+        }, longestDuration * secondsPerBeat * 1000);
+      });
     }
     
     // Stop playback
     function stopPlayback() {
-      if (!isPlaying) {
-        return;
-      }
+      if (!state.isPlaying) return;
       
-      // Stop all scheduled notes
-      scheduledNotes.forEach(note => {
+      // Stop all oscillators
+      state.oscillators.forEach(osc => {
         try {
-          note.oscillator.stop();
+          osc.stop();
         } catch (e) {
-          // Ignore errors if note already stopped
+          // Ignore errors for oscillators that are already stopped
         }
       });
       
-      scheduledNotes = [];
-      isPlaying = false;
+      state.oscillators = [];
+      state.isPlaying = false;
+      
       updateStatus('Playback stopped');
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
     }
     
     // Convert MIDI note to frequency
-    function midiNoteToFrequency(note) {
+    function midiToFrequency(note) {
       return 440 * Math.pow(2, (note - 69) / 12);
     }
     
-    // ========================
-    // PATTERN GENERATION
-    // ========================
+    // Event listeners
+    setupBtn.addEventListener('click', setup);
+    chordBtn.addEventListener('click', generateChords);
+    bassBtn.addEventListener('click', generateBass);
+    drumBtn.addEventListener('click', generateDrums);
+    clearBtn.addEventListener('click', clearNotes);
+    playBtn.addEventListener('click', playSequence);
+    stopBtn.addEventListener('click', stopPlayback);
     
-    // Show the appropriate pattern form
-    function showPatternForm(patternType) {
-      // Hide all forms
-      document.querySelectorAll('.pattern-form').forEach(form => {
-        form.style.display = 'none';
-      });
-      
-      // Show the selected form
-      const form = document.getElementById(`${patternType}-form`);
-      if (form) {
-        form.style.display = 'block';
-      }
-      
-      // Highlight the selected pattern type
-      document.querySelectorAll('.pattern-type').forEach(item => {
-        if (item.getAttribute('data-pattern') === patternType) {
-          item.classList.add('active');
-        } else {
-          item.classList.remove('active');
-        }
-      });
-    }
-    
-    // Generate chord progression
-    function generateChordProgression() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
-        return;
-      }
-      
-      const key = document.getElementById('progressionKey').value;
-      const progressionName = document.getElementById('progressionType').value;
-      const scaleType = document.getElementById('progressionScaleType').value;
-      const octave = parseInt(document.getElementById('progressionOctave').value);
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/patterns/chord-progression`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          key,
-          progressionName,
-          scaleType,
-          octave,
-          rhythmPattern: [4] // 4 beats per chord
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Chord progression generated: ${key} ${progressionName}`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the updated sequence
-          loadSequence(data.currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Generate bassline
-    function generateBassline() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
-        return;
-      }
-      
-      const key = document.getElementById('basslineKey').value;
-      const progressionName = document.getElementById('basslineProgression').value;
-      const scaleType = document.getElementById('basslineScaleType').value;
-      const octave = parseInt(document.getElementById('basslineOctave').value);
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/patterns/bassline`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          key,
-          progressionName,
-          scaleType,
-          octave,
-          rhythmPattern: [1, 0.5, 0.5, 1, 1] // Bassline rhythm
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Bassline generated: ${key} ${progressionName}`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the updated sequence
-          loadSequence(data.currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Generate arpeggio
-    function generateArpeggio() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
-        return;
-      }
-      
-      const rootNote = document.getElementById('arpeggioRoot').value;
-      const chordType = document.getElementById('arpeggioChordType').value;
-      const pattern = document.getElementById('arpeggioPattern').value;
-      const octave = parseInt(document.getElementById('arpeggioOctave').value);
-      const octaveRange = parseInt(document.getElementById('arpeggioOctaveRange').value);
-      const repeats = parseInt(document.getElementById('arpeggioRepeats').value);
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/patterns/arpeggio`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          rootNote,
-          chordType,
-          arpeggioPattern: pattern,
-          octave,
-          octaveRange,
-          noteDuration: 0.25, // 16th notes
-          repeats
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Arpeggio generated: ${rootNote} ${chordType}`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the updated sequence
-          loadSequence(data.currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Generate drum pattern
-    function generateDrumPattern() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
-        return;
-      }
-      
-      const patternType = document.getElementById('drumPatternType').value;
-      const measures = parseInt(document.getElementById('drumMeasures').value);
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/patterns/drums`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          patternType,
-          measures
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Drum pattern generated: ${patternType}`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the updated sequence
-          loadSequence(data.currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Generate rhythmic pattern
-    function generateRhythmicPattern() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
-        return;
-      }
-      
-      const noteValuesStr = document.getElementById('rhythmicNoteValues').value;
-      const notePitchesStr = document.getElementById('rhythmicNotePitches').value;
-      const repeats = parseInt(document.getElementById('rhythmicRepeats').value);
-      
-      // Parse comma-separated values
-      const noteValues = noteValuesStr.split(',').map(val => parseFloat(val.trim()));
-      const notePitches = notePitchesStr.split(',').map(val => parseInt(val.trim()));
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/patterns/rhythmic`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          noteValues,
-          notePitches,
-          startTime: 0,
-          repeats
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Rhythmic pattern generated with ${notePitches.length} pitches`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the updated sequence
-          loadSequence(data.currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // ========================
-    // TOOLS
-    // ========================
-    
-    // Show the appropriate tool form
-    function showToolForm(toolType) {
-      // Hide all forms
-      document.querySelectorAll('.tool-form').forEach(form => {
-        form.style.display = 'none';
-      });
-      
-      // Show the selected form
-      const form = document.getElementById(`${toolType}-form`);
-      if (form) {
-        form.style.display = 'block';
-      }
-      
-      // Highlight the selected tool type
-      document.querySelectorAll('.tool-type').forEach(item => {
-        if (item.getAttribute('data-tool') === toolType) {
-          item.classList.add('active');
-        } else {
-          item.classList.remove('active');
-        }
-      });
-      
-      // Special handling for merge tool
-      if (toolType === 'merge') {
-        refreshSequenceList(); // Make sure the sequence list is up to date
-      }
-    }
-    
-    // Create a variation of the current sequence
-    function createVariation() {
-      if (!currentSessionId || !currentSequenceId) {
-        updateStatus('No active sequence');
-        return;
-      }
-      
-      const name = document.getElementById('variationName').value || `${currentSequence.name} Variation`;
-      const transpose = parseInt(document.getElementById('variationTranspose').value);
-      const velocityChange = parseInt(document.getElementById('variationVelocity').value);
-      const timingVariation = parseFloat(document.getElementById('variationTiming').value);
-      const noteAdditionRate = parseFloat(document.getElementById('variationAddition').value);
-      const noteRemovalRate = parseFloat(document.getElementById('variationRemoval').value);
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/operations/variation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name,
-          transpose,
-          velocityChange,
-          timingVariation,
-          noteAdditionRate,
-          noteRemovalRate
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Variation created: ${name}`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the new variation
-          loadSequence(data.variation.id);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Quantize notes in the current sequence
-    function quantizeNotes() {
-      if (!currentSessionId || !currentSequenceId) {
-        updateStatus('No active sequence');
-        return;
-      }
-      
-      const gridSize = parseFloat(document.getElementById('quantizeGrid').value);
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/operations/quantize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          gridSize
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Notes quantized to grid size ${gridSize}`);
-          
-          // Reload the sequence
-          loadSequence(currentSequenceId);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Change rhythm of the current sequence
-    function changeRhythm() {
-      if (!currentSessionId || !currentSequenceId) {
-        updateStatus('No active sequence');
-        return;
-      }
-      
-      const rhythmPatternStr = document.getElementById('rhythmPattern').value;
-      
-      // Parse comma-separated values
-      const rhythmPattern = rhythmPatternStr.split(',').map(val => parseFloat(val.trim()));
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/operations/change-rhythm`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          rhythmPattern
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Rhythm changed to ${rhythmPatternStr}`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the new sequence
-          loadSequence(data.newSequence.id);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // Merge multiple sequences
-    function mergeSequences() {
-      if (!currentSessionId) {
-        updateStatus('No active session');
-        return;
-      }
-      
-      const select = document.getElementById('mergeSequences');
-      const sequenceIds = Array.from(select.selectedOptions).map(option => option.value);
-      
-      if (sequenceIds.length < 2) {
-        updateStatus('Select at least two sequences to merge');
-        return;
-      }
-      
-      const name = document.getElementById('mergeName').value || 'Merged Sequence';
-      
-      fetch(`${API_URL}/sessions/${currentSessionId}/operations/merge`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sequenceIds,
-          name
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          updateStatus(`Merged ${sequenceIds.length} sequences into "${name}"`);
-          
-          // Update sequence list
-          refreshSequenceList();
-          
-          // Load the merged sequence
-          loadSequence(data.merged.id);
-        } else {
-          updateStatus(`Error: ${data.message}`);
-        }
-      })
-      .catch(error => {
-        updateStatus(`Error: ${error.message}`);
-      });
-    }
-    
-    // ========================
-    // UTILITIES
-    // ========================
-    
-    // Refresh JSON view
-    function refreshJsonView() {
-      if (!currentSessionId) {
-        jsonOutput.textContent = 'No active session';
-        return;
-      }
-      
-      if (!currentSequenceId) {
-        jsonOutput.textContent = 'No active sequence';
-        return;
-      }
-      
-      // Get current sequence JSON
-      fetch(`${API_URL}/sessions/${currentSessionId}/sequences/${currentSequenceId}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          jsonOutput.textContent = JSON.stringify(data.sequence, null, 2);
-        } else {
-          jsonOutput.textContent = `Error: ${data.message}`;
-        }
-      })
-      .catch(error => {
-        jsonOutput.textContent = `Error: ${error.message}`;
-      });
-    }
-    
-    // Copy JSON to clipboard
-    function copyJsonToClipboard() {
-      const json = jsonOutput.textContent;
-      
-      if (!json || json.startsWith('No active') || json.startsWith('Error')) {
-        updateStatus('No valid JSON to copy');
-        return;
-      }
-      
-      navigator.clipboard.writeText(json)
-        .then(() => {
-          updateStatus('JSON copied to clipboard');
-        })
-        .catch(err => {
-          updateStatus(`Error copying to clipboard: ${err.message}`);
-        });
-    }
-    
-    // Update status bar
-    function updateStatus(message) {
-      statusBar.textContent = message;
-      console.log(message);
-    }
+    // Initialize
+    updateStatus('Ready - click "Set Up" to begin');
+    log('Interface loaded, click "Set Up" to begin', 'success');
   </script>
 </body>
 </html>
