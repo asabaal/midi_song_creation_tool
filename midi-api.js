@@ -141,6 +141,38 @@ try {
     };
   };
   
+  // Add static fromJSON method to MidiSequence
+  MidiSequence.fromJSON = function(json) {
+    try {
+      const data = typeof json === 'string' ? JSON.parse(json) : json;
+      
+      const sequence = new MidiSequence({
+        id: data.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
+        name: data.name || 'Imported Sequence',
+        timeSignature: data.timeSignature || { numerator: 4, denominator: 4 },
+        tempo: data.tempo || 120,
+        key: data.key || 'C major'
+      });
+      
+      if (data.notes && Array.isArray(data.notes)) {
+        const midiNotes = data.notes.map(note => 
+          new MidiNote(
+            note.pitch,
+            note.startTime,
+            note.duration,
+            note.velocity || 80,
+            note.channel || 0
+          )
+        );
+        sequence.addNotes(midiNotes);
+      }
+      
+      return sequence;
+    } catch (error) {
+      throw new Error(`Failed to parse sequence data: ${error.message}`);
+    }
+  };
+  
   Session = function(id) {
     this.id = id || `session_${Date.now()}`;
     this.created = new Date();
@@ -866,6 +898,104 @@ app.post('/api/sessions/:sessionId/patterns/drums', (req, res) => {
 // EXPORT ENDPOINTS
 // =================
 
+// Export current sequence as JSON
+app.get('/api/sessions/:sessionId/export/json', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    const session = sessions.get(sessionId);
+    
+    // Check if current sequence exists
+    const currentSequence = session.getCurrentSequence();
+    if (!currentSequence) {
+      return res.status(400).json({
+        success: false,
+        error: 'No current sequence',
+        message: 'No current sequence selected'
+      });
+    }
+    
+    // Get the sequence data
+    const sequenceData = currentSequence.toJSON();
+    
+    res.json({
+      success: true,
+      message: `Exported sequence ${currentSequence.id} as JSON`,
+      sequenceId: currentSequence.id,
+      noteCount: sequenceData.notes.length,
+      data: sequenceData
+    });
+    
+    console.log(`Exported sequence ${currentSequence.id} as JSON`);
+  } catch (error) {
+    console.error(`Error in JSON export endpoint: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Export specific sequence as JSON
+app.get('/api/sessions/:sessionId/sequences/:sequenceId/export/json', (req, res) => {
+  try {
+    const { sessionId, sequenceId } = req.params;
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    const session = sessions.get(sessionId);
+    
+    // Try to get the sequence
+    try {
+      const sequence = session.getSequence(sequenceId);
+      
+      // Get the sequence data
+      const sequenceData = sequence.toJSON();
+      
+      res.json({
+        success: true,
+        message: `Exported sequence ${sequence.id} as JSON`,
+        sequenceId: sequence.id,
+        noteCount: sequenceData.notes.length,
+        data: sequenceData
+      });
+      
+      console.log(`Exported sequence ${sequence.id} as JSON`);
+    } catch (error) {
+      console.error(`Error exporting sequence: ${error.message}`);
+      res.status(404).json({
+        success: false,
+        error: 'Failed to export sequence',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in sequence export endpoint: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 // Export current sequence to MIDI file
 app.get('/api/sessions/:sessionId/export/midi', (req, res) => {
   try {
@@ -967,6 +1097,61 @@ app.get('/api/sessions/:sessionId/sequences/:sequenceId/export/midi', (req, res)
     }
   } catch (error) {
     console.error(`Error in sequence export endpoint: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Import sequence from JSON data
+app.post('/api/sessions/:sessionId/import', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { name, data } = req.body;
+    
+    // Check if session exists
+    if (!sessions.has(sessionId)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    const session = sessions.get(sessionId);
+    
+    // Try to import the sequence
+    try {
+      // Determine if data is JSON string or object
+      const jsonData = typeof data === 'string' ? data : JSON.stringify(data);
+      const sequence = session.importSequence(jsonData);
+      
+      res.json({
+        success: true,
+        message: `Imported sequence ${sequence.id} with ${sequence.notes.length} notes`,
+        sequenceId: sequence.id,
+        sequence: {
+          id: sequence.id,
+          name: sequence.name,
+          tempo: sequence.tempo,
+          key: sequence.key,
+          noteCount: sequence.notes.length
+        }
+      });
+      
+      console.log(`Imported sequence ${sequence.id} with ${sequence.notes.length} notes`);
+    } catch (error) {
+      console.error(`Error importing sequence: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to import sequence',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in import endpoint: ${error.message}`);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
