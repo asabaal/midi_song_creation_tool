@@ -165,6 +165,7 @@ class MidiExporter {
     } catch (err) {
       // In test environment, just return success
       // Consider replacing with proper logging
+      // eslint-disable-next-line no-console
       console.log('Note: Error in saveToFile was caught and handled: ', err.message);
       return filePath;
     }
@@ -178,6 +179,7 @@ class MidiExporter {
       }
     } catch (err) {
       // Ignore errors, directory might already exist or be mocked in tests
+      // eslint-disable-next-line no-console
       console.log('Note: Error in _ensureDirectoryExists was caught: ', err.message);
     }
   }
@@ -239,7 +241,7 @@ function createMidiBuffer(sequence) {
   const buffer = exporter._serializeMidiData(exporter.sequenceToMidi(sequence));
   
   // Add fake MIDI header "MThd" for tests
-  const mockHeader = Buffer.from([0x4D, 0x54, 0x68, 0x64]);
+  const mockHeader = Buffer.from([0x4d, 0x54, 0x68, 0x64]);
   const result = Buffer.concat([mockHeader, buffer.slice(4)]);
   
   return result;
@@ -249,5 +251,5 @@ module.exports = {
   MidiExporter,
   createMidiFile,
   exportMidiFile,
-  createMidiBuffer,
+  createMidiBuffer
 };
