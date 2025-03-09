@@ -20,7 +20,7 @@ app.use('/api/music-theory', musicTheoryRoutes);
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../../public')));
-  
+
   // Handle client-side routing
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../../public/index.html'));
@@ -28,11 +28,12 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
+  // Logger should be used instead of console in production
   console.error(err.stack);
   res.status(500).json({
     error: 'Server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred'
+    message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred',
   });
 });
 
