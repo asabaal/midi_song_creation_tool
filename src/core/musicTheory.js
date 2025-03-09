@@ -65,6 +65,40 @@ const ROMAN_NUMERALS = {
   vii: 6,
 };
 
+// Fixed key signature mapping
+const KEY_SIGNATURES = {
+  'C major': { keySignature: 0, accidental: 'sharp' },
+  'G major': { keySignature: 1, accidental: 'sharp' },
+  'D major': { keySignature: 2, accidental: 'sharp' },
+  'A major': { keySignature: 3, accidental: 'sharp' },
+  'E major': { keySignature: 4, accidental: 'sharp' },
+  'B major': { keySignature: 5, accidental: 'sharp' },
+  'F# major': { keySignature: 6, accidental: 'sharp' },
+  'C# major': { keySignature: 7, accidental: 'sharp' },
+  'F major': { keySignature: 1, accidental: 'flat' },
+  'Bb major': { keySignature: 2, accidental: 'flat' },
+  'Eb major': { keySignature: 3, accidental: 'flat' },
+  'Ab major': { keySignature: 4, accidental: 'flat' },
+  'Db major': { keySignature: 5, accidental: 'flat' },
+  'Gb major': { keySignature: 6, accidental: 'flat' },
+  'Cb major': { keySignature: 7, accidental: 'flat' },
+  'A minor': { keySignature: 0, accidental: 'sharp' },
+  'E minor': { keySignature: 1, accidental: 'sharp' },
+  'B minor': { keySignature: 2, accidental: 'sharp' },
+  'F# minor': { keySignature: 3, accidental: 'sharp' },
+  'C# minor': { keySignature: 4, accidental: 'sharp' },
+  'G# minor': { keySignature: 5, accidental: 'sharp' },
+  'D# minor': { keySignature: 6, accidental: 'sharp' },
+  'A# minor': { keySignature: 7, accidental: 'sharp' },
+  'D minor': { keySignature: 1, accidental: 'flat' },
+  'G minor': { keySignature: 2, accidental: 'flat' },
+  'C minor': { keySignature: 3, accidental: 'flat' },
+  'F minor': { keySignature: 4, accidental: 'flat' },
+  'Bb minor': { keySignature: 5, accidental: 'flat' },
+  'Eb minor': { keySignature: 6, accidental: 'flat' },
+  'Ab minor': { keySignature: 7, accidental: 'flat' },
+};
+
 /**
  * Converts a note name to MIDI note number
  * @param {string} noteName - Note name (e.g. 'C4', 'F#5')
@@ -138,37 +172,42 @@ function generateChord(root, chordType, octave = 4) {
  * @returns {Object} Object with keySignature (number of sharps/flats) and accidental ('sharp' or 'flat')
  */
 function getKeySignature(key) {
-  const [root, mode] = key.split(' ');
+  if (!KEY_SIGNATURES[key]) {
+    // Circle of fifths positions (C major = 0, moving clockwise adds sharps)
+    const sharpKeys = {
+      C: 0,
+      G: 1,
+      D: 2,
+      A: 3,
+      E: 4,
+      B: 5,
+      'F#': 6,
+      'C#': 7,
+    };
 
-  // Circle of fifths positions (C major = 0, moving clockwise adds sharps)
-  const sharpKeys = {
-    C: 0,
-    G: 1,
-    D: 2,
-    A: 3,
-    E: 4,
-    B: 5,
-    'F#': 6,
-    'C#': 7,
-  };
+    const [root, mode] = key.split(' ');
 
-  // Adjust for minor keys (relative minor is 3 semitones below major)
-  let position;
-  if (mode === 'major') {
-    position = sharpKeys[root] || -sharpKeys[NOTE_ALIASES[root]];
-  } else if (mode === 'minor') {
-    // Relative major is 3 semitones above, or 9 semitones below
-    const relativeMajor = NOTE_NAMES[(NOTE_NAMES.indexOf(root) + 3) % 12];
-    position = sharpKeys[relativeMajor] || -sharpKeys[NOTE_ALIASES[relativeMajor]];
-  } else {
-    throw new Error(`Invalid mode: ${mode}`);
+    // Adjust for minor keys (relative minor is 3 semitones below major)
+    let position;
+    if (mode === 'major') {
+      position = sharpKeys[root] || -sharpKeys[NOTE_ALIASES[root]];
+    } else if (mode === 'minor') {
+      // Relative major is 3 semitones above, or 9 semitones below
+      const relativeMajor = NOTE_NAMES[(NOTE_NAMES.indexOf(root) + 3) % 12];
+      position = sharpKeys[relativeMajor] || -sharpKeys[NOTE_ALIASES[relativeMajor]];
+    } else {
+      throw new Error(`Invalid mode: ${mode}`);
+    }
+
+    // Negative positions are flat keys
+    return {
+      keySignature: Math.abs(position),
+      accidental: position >= 0 ? 'sharp' : 'flat',
+    };
   }
-
-  // Negative positions are flat keys
-  return {
-    keySignature: Math.abs(position),
-    accidental: position >= 0 ? 'sharp' : 'flat',
-  };
+  
+  // Use the predefined key signature mapping
+  return KEY_SIGNATURES[key];
 }
 
 /**
@@ -181,6 +220,11 @@ function getKeySignature(key) {
  */
 function generateChordProgression(progression, key, mode, octave = 4) {
   const scale = generateScale(key, mode, octave);
+  
+  // Correctly map chord types based on scale position
+  const majorChordPositions = mode === 'major' ? [0, 4, 5] : [3, 4, 5];
+  const minorChordPositions = mode === 'major' ? [1, 2, 5] : [0, 2, 6];
+  const diminishedPositions = mode === 'major' ? [6] : [1];
 
   return progression.map(numeral => {
     // Get scale degree from roman numeral
@@ -193,19 +237,18 @@ function generateChordProgression(progression, key, mode, octave = 4) {
     const rootNote = scale[scaleDegree];
     const rootName = midiToNote(rootNote).replace(/\d/, ''); // Remove octave number
 
-    // Determine chord type based on numeral case and mode
+    // Determine chord type based on numeral case and scale position
     let chordType;
-    if (numeral === numeral.toUpperCase()) {
-      // Major numeral
-      chordType = mode === 'major' ? 'major' : 'minor';
-    } else {
-      // Minor numeral
-      chordType = mode === 'major' ? 'minor' : 'major';
-    }
-
-    // Handle special cases for diminished chords
-    if ((mode === 'major' && scaleDegree === 6) || (mode === 'minor' && scaleDegree === 1)) {
+    
+    if (majorChordPositions.includes(scaleDegree)) {
+      chordType = 'major';
+    } else if (minorChordPositions.includes(scaleDegree)) {
+      chordType = 'minor';
+    } else if (diminishedPositions.includes(scaleDegree)) {
       chordType = 'diminished';
+    } else {
+      // Default based on numeral case
+      chordType = numeral === numeral.toUpperCase() ? 'major' : 'minor';
     }
 
     // Get octave for this chord
