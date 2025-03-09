@@ -246,8 +246,8 @@ function createMidiBuffer(sequence) {
 }
 
 module.exports = { 
-  MidiExporter, 
+  MidiExporter,
   createMidiFile,
   exportMidiFile,
-  createMidiBuffer
+  createMidiBuffer,
 };
