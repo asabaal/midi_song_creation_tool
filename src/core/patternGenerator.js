@@ -135,11 +135,12 @@ class ChordGenerator {
 
       return progression.map((numeral) => {
         const step = steps[numeral] || 0;
-        return this.generateChord(
-          Object.keys(this.noteValues).find((key) => this.noteValues[key] === (rootValue + step) % 12),
-          type,
-          octave
+        // Find the note name that corresponds to the scale degree
+        const noteValueForStep = (rootValue + step) % 12;
+        const noteName = Object.keys(this.noteValues).find(
+          (key) => this.noteValues[key] === noteValueForStep
         );
+        return this.generateChord(noteName, type, octave);
       });
     }
 
