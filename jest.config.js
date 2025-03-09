@@ -3,25 +3,19 @@ module.exports = {
   // Base test environment
   testEnvironment: 'node',
   
-  // Different test environments for different test files
-  projects: [
-    {
-      displayName: 'Server Tests',
-      testMatch: ['<rootDir>/tests/unit/server/**/*.test.js', '<rootDir>/tests/integration/api/**/*.test.js'],
-      testEnvironment: 'node',
-    },
-    {
-      displayName: 'Client Tests',
-      testMatch: ['<rootDir>/tests/unit/client/**/*.test.{js,jsx}'],
-      testEnvironment: 'jsdom',
-      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-    },
-    {
-      displayName: 'Core Library Tests',
-      testMatch: ['<rootDir>/tests/unit/core/**/*.test.js'],
-      testEnvironment: 'node',
-    },
+  // Test matching patterns
+  testMatch: [
+    '<rootDir>/tests/**/*.test.{js,jsx}'
   ],
+
+  // Environment setup for different types of tests
+  testEnvironmentOptions: {
+    // For JSX/React tests
+    jsx: true
+  },
+  
+  // Setup files for React tests
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
   // Coverage configuration
   collectCoverageFrom: [
