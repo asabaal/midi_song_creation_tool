@@ -1,20 +1,14 @@
 // jest.config.js
 module.exports = {
-  // Base test environment
-  testEnvironment: 'node',
+  // Use jsdom for all tests since our setup relies on window
+  testEnvironment: 'jsdom',
   
   // Test matching patterns
   testMatch: [
     '<rootDir>/tests/**/*.test.{js,jsx}'
   ],
-
-  // Environment setup for different types of tests
-  testEnvironmentOptions: {
-    // For JSX/React tests
-    jsx: true
-  },
   
-  // Setup files for React tests
+  // Setup files for tests
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
   // Coverage configuration
