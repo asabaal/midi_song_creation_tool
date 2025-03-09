@@ -11,22 +11,22 @@ router.get('/scales/:root/:type', (req, res) => {
   try {
     const { root, type } = req.params;
     const octave = parseInt(req.query.octave || 4);
-    
+
     // Generate the scale in MIDI notes
     const midiNotes = musicTheory.generateScale(root, type, octave);
-    
+
     // Convert MIDI notes to note names
-    const notes = midiNotes.map(midiNote => {
+    const notes = midiNotes.map((midiNote) => {
       const noteName = musicTheory.midiToNote(midiNote);
       return noteName.replace(/\d+$/, ''); // Remove octave number
     });
-    
+
     res.json({
       root,
       type,
       octave,
       notes,
-      midiNotes
+      midiNotes,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -41,22 +41,22 @@ router.get('/chords/:root/:type', (req, res) => {
   try {
     const { root, type } = req.params;
     const octave = parseInt(req.query.octave || 4);
-    
+
     // Generate the chord in MIDI notes
     const midiNotes = musicTheory.generateChord(root, type, octave);
-    
+
     // Convert MIDI notes to note names
-    const notes = midiNotes.map(midiNote => {
+    const notes = midiNotes.map((midiNote) => {
       const noteName = musicTheory.midiToNote(midiNote);
       return noteName.replace(/\d+$/, ''); // Remove octave number
     });
-    
+
     res.json({
       root,
       type,
       octave,
       notes,
-      midiNotes
+      midiNotes,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -72,33 +72,33 @@ router.get('/progressions/:key/:mode', (req, res) => {
     const { key, mode } = req.params;
     const numerals = req.query.numerals || 'I-IV-V-I';
     const octave = parseInt(req.query.octave || 4);
-    
+
     // Split numerals string into array
     const numeralArray = numerals.split('-');
-    
+
     // Generate the progression
     const chordArrays = musicTheory.generateChordProgression(numeralArray, key, mode, octave);
-    
+
     // Format the response
     const chords = chordArrays.map((chordMidiNotes, index) => {
-      const notes = chordMidiNotes.map(midiNote => {
+      const notes = chordMidiNotes.map((midiNote) => {
         const noteName = musicTheory.midiToNote(midiNote);
         return noteName.replace(/\d+$/, ''); // Remove octave number
       });
-      
+
       return {
         numeral: numeralArray[index],
         notes,
-        midiNotes: chordMidiNotes
+        midiNotes: chordMidiNotes,
       };
     });
-    
+
     res.json({
       key,
       mode,
       numerals,
       octave,
-      chords
+      chords,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -112,10 +112,10 @@ router.get('/progressions/:key/:mode', (req, res) => {
 router.get('/key-signature/:key/:mode', (req, res) => {
   try {
     const { key, mode } = req.params;
-    
+
     // Get key signature info
     const keySignatureInfo = musicTheory.getKeySignature(`${key} ${mode}`);
-    
+
     res.json(keySignatureInfo);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -129,32 +129,32 @@ router.get('/key-signature/:key/:mode', (req, res) => {
 router.post('/analyze-chord', (req, res) => {
   try {
     const { midiNotes } = req.body;
-    
+
     if (!Array.isArray(midiNotes) || midiNotes.length < 3) {
       return res.status(400).json({ error: 'At least 3 notes required to analyze a chord' });
     }
-    
+
     // Sort notes in ascending order
     const sortedNotes = [...midiNotes].sort((a, b) => a - b);
-    
+
     // Get note names
-    const noteNames = sortedNotes.map(midiNote => {
+    const noteNames = sortedNotes.map((midiNote) => {
       const noteName = musicTheory.midiToNote(midiNote);
       return noteName.replace(/\d+$/, ''); // Remove octave number
     });
-    
+
     // Analyze chord (simplified implementation)
     // In a real implementation, this would use more advanced chord recognition algorithms
     let root = noteNames[0];
     let type = 'unknown';
     let inversion = 0;
-    
+
     // Try to identify common chord types based on intervals
     const intervals = [];
     for (let i = 1; i < sortedNotes.length; i++) {
       intervals.push(sortedNotes[i] - sortedNotes[0]);
     }
-    
+
     // Major triad [0, 4, 7]
     if (intervals.length === 2 && intervals[0] === 4 && intervals[1] === 7) {
       type = 'major';
@@ -172,18 +172,33 @@ router.post('/analyze-chord', (req, res) => {
       type = 'augmented';
     }
     // Major 7th [0, 4, 7, 11]
-    else if (intervals.length === 3 && intervals[0] === 4 && intervals[1] === 7 && intervals[2] === 11) {
+    else if (
+      intervals.length === 3 &&
+      intervals[0] === 4 &&
+      intervals[1] === 7 &&
+      intervals[2] === 11
+    ) {
       type = 'major7';
     }
     // Dominant 7th [0, 4, 7, 10]
-    else if (intervals.length === 3 && intervals[0] === 4 && intervals[1] === 7 && intervals[2] === 10) {
+    else if (
+      intervals.length === 3 &&
+      intervals[0] === 4 &&
+      intervals[1] === 7 &&
+      intervals[2] === 10
+    ) {
       type = 'dominant7';
     }
     // Minor 7th [0, 3, 7, 10]
-    else if (intervals.length === 3 && intervals[0] === 3 && intervals[1] === 7 && intervals[2] === 10) {
+    else if (
+      intervals.length === 3 &&
+      intervals[0] === 3 &&
+      intervals[1] === 7 &&
+      intervals[2] === 10
+    ) {
       type = 'minor7';
     }
-    
+
     // If chord is recognized, check for inversions
     // This is a simplified approach; a real implementation would be more sophisticated
     if (type !== 'unknown') {
@@ -198,13 +213,13 @@ router.post('/analyze-chord', (req, res) => {
         inversion = 2;
       }
     }
-    
+
     res.json({
       root,
       type,
       inversion,
       notes: noteNames,
-      midiNotes: sortedNotes
+      midiNotes: sortedNotes,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
