@@ -21,7 +21,8 @@
     "start": "node src/server/server.js",
     "dev": "nodemon src/server/server.js",
     "prepare": "chmod +x scripts/run-tests.sh",
-    "generate:fixtures": "node scripts/generate-test-midi.js"
+    "generate:fixtures": "node scripts/generate-test-midi.js",
+    "build": "echo \"No build step required for now\" && exit 0"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
