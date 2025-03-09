@@ -180,11 +180,11 @@ class MidiExporter {
     }
   }
 
-  exportToFile(sequence, _filePath) {
-    // This is a synchronous variant - could use for testing
-    // Renamed to _filePath since it's not used
-    // const midiData = this.sequenceToMidi(sequence);
-    return true; // Success flag
+  // This method is not currently used but kept for future expansion
+  // Renamed parameter to indicate it's not used
+  exportToFile(_sequence) {
+    // For testing purposes, just return success
+    return true;
   }
 
   // Helper methods
