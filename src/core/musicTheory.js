@@ -205,7 +205,7 @@ function getKeySignature(key) {
       accidental: position >= 0 ? 'sharp' : 'flat',
     };
   }
-  
+
   // Use the predefined key signature mapping
   return KEY_SIGNATURES[key];
 }
@@ -220,7 +220,7 @@ function getKeySignature(key) {
  */
 function generateChordProgression(progression, key, mode, octave = 4) {
   const scale = generateScale(key, mode, octave);
-  
+
   // Correctly map chord types based on scale position
   const majorChordPositions = mode === 'major' ? [0, 4, 5] : [3, 4, 5];
   const minorChordPositions = mode === 'major' ? [1, 2, 5] : [0, 2, 6];
@@ -239,7 +239,7 @@ function generateChordProgression(progression, key, mode, octave = 4) {
 
     // Determine chord type based on numeral case and scale position
     let chordType;
-    
+
     if (majorChordPositions.includes(scaleDegree)) {
       chordType = 'major';
     } else if (minorChordPositions.includes(scaleDegree)) {
