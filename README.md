@@ -85,8 +85,8 @@ chmod +x scripts/local_test.sh
 This script will:
 - Verify your Node.js installation
 - Install dependencies if needed
-- Run ESLint and Prettier checks
-- Run all test suites (unit, integration, e2e)
+- Run ESLint and Prettier on core modules
+- Run all test suites
 - Check test coverage against required thresholds
 - Build the project to verify everything compiles correctly
 
@@ -96,7 +96,7 @@ This script will:
 - **Integration Tests**: Test API endpoints and module interactions
 - **End-to-End Tests**: Test full application workflows using Cypress
 
-For more details about the testing suite, see the [tests/README.md](tests/README.md) file.
+For more details about the testing suite, see the [tests/README.md](tests/README.md) file and [.github/QUALITY_GATES.md](.github/QUALITY_GATES.md) for information about the quality gates implementation.
 
 ## Code Quality
 
