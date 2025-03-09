@@ -99,15 +99,6 @@ const KEY_SIGNATURES = {
   'Ab minor': { keySignature: 7, accidental: 'flat' },
 };
 
-// Store note name conversions for consistency
-const FLAT_TO_SHARP_MAP = {
-  'Bb': 'A#',
-  'Db': 'C#',
-  'Eb': 'D#',
-  'Gb': 'F#',
-  'Ab': 'G#',
-};
-
 /**
  * Converts a note name to MIDI note number
  * @param {string} noteName - Note name (e.g. 'C4', 'F#5')
