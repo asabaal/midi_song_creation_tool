@@ -6,20 +6,17 @@ module.exports = {
   // Different test environments for different test files
   projects: [
     {
-      name: 'server',
       displayName: 'Server Tests',
       testMatch: ['<rootDir>/tests/unit/server/**/*.test.js', '<rootDir>/tests/integration/api/**/*.test.js'],
       testEnvironment: 'node',
     },
     {
-      name: 'client',
       displayName: 'Client Tests',
       testMatch: ['<rootDir>/tests/unit/client/**/*.test.{js,jsx}'],
       testEnvironment: 'jsdom',
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
     },
     {
-      name: 'core',
       displayName: 'Core Library Tests',
       testMatch: ['<rootDir>/tests/unit/core/**/*.test.js'],
       testEnvironment: 'node',
