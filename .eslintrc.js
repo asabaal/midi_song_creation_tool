@@ -7,7 +7,8 @@ module.exports = {
     jest: true,
   },
   extends: [
-    'eslint:recommended'
+    'eslint:recommended',
+    'prettier' // Add prettier last to override conflicting rules
   ],
   parserOptions: {
     ecmaVersion: 12,
@@ -22,15 +23,15 @@ module.exports = {
     'no-console': 'warn',
     'no-undef': 'error',
     
-    // Style consistency
-    'indent': ['error', 2],
-    'linebreak-style': ['error', 'unix'],
-    'quotes': ['error', 'single'],
-    'semi': ['error', 'always'],
-    
     // MIDI specific rules to ensure pattern correctness
     'max-len': ['warn', { code: 100, ignoreComments: true }],
+    
+    // Add prettier as a rule (will use your .prettierrc settings)
+    'prettier/prettier': ['error']
   },
+  plugins: [
+    'prettier' // Add prettier plugin
+  ],
   // Jest test file specific relaxations
   overrides: [
     {
