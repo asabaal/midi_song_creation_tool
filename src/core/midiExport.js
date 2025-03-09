@@ -59,7 +59,7 @@ class MidiExporter {
     midiData.tracks.push(tempoTrack);
 
     // Create a track for each sequence track
-    sequence.tracks.forEach((track) => {
+    sequence.tracks.forEach(track => {
       const midiTrack = [];
 
       // Track name if available
@@ -85,7 +85,7 @@ class MidiExporter {
       const noteOffEvents = [];
 
       if (track.notes && Array.isArray(track.notes)) {
-        track.notes.forEach((note) => {
+        track.notes.forEach(note => {
           // Note On event
           noteOnEvents.push({
             deltaTime: this._timeToTicks(note.startTime),
@@ -105,11 +105,13 @@ class MidiExporter {
       }
 
       // Sort events by time
-      const allEvents = [...noteOnEvents, ...noteOffEvents].sort((a, b) => a.deltaTime - b.deltaTime);
+      const allEvents = [...noteOnEvents, ...noteOffEvents].sort(
+        (a, b) => a.deltaTime - b.deltaTime
+      );
 
       // Convert absolute times to delta times
       let lastTime = 0;
-      allEvents.forEach((event) => {
+      allEvents.forEach(event => {
         const absoluteTime = event.deltaTime;
         event.deltaTime = absoluteTime - lastTime;
         lastTime = absoluteTime;
@@ -195,9 +197,9 @@ class MidiExporter {
   _getSequenceLengthInTicks(sequence) {
     let maxTime = 0;
 
-    sequence.tracks.forEach((track) => {
+    sequence.tracks.forEach(track => {
       if (track.notes && Array.isArray(track.notes)) {
-        track.notes.forEach((note) => {
+        track.notes.forEach(note => {
           const noteEnd = note.startTime + note.duration;
           if (noteEnd > maxTime) {
             maxTime = noteEnd;

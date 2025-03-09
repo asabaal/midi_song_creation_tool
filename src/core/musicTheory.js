@@ -6,11 +6,11 @@
 // Note mapping for conversions
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const NOTE_ALIASES = {
-  'Db': 'C#',
-  'Eb': 'D#',
-  'Gb': 'F#',
-  'Ab': 'G#',
-  'Bb': 'A#',
+  Db: 'C#',
+  Eb: 'D#',
+  Gb: 'F#',
+  Ab: 'G#',
+  Bb: 'A#',
 };
 
 // Scale definitions (semitone intervals)
@@ -49,20 +49,20 @@ const CHORD_TYPES = {
 
 // Roman numeral to scale degree mapping
 const ROMAN_NUMERALS = {
-  'I': 0,
-  'II': 1,
-  'III': 2,
-  'IV': 3,
-  'V': 4,
-  'VI': 5,
-  'VII': 6,
-  'i': 0,
-  'ii': 1,
-  'iii': 2,
-  'iv': 3,
-  'v': 4,
-  'vi': 5,
-  'vii': 6
+  I: 0,
+  II: 1,
+  III: 2,
+  IV: 3,
+  V: 4,
+  VI: 5,
+  VII: 6,
+  i: 0,
+  ii: 1,
+  iii: 2,
+  iv: 3,
+  v: 4,
+  vi: 5,
+  vii: 6,
 };
 
 /**
@@ -75,17 +75,17 @@ function noteToMidi(noteName) {
   Object.keys(NOTE_ALIASES).forEach(flat => {
     noteName = noteName.replace(flat, NOTE_ALIASES[flat]);
   });
-  
+
   // Extract note and octave
   const note = noteName.slice(0, -1);
   const octave = parseInt(noteName.slice(-1));
-  
+
   // Calculate MIDI note number
   const noteIndex = NOTE_NAMES.indexOf(note);
   if (noteIndex === -1) {
     throw new Error(`Invalid note name: ${note}`);
   }
-  
+
   return noteIndex + (octave + 1) * 12;
 }
 
@@ -111,7 +111,7 @@ function generateScale(root, scaleType, octave = 4) {
   if (!SCALES[scaleType]) {
     throw new Error(`Unknown scale type: ${scaleType}`);
   }
-  
+
   const rootNote = noteToMidi(`${root}${octave}`);
   return SCALES[scaleType].map(interval => rootNote + interval);
 }
@@ -127,7 +127,7 @@ function generateChord(root, chordType, octave = 4) {
   if (!CHORD_TYPES[chordType]) {
     throw new Error(`Unknown chord type: ${chordType}`);
   }
-  
+
   const rootNote = noteToMidi(`${root}${octave}`);
   return CHORD_TYPES[chordType].map(interval => rootNote + interval);
 }
@@ -139,13 +139,19 @@ function generateChord(root, chordType, octave = 4) {
  */
 function getKeySignature(key) {
   const [root, mode] = key.split(' ');
-  
+
   // Circle of fifths positions (C major = 0, moving clockwise adds sharps)
   const sharpKeys = {
-    'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 
-    'B': 5, 'F#': 6, 'C#': 7
+    C: 0,
+    G: 1,
+    D: 2,
+    A: 3,
+    E: 4,
+    B: 5,
+    'F#': 6,
+    'C#': 7,
   };
-  
+
   // Adjust for minor keys (relative minor is 3 semitones below major)
   let position;
   if (mode === 'major') {
@@ -157,11 +163,11 @@ function getKeySignature(key) {
   } else {
     throw new Error(`Invalid mode: ${mode}`);
   }
-  
+
   // Negative positions are flat keys
   return {
     keySignature: Math.abs(position),
-    accidental: position >= 0 ? 'sharp' : 'flat'
+    accidental: position >= 0 ? 'sharp' : 'flat',
   };
 }
 
@@ -169,24 +175,24 @@ function getKeySignature(key) {
  * Generates a chord progression from Roman numeral notation
  * @param {string[]} progression - Array of Roman numerals (e.g. ['I', 'IV', 'V', 'I'])
  * @param {string} key - Key name (e.g. 'C', 'F#')
- * @param {string} mode - Mode name (e.g. 'major', 'minor') 
+ * @param {string} mode - Mode name (e.g. 'major', 'minor')
  * @param {number} octave - Starting octave
  * @returns {Array<Array<number>>} Array of chord arrays, each containing MIDI note numbers
  */
 function generateChordProgression(progression, key, mode, octave = 4) {
   const scale = generateScale(key, mode, octave);
-  
+
   return progression.map(numeral => {
     // Get scale degree from roman numeral
     let scaleDegree = ROMAN_NUMERALS[numeral];
     if (scaleDegree === undefined) {
       throw new Error(`Invalid Roman numeral: ${numeral}`);
     }
-    
+
     // Get root note of chord from scale degree
     const rootNote = scale[scaleDegree];
     const rootName = midiToNote(rootNote).replace(/\d/, ''); // Remove octave number
-    
+
     // Determine chord type based on numeral case and mode
     let chordType;
     if (numeral === numeral.toUpperCase()) {
@@ -196,16 +202,15 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       // Minor numeral
       chordType = mode === 'major' ? 'minor' : 'major';
     }
-    
+
     // Handle special cases for diminished chords
-    if ((mode === 'major' && scaleDegree === 6) || 
-        (mode === 'minor' && scaleDegree === 1)) {
+    if ((mode === 'major' && scaleDegree === 6) || (mode === 'minor' && scaleDegree === 1)) {
       chordType = 'diminished';
     }
-    
+
     // Get octave for this chord
     const chordOctave = Math.floor(rootNote / 12) - 1;
-    
+
     // Generate the chord
     return generateChord(rootName, chordType, chordOctave);
   });
@@ -220,5 +225,5 @@ module.exports = {
   generateChordProgression,
   NOTE_NAMES,
   SCALES,
-  CHORD_TYPES
+  CHORD_TYPES,
 };

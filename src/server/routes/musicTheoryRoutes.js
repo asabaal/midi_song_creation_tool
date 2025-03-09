@@ -16,7 +16,7 @@ router.get('/scales/:root/:type', (req, res) => {
     const midiNotes = musicTheory.generateScale(root, type, octave);
 
     // Convert MIDI notes to note names
-    const notes = midiNotes.map((midiNote) => {
+    const notes = midiNotes.map(midiNote => {
       const noteName = musicTheory.midiToNote(midiNote);
       return noteName.replace(/\d+$/, ''); // Remove octave number
     });
@@ -46,7 +46,7 @@ router.get('/chords/:root/:type', (req, res) => {
     const midiNotes = musicTheory.generateChord(root, type, octave);
 
     // Convert MIDI notes to note names
-    const notes = midiNotes.map((midiNote) => {
+    const notes = midiNotes.map(midiNote => {
       const noteName = musicTheory.midiToNote(midiNote);
       return noteName.replace(/\d+$/, ''); // Remove octave number
     });
@@ -81,7 +81,7 @@ router.get('/progressions/:key/:mode', (req, res) => {
 
     // Format the response
     const chords = chordArrays.map((chordMidiNotes, index) => {
-      const notes = chordMidiNotes.map((midiNote) => {
+      const notes = chordMidiNotes.map(midiNote => {
         const noteName = musicTheory.midiToNote(midiNote);
         return noteName.replace(/\d+$/, ''); // Remove octave number
       });
@@ -138,7 +138,7 @@ router.post('/analyze-chord', (req, res) => {
     const sortedNotes = [...midiNotes].sort((a, b) => a - b);
 
     // Get note names
-    const noteNames = sortedNotes.map((midiNote) => {
+    const noteNames = sortedNotes.map(midiNote => {
       const noteName = musicTheory.midiToNote(midiNote);
       return noteName.replace(/\d+$/, ''); // Remove octave number
     });

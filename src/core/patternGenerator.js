@@ -102,7 +102,7 @@ class ChordGenerator {
       intervals = [0, 4, 7]; // Default to major
     }
 
-    return intervals.map((interval) => ({
+    return intervals.map(interval => ({
       pitch: rootPitch + interval,
       startTime,
       duration,
@@ -133,12 +133,12 @@ class ChordGenerator {
         viio: 11,
       };
 
-      return progression.map((numeral) => {
+      return progression.map(numeral => {
         const step = steps[numeral] || 0;
         // Find the note name that corresponds to the scale degree
         const noteValueForStep = (rootValue + step) % 12;
         const noteName = Object.keys(this.noteValues).find(
-          (key) => this.noteValues[key] === noteValueForStep
+          key => this.noteValues[key] === noteValueForStep
         );
         return this.generateChord(noteName, type, octave);
       });
@@ -174,7 +174,7 @@ class ChordGenerator {
     }
 
     // Create chord notes
-    return intervals.map((interval) => ({
+    return intervals.map(interval => ({
       pitch: root + interval,
       startTime: options.startTime || 0,
       duration: options.duration || 1,
@@ -255,9 +255,9 @@ class BasslineGenerator {
     const roots = Array.isArray(chordRoots) ? chordRoots : [chordRoots];
 
     // Transpose chord roots to the bass octave (octave 3 = C3 = MIDI note 48)
-    const bassRoots = roots.map((root) => {
+    const bassRoots = roots.map(root => {
       // Normalize to C in the requested octave
-      const normalizedRoot = (root % 12) + (octave * 12);
+      const normalizedRoot = (root % 12) + octave * 12;
       return normalizedRoot;
     });
 
@@ -338,7 +338,7 @@ class BasslineGenerator {
 
     roots.forEach((root, chordIndex) => {
       // Transpose to correct octave
-      const bassRoot = (root % 12) + (octave * 12);
+      const bassRoot = (root % 12) + octave * 12;
 
       // Apply the pattern for each chord
       pattern.forEach((interval, stepIndex) => {

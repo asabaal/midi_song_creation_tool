@@ -95,8 +95,8 @@ class MidiSequence {
   getDuration() {
     let maxDuration = 0;
 
-    this.tracks.forEach((track) => {
-      track.notes.forEach((note) => {
+    this.tracks.forEach(track => {
+      track.notes.forEach(note => {
         const noteEnd = note.startTime + note.duration;
         if (noteEnd > maxDuration) {
           maxDuration = noteEnd;
@@ -108,8 +108,8 @@ class MidiSequence {
   }
 
   quantizeNotes(gridSize) {
-    this.tracks.forEach((track) => {
-      track.notes.forEach((note) => {
+    this.tracks.forEach(track => {
+      track.notes.forEach(note => {
         // Quantize start time to nearest grid value
         note.startTime = Math.round(note.startTime / gridSize) * gridSize;
 
@@ -126,7 +126,7 @@ class MidiSequence {
 
   transposeTrack(trackId, semitones) {
     if (trackId < this.tracks.length) {
-      this.tracks[trackId].notes.forEach((note) => {
+      this.tracks[trackId].notes.forEach(note => {
         note.pitch += semitones;
       });
       return true;
@@ -143,7 +143,7 @@ class MidiSequence {
 
     const endTime = startTime + duration;
 
-    return this.tracks[trackId].notes.some((note) => {
+    return this.tracks[trackId].notes.some(note => {
       if (note.pitch !== pitch) {
         return false;
       }

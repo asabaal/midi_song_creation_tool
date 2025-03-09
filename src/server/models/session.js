@@ -16,7 +16,7 @@ if (process.env.NODE_ENV === 'test') {
     pitch: { type: Number, required: true },
     startTime: { type: Number, required: true },
     duration: { type: Number, required: true },
-    velocity: { type: Number, default: 100 }
+    velocity: { type: Number, default: 100 },
   });
 
   // Track schema (embedded in Session)
@@ -24,7 +24,7 @@ if (process.env.NODE_ENV === 'test') {
     id: { type: Number, required: true },
     name: { type: String, default: 'Untitled Track' },
     instrument: { type: Number, default: 0 },
-    notes: [NoteSchema]
+    notes: [NoteSchema],
   });
 
   // Session schema
@@ -36,13 +36,13 @@ if (process.env.NODE_ENV === 'test') {
     loop: {
       enabled: { type: Boolean, default: false },
       start: { type: Number, default: 0 },
-      end: { type: Number, default: 8 }
+      end: { type: Number, default: 8 },
     },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
   });
 
   // Create models
   const Session = mongoose.model('Session', SessionSchema);
-  
+
   module.exports = { Session };
 }
