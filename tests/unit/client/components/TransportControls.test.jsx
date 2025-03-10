@@ -1,6 +1,6 @@
 // tests/unit/client/components/TransportControls.test.jsx
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TransportControls from '../../../../src/client/components/TransportControls';
 
@@ -29,6 +29,12 @@ jest.mock('../../../../src/client/context/SessionContext', () => ({
 }));
 
 describe('TransportControls', () => {
+  // Clean up after each test to prevent multiple instances
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+
   test('renders transport controls', () => {
     render(<TransportControls />);
     
@@ -43,7 +49,7 @@ describe('TransportControls', () => {
   test('plays and pauses transport', () => {
     const transportService = require('../../../../src/client/services/transportService');
     
-    render(<TransportControls />);
+    const { rerender } = render(<TransportControls />);
     
     // Click play
     fireEvent.click(screen.getByLabelText('Play'));
@@ -53,8 +59,8 @@ describe('TransportControls', () => {
     // Mock that it's now playing
     transportService.isPlaying.mockReturnValue(true);
     
-    // Re-render to update play/pause button
-    render(<TransportControls />);
+    // Re-render with same component instance
+    rerender(<TransportControls />);
     
     // Now click pause (same button)
     fireEvent.click(screen.getByLabelText('Pause'));
@@ -176,7 +182,7 @@ describe('TransportControls', () => {
     // Mock the current position (in ticks)
     transportService.getCurrentTick.mockReturnValue(480); // 1 quarter note at 480 PPQ
     
-    render(<TransportControls />);
+    const { rerender } = render(<TransportControls />);
     
     // Check that position display is rendered with correct format (e.g., "1.1.00")
     const positionDisplay = screen.getByTestId('position-display');
@@ -186,10 +192,11 @@ describe('TransportControls', () => {
     // Update the tick position
     transportService.getCurrentTick.mockReturnValue(960); // 2 quarter notes
     
-    // Re-render to update position display
-    render(<TransportControls />);
+    // Re-render the same component instance to update position display
+    rerender(<TransportControls />);
     
-    expect(screen.getByTestId('position-display').textContent).toBe('1.2.00');
+    // Now check the updated position display
+    expect(positionDisplay.textContent).toBe('1.2.00');
   });
   
   test('toggles loop mode', () => {
