@@ -1,272 +1,221 @@
 // tests/unit/client/components/PatternGenerator.test.jsx
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PatternGenerator from '../../../../src/client/components/PatternGenerator';
+import { useSessionContext } from '../../../../tests/mocks/SessionContextMock';
+
+// Mock the context provider
+jest.mock('../../../../src/client/context/SessionContext', () => ({
+  useSessionContext
+}));
 
 // Mock the API service
 jest.mock('../../../../src/client/services/apiService', () => ({
-  generatePattern: jest.fn().mockResolvedValue({
-    notes: [
-      { pitch: 60, startTime: 0, duration: 1, velocity: 100 },
-      { pitch: 64, startTime: 1, duration: 1, velocity: 100 },
-      { pitch: 67, startTime: 2, duration: 1, velocity: 100 }
+  generateChordProgression: jest.fn().mockResolvedValue({
+    success: true,
+    progression: [
+      { root: 'C', octave: 4, chordType: 'major', notes: [60, 64, 67] },
+      { root: 'G', octave: 4, chordType: 'major', notes: [67, 71, 74] },
+      { root: 'A', octave: 4, chordType: 'minor', notes: [69, 72, 76] },
+      { root: 'F', octave: 4, chordType: 'major', notes: [65, 69, 72] }
+    ]
+  }),
+  generateBassline: jest.fn().mockResolvedValue({
+    success: true,
+    bassline: [
+      { pitch: 48, startTime: 0, duration: 1, velocity: 100 },
+      { pitch: 55, startTime: 1, duration: 1, velocity: 100 },
+      { pitch: 57, startTime: 2, duration: 1, velocity: 100 },
+      { pitch: 53, startTime: 3, duration: 1, velocity: 100 }
+    ]
+  }),
+  generateDrumPattern: jest.fn().mockResolvedValue({
+    success: true,
+    drumPattern: [
+      { pitch: 36, startTime: 0, duration: 0.25, velocity: 100 },
+      { pitch: 38, startTime: 1, duration: 0.25, velocity: 90 },
+      { pitch: 36, startTime: 2, duration: 0.25, velocity: 100 },
+      { pitch: 38, startTime: 3, duration: 0.25, velocity: 90 }
+    ]
+  }),
+  generateArpeggio: jest.fn().mockResolvedValue({
+    success: true,
+    arpeggio: [
+      { pitch: 60, startTime: 0, duration: 0.25, velocity: 90 },
+      { pitch: 64, startTime: 0.25, duration: 0.25, velocity: 90 },
+      { pitch: 67, startTime: 0.5, duration: 0.25, velocity: 90 },
+      { pitch: 72, startTime: 0.75, duration: 0.25, velocity: 90 }
     ]
   })
 }));
 
-// Mock the context provider
-jest.mock('../../../../src/client/context/SessionContext', () => ({
-  useSessionContext: jest.fn().mockReturnValue({
-    currentSession: {
-      id: 'test-session',
-      tracks: [
-        { id: 0, name: 'Piano', instrument: 0 },
-        { id: 1, name: 'Bass', instrument: 32 },
-        { id: 9, name: 'Drums', instrument: 0 }
-      ]
-    },
-    selectedTrackId: 0,
-    setSelectedTrackId: jest.fn(),
-    addNotesToTrack: jest.fn()
-  })
-}));
+// Mock the CSS imports
+jest.mock('../../../../src/client/styles/PatternGenerator.css', () => ({}));
 
 describe('PatternGenerator', () => {
+  // Clean up after each test
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+  
   test('renders pattern generator component', () => {
     render(<PatternGenerator />);
-    
-    // Check that all main tabs are rendered
-    expect(screen.getByText('Chord Patterns')).toBeInTheDocument();
-    expect(screen.getByText('Bassline Patterns')).toBeInTheDocument();
-    expect(screen.getByText('Drum Patterns')).toBeInTheDocument();
+    expect(screen.getByText(/Pattern Generator/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chord Progression/i)).toBeInTheDocument();
+    expect(screen.getByText(/Bassline/i)).toBeInTheDocument();
+    expect(screen.getByText(/Drum Pattern/i)).toBeInTheDocument();
   });
   
-  test('generates chord pattern', async () => {
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
-    const mockAddNotesToTrack = jest.fn();
+  test('generates chord progression', async () => {
+    const mockAddNotes = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
-      addNotesToTrack: mockAddNotesToTrack
-    });
-    
-    const apiService = require('../../../../src/client/services/apiService');
-    
-    render(<PatternGenerator />);
-    
-    // Select the Chord Patterns tab
-    fireEvent.click(screen.getByText('Chord Patterns'));
-    
-    // Fill out chord pattern form
-    fireEvent.change(screen.getByLabelText('Root Note'), { 
-      target: { value: 'C' } 
-    });
-    
-    fireEvent.change(screen.getByLabelText('Chord Type'), { 
-      target: { value: 'major' } 
-    });
-    
-    fireEvent.change(screen.getByLabelText('Octave'), { 
-      target: { value: '4' } 
-    });
-    
-    // Click the Generate button
-    fireEvent.click(screen.getByText('Generate Chord'));
-    
-    // Wait for API call to complete
-    await waitFor(() => {
-      expect(apiService.generatePattern).toHaveBeenCalledWith(
-        'test-session',
-        expect.objectContaining({
-          type: 'chord',
-          root: 'C',
-          chordType: 'major',
-          octave: 4,
-          trackId: 0
-        })
-      );
-    });
-    
-    // Check that notes were added to the track
-    expect(mockAddNotesToTrack).toHaveBeenCalled();
-  });
-  
-  test('generates bassline pattern', async () => {
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
-    const mockAddNotesToTrack = jest.fn();
-    mockAddNotesToTrack.mockResolvedValue(undefined);
-    useSessionContext.mockReturnValue({
-      ...useSessionContext(),
-      addNotesToTrack: mockAddNotesToTrack,
-      selectedTrackId: 1 // Select bass track
-    });
-    
-    const apiService = require('../../../../src/client/services/apiService');
-    apiService.generatePattern.mockResolvedValue({
-      notes: [
-        { pitch: 36, startTime: 0, duration: 1, velocity: 100 },
-        { pitch: 43, startTime: 1, duration: 1, velocity: 100 },
-        { pitch: 40, startTime: 2, duration: 1, velocity: 100 }
-      ]
+      addNotes: mockAddNotes
     });
     
     render(<PatternGenerator />);
     
-    // Select the Bassline Patterns tab
-    fireEvent.click(screen.getByText('Bassline Patterns'));
+    // Find and click the generate chord progression button
+    const generateButton = screen.getByText('Generate Chord Progression');
+    fireEvent.click(generateButton);
     
-    // Select bassline style
-    fireEvent.change(screen.getByLabelText('Style'), { 
-      target: { value: 'walking' } 
-    });
-    
-    // Enter chord progression
-    fireEvent.change(screen.getByLabelText('Chord Roots'), { 
-      target: { value: 'C G F C' } 
-    });
-    
-    // Click the Generate button
-    fireEvent.click(screen.getByText('Generate Bassline'));
-    
-    // Wait for API call to complete
+    // Wait for the API call to resolve
     await waitFor(() => {
-      expect(apiService.generatePattern).toHaveBeenCalledWith(
-        'test-session',
-        expect.objectContaining({
-          type: 'bassline',
-          style: 'walking',
-          trackId: 1
-        })
-      );
+      expect(mockAddNotes).toHaveBeenCalled();
+    });
+  });
+  
+  test('generates bassline', async () => {
+    const mockAddNotes = jest.fn();
+    useSessionContext.mockReturnValue({
+      ...useSessionContext(),
+      addNotes: mockAddNotes
     });
     
-    // Check that notes were added to the track
-    expect(mockAddNotesToTrack).toHaveBeenCalled();
+    render(<PatternGenerator />);
+    
+    // Find and click the generate bassline button
+    const generateButton = screen.getByText('Generate Bassline');
+    fireEvent.click(generateButton);
+    
+    // Wait for the API call to resolve
+    await waitFor(() => {
+      expect(mockAddNotes).toHaveBeenCalled();
+    });
   });
   
   test('generates drum pattern', async () => {
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
-    const mockAddNotesToTrack = jest.fn();
-    mockAddNotesToTrack.mockResolvedValue(undefined);
+    const mockAddNotes = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
-      addNotesToTrack: mockAddNotesToTrack,
-      selectedTrackId: 9 // Select drum track
-    });
-    
-    const apiService = require('../../../../src/client/services/apiService');
-    apiService.generatePattern.mockResolvedValue({
-      notes: [
-        { pitch: 36, startTime: 0, duration: 0.25, velocity: 100 }, // Kick
-        { pitch: 38, startTime: 1, duration: 0.25, velocity: 90 },  // Snare
-        { pitch: 42, startTime: 0.5, duration: 0.25, velocity: 80 } // Hi-hat closed
-      ]
+      addNotes: mockAddNotes
     });
     
     render(<PatternGenerator />);
     
-    // Select the Drum Patterns tab
-    fireEvent.click(screen.getByText('Drum Patterns'));
+    // Find and click the generate drum pattern button
+    const generateButton = screen.getByText('Generate Drum Pattern');
+    fireEvent.click(generateButton);
     
-    // Select drum pattern style
-    fireEvent.change(screen.getByLabelText('Style'), { 
-      target: { value: 'basic' } 
-    });
-    
-    // Set number of bars
-    fireEvent.change(screen.getByLabelText('Bars'), { 
-      target: { value: '2' } 
-    });
-    
-    // Click the Generate button
-    fireEvent.click(screen.getByText('Generate Drum Pattern'));
-    
-    // Wait for API call to complete
+    // Wait for the API call to resolve
     await waitFor(() => {
-      expect(apiService.generatePattern).toHaveBeenCalledWith(
-        'test-session',
-        expect.objectContaining({
-          type: 'drum',
-          style: 'basic',
-          bars: 2,
-          trackId: 9
-        })
-      );
-    });
-    
-    // Check that notes were added to the track
-    expect(mockAddNotesToTrack).toHaveBeenCalled();
-  });
-  
-  test('handles pattern generation errors', async () => {
-    const apiService = require('../../../../src/client/services/apiService');
-    apiService.generatePattern.mockRejectedValue(new Error('Pattern generation failed'));
-    
-    render(<PatternGenerator />);
-    
-    // Select the Chord Patterns tab
-    fireEvent.click(screen.getByText('Chord Patterns'));
-    
-    // Click generate without filling form
-    fireEvent.click(screen.getByText('Generate Chord'));
-    
-    // Wait for error message to appear
-    await waitFor(() => {
-      expect(screen.getByText('Error: Pattern generation failed')).toBeInTheDocument();
+      expect(mockAddNotes).toHaveBeenCalled();
     });
   });
   
-  test('updates track selection', () => {
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
-    const mockSetSelectedTrackId = jest.fn();
-    useSessionContext.mockReturnValue({
-      ...useSessionContext(),
-      setSelectedTrackId: mockSetSelectedTrackId
-    });
-    
+  test('changes key parameter', () => {
     render(<PatternGenerator />);
     
-    // Select the Chord Patterns tab
-    fireEvent.click(screen.getByText('Chord Patterns'));
+    // Find the key selector
+    const keySelector = screen.getByLabelText('Key');
     
-    // Find and change the track select
-    fireEvent.change(screen.getByLabelText('Target Track'), { 
-      target: { value: '1' } 
-    });
+    // Change key value
+    fireEvent.change(keySelector, { target: { value: 'G' } });
     
-    expect(mockSetSelectedTrackId).toHaveBeenCalledWith(1);
+    // Verify the select value was updated
+    expect(keySelector.value).toBe('G');
   });
   
-  test('previews pattern before adding', async () => {
-    const apiService = require('../../../../src/client/services/apiService');
-    
-    // Create a component with the preview feature
+  test('changes scale type parameter', () => {
     render(<PatternGenerator />);
     
-    // Select the Chord Patterns tab
-    fireEvent.click(screen.getByText('Chord Patterns'));
+    // Find the scale type selector
+    const scaleTypeSelector = screen.getByLabelText('Scale Type');
     
-    // Fill basic form
-    fireEvent.change(screen.getByLabelText('Root Note'), { 
-      target: { value: 'C' } 
-    });
+    // Change scale type value
+    fireEvent.change(scaleTypeSelector, { target: { value: 'minor' } });
     
-    // Click Preview button if available
-    const previewButton = screen.getByText('Preview');
-    fireEvent.click(previewButton);
+    // Verify the select value was updated
+    expect(scaleTypeSelector.value).toBe('minor');
+  });
+  
+  test('changes pattern type parameter', () => {
+    render(<PatternGenerator />);
     
-    // Wait for API call
+    // Find the pattern type selector
+    const patternTypeSelector = screen.getByLabelText('Pattern Type');
+    
+    // Change pattern type value
+    fireEvent.change(patternTypeSelector, { target: { value: 'funk' } });
+    
+    // Verify the select value was updated
+    expect(patternTypeSelector.value).toBe('funk');
+  });
+  
+  test('changes pattern length parameter', () => {
+    render(<PatternGenerator />);
+    
+    // Find the pattern length selector
+    const patternLengthSelector = screen.getByLabelText('Pattern Length');
+    
+    // Change pattern length value
+    fireEvent.change(patternLengthSelector, { target: { value: '8' } });
+    
+    // Verify the select value was updated
+    expect(patternLengthSelector.value).toBe('8');
+  });
+  
+  test('tracks loading state while generating', async () => {
+    // Mock a delayed API response
+    const apiService = require('../../../../src/client/services/apiService');
+    apiService.generateChordProgression.mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve({
+        success: true,
+        progression: []
+      }), 100))
+    );
+    
+    render(<PatternGenerator />);
+    
+    // Find and click the generate button
+    const generateButton = screen.getByText('Generate Chord Progression');
+    fireEvent.click(generateButton);
+    
+    // Button should be disabled while loading
+    expect(generateButton).toBeDisabled();
+    
+    // Wait for loading to complete
     await waitFor(() => {
-      expect(apiService.generatePattern).toHaveBeenCalled();
+      expect(generateButton).not.toBeDisabled();
     });
+  });
+  
+  test('shows error when generation fails', async () => {
+    // Mock an API error
+    const apiService = require('../../../../src/client/services/apiService');
+    apiService.generateChordProgression.mockRejectedValue(new Error('API error'));
     
-    // Check that the preview display shows
-    const previewDisplay = screen.getByTestId('pattern-preview');
-    expect(previewDisplay).toBeInTheDocument();
+    render(<PatternGenerator />);
     
-    // Verify preview content (this would depend on your component implementation)
-    expect(previewDisplay.textContent).toContain('C');
-    expect(previewDisplay.textContent).toContain('E');
-    expect(previewDisplay.textContent).toContain('G');
+    // Find and click the generate button
+    const generateButton = screen.getByText('Generate Chord Progression');
+    fireEvent.click(generateButton);
+    
+    // Wait for error to be displayed
+    await waitFor(() => {
+      expect(screen.getByText(/Error generating pattern/i)).toBeInTheDocument();
+    });
   });
 });
