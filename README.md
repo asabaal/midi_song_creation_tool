@@ -1,9 +1,12 @@
 # MIDI Song Creation Tool
 
 [![Test Suite](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml)
-[![Lint](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml)
 
 An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.
+
+## Testing Infrastructure
+
+This branch focuses **exclusively** on adding testing infrastructure to the project. It includes Jest configuration, test files, and test utilities without introducing linting or code style changes.
 
 ## Overview
 
@@ -24,25 +27,6 @@ The framework consists of these main components:
 1. **Core Library** (`src/core`): Handles note creation, manipulation and basic music theory
 2. **Server** (`src/server`): Provides structured API endpoints for Claude to interact with
 3. **Web Interface** (`public`): Simple UI for human testing and visualization
-
-## Setup Instructions
-
-1. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
-
-2. **Start the Server**:
-   ```bash
-   npm start
-   ```
-
-3. **Development Mode**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Access the UI**: Open `http://localhost:3000` in your browser
 
 ## Testing
 
@@ -85,7 +69,6 @@ chmod +x scripts/local_test.sh
 This script will:
 - Verify your Node.js installation
 - Install dependencies if needed
-- Run ESLint and Prettier on core modules
 - Run all test suites
 - Check test coverage against required thresholds
 - Build the project to verify everything compiles correctly
@@ -96,43 +79,26 @@ This script will:
 - **Integration Tests**: Test API endpoints and module interactions
 - **End-to-End Tests**: Test full application workflows using Cypress
 
-For more details about the testing suite, see the [tests/README.md](tests/README.md) file and [.github/QUALITY_GATES.md](.github/QUALITY_GATES.md) for information about the quality gates implementation.
+For more details about the testing suite, see the [tests/README.md](tests/README.md) file.
 
-## Code Quality
+## Setup Instructions
 
-```bash
-# Run linting
-npm run lint
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
 
-# Fix linting issues automatically
-npm run lint:fix
+2. **Start the Server**:
+   ```bash
+   npm start
+   ```
 
-# Format code with Prettier
-npm run format
-```
+3. **Development Mode**:
+   ```bash
+   npm run dev
+   ```
 
-## API Documentation
-
-The API provides endpoints for:
-
-- Session management
-- Sequence creation and modification
-- Note manipulation
-- Music theory operations (scales, chords, progressions)
-- Pattern generation (chord progressions, arpeggios, basslines, drums)
-- Sequence operations (variations, quantization, merging)
-
-All endpoints support JSON and follow RESTful conventions.
-
-## Claude Integration
-
-Claude can interact with this framework to help with music creation tasks including:
-
-- Creating chord progressions in specific keys
-- Generating drum patterns in various styles
-- Building arpeggios and basslines
-- Applying music theory principles to compositions
-- Creating variations and transformations of musical ideas
+4. **Access the UI**: Open `http://localhost:3000` in your browser
 
 ## License
 
