@@ -205,7 +205,8 @@ class MidiSequence {
   debug() {
     // eslint-disable-next-line no-console
     console.log(
-      `MidiSequence: ${this.tracks.length} tracks, ${this.totalDuration} beats, tempo: ${this.tempo}`
+      `MidiSequence: ${this.tracks.length} tracks, ${this.totalDuration} beats, ` + 
+      `tempo: ${this.tempo}`
     );
     this.tracks.forEach((track, i) => {
       // eslint-disable-next-line no-console
