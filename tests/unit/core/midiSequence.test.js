@@ -1,5 +1,5 @@
 // tests/unit/core/midiSequence.test.js
-const { MidiSequence } = require('../../../src/core/midiSequence');
+const MidiSequence = require('../../../src/core/midiSequence');
 
 describe('MidiSequence', () => {
   let sequence;
@@ -7,42 +7,37 @@ describe('MidiSequence', () => {
   beforeEach(() => {
     // Setup a new sequence before each test
     sequence = new MidiSequence({
-      bpm: 120,
-      timeSignature: [4, 4],
-      tracks: []
+      tempo: 120,
+      timeSignature: { numerator: 4, denominator: 4 }
     });
   });
   
   test('should initialize with correct default values', () => {
-    expect(sequence.bpm).toBe(120);
-    expect(sequence.timeSignature).toEqual([4, 4]);
-    expect(sequence.tracks).toEqual([]);
+    expect(sequence.tempo).toBe(120);
+    expect(sequence.timeSignature).toEqual({ numerator: 4, denominator: 4 });
+    expect(sequence.tracks.length).toBe(1); // Default track
   });
   
   test('should add a note correctly', () => {
-    sequence.addNote({
-      trackId: 0,
+    const trackIndex = 0;
+    sequence.addNote(trackIndex, {
       pitch: 60, // Middle C
       startTime: 0,
       duration: 1,
       velocity: 100
     });
     
-    // Create a new track if it doesn't exist
-    expect(sequence.tracks.length).toBe(1);
-    expect(sequence.tracks[0].notes.length).toBe(1);
-    expect(sequence.tracks[0].notes[0]).toEqual({
-      pitch: 60,
-      startTime: 0,
-      duration: 1,
-      velocity: 100
-    });
+    expect(sequence.tracks[trackIndex].notes.length).toBe(1);
+    expect(sequence.tracks[trackIndex].notes[0].pitch).toBe(60);
+    expect(sequence.tracks[trackIndex].notes[0].startTime).toBe(0);
+    expect(sequence.tracks[trackIndex].notes[0].duration).toBe(1);
+    expect(sequence.tracks[trackIndex].notes[0].velocity).toBe(100);
   });
   
   test('should remove a note correctly', () => {
+    const trackIndex = 0;
     // Add a note first
-    sequence.addNote({
-      trackId: 0,
+    sequence.addNote(trackIndex, {
       pitch: 60,
       startTime: 0,
       duration: 1,
@@ -50,25 +45,22 @@ describe('MidiSequence', () => {
     });
     
     // Then remove it
-    sequence.removeNote({
-      trackId: 0,
-      index: 0
-    });
+    const result = sequence.removeNote(trackIndex, 0);
     
-    expect(sequence.tracks[0].notes.length).toBe(0);
+    expect(result).toBe(true);
+    expect(sequence.tracks[trackIndex].notes.length).toBe(0);
   });
   
   test('should calculate sequence duration correctly', () => {
-    sequence.addNote({
-      trackId: 0,
+    const trackIndex = 0;
+    sequence.addNote(trackIndex, {
       pitch: 60,
       startTime: 0,
       duration: 2,
       velocity: 100
     });
     
-    sequence.addNote({
-      trackId: 0,
+    sequence.addNote(trackIndex, {
       pitch: 62,
       startTime: 3,
       duration: 1,
@@ -79,8 +71,8 @@ describe('MidiSequence', () => {
   });
   
   test('should quantize notes correctly', () => {
-    sequence.addNote({
-      trackId: 0,
+    const trackIndex = 0;
+    sequence.addNote(trackIndex, {
       pitch: 60,
       startTime: 0.95, // Should round to 1
       duration: 0.45,  // Should round to 0.5
@@ -89,41 +81,43 @@ describe('MidiSequence', () => {
     
     sequence.quantizeNotes(0.5); // Quantize to half notes
     
-    expect(sequence.tracks[0].notes[0].startTime).toBe(1);
-    expect(sequence.tracks[0].notes[0].duration).toBe(0.5);
+    expect(sequence.tracks[trackIndex].notes[0].startTime).toBe(1);
+    expect(sequence.tracks[trackIndex].notes[0].duration).toBe(0.5);
   });
   
   test('should transpose notes correctly', () => {
-    sequence.addNote({
-      trackId: 0,
+    const trackIndex = 0;
+    sequence.addNote(trackIndex, {
       pitch: 60,
       startTime: 0,
       duration: 1,
       velocity: 100
     });
     
-    sequence.transposeTrack(0, 12); // Transpose up an octave
+    sequence.transpose(12); // Transpose up an octave
     
-    expect(sequence.tracks[0].notes[0].pitch).toBe(72);
+    expect(sequence.tracks[trackIndex].notes[0].pitch).toBe(72);
   });
   
   test('should handle note collisions', () => {
-    sequence.addNote({
-      trackId: 0,
+    const trackIndex = 0;
+    sequence.addNote(trackIndex, {
       pitch: 60,
       startTime: 0,
       duration: 2,
       velocity: 100
     });
     
-    // This note overlaps with the previous one
-    const hasCollision = sequence.wouldCollide({
-      trackId: 0,
+    // Add another note on same pitch
+    sequence.addNote(trackIndex, {
       pitch: 60,
       startTime: 1,
-      duration: 2
+      duration: 2,
+      velocity: 100
     });
     
-    expect(hasCollision).toBeTruthy();
+    const collisions = sequence.findNoteCollisions(trackIndex);
+    
+    expect(collisions.length).toBe(1);
   });
 });
