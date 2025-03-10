@@ -1,217 +1,217 @@
 // src/core/midiSequence.js
+/**
+ * MidiSequence class - represents a MIDI sequence with multiple tracks
+ * Each track contains notes with timing information
+ */
+
 class MidiSequence {
+  /**
+   * Create a new MIDI sequence
+   * @param {Object} options - Configuration options
+   * @param {number} options.tempo - Tempo in BPM (defaults to 120)
+   * @param {Object} options.timeSignature - Time signature (numerator/denominator)
+   * @param {number} options.ticksPerBeat - MIDI ticks per beat (defaults to 480)
+   */
   constructor(options = {}) {
-    // Support both constructor styles - our original and the test's expected format
-    this.tracks = options.tracks || [];
-    this.tempo = options.bpm || 120;
-    this.bpm = options.bpm || 120; // Alias for tests
-    this.timeSignature = options.timeSignature || [4, 4];
+    this.tempo = options.tempo || 120;
+    this.timeSignature = options.timeSignature || { numerator: 4, denominator: 4 };
+    this.ticksPerBeat = options.ticksPerBeat || 480;
+    this.tracks = [];
+    this.totalDuration = 0;
+
+    // Create a default track if not provided
+    this.addTrack({ name: 'Track 1', instrument: 0 });
   }
 
-  addTrack(instrument = 0, name = '') {
-    const trackId = this.tracks.length;
-    this.tracks.push({
+  /**
+   * Add a new track to the sequence
+   * @param {Object} trackData - Track data (name, instrument, etc.)
+   * @returns {number} Index of the new track
+   */
+  addTrack(trackData = {}) {
+    const track = {
+      name: trackData.name || `Track ${this.tracks.length + 1}`,
+      instrument: trackData.instrument !== undefined ? trackData.instrument : 0, // Default to piano
       notes: [],
-      instrument,
-      name,
-      id: trackId,
-    });
-    return trackId;
-  }
+      ...trackData,
+    };
 
-  setBpm(bpm) {
-    this.tempo = bpm;
-    this.bpm = bpm; // Update alias for tests
-  }
-
-  getBpm() {
-    return this.bpm || this.tempo;
-  }
-
-  getTracks() {
-    return this.tracks;
-  }
-
-  // Method signature for our application
-  addNote(trackId, note) {
-    if (typeof trackId === 'object') {
-      // Test is using object parameter style
-      return this.addNoteObject(trackId);
+    // Initialize notes array if not provided
+    if (!track.notes) {
+      track.notes = [];
     }
 
-    // Create track if it doesn't exist
-    while (this.tracks.length <= trackId) {
-      this.addTrack();
-    }
-
-    this.tracks[trackId].notes.push({
-      pitch: note.pitch,
-      startTime: note.startTime,
-      duration: note.duration,
-      velocity: note.velocity || 100,
-    });
-
-    return this.tracks[trackId].notes.length - 1;
+    // Add the track and return its index
+    this.tracks.push(track);
+    return this.tracks.length - 1;
   }
 
-  // Method signature for tests
-  addNoteObject(noteObj) {
-    const { pitch, startTime, duration, velocity = 100 } = noteObj;
-    const trackId = noteObj.track || noteObj.trackId || 0;
-
-    // Create track if it doesn't exist
-    while (this.tracks.length <= trackId) {
-      this.addTrack();
+  /**
+   * Add a note to a specific track
+   * @param {number} trackIndex - Index of the track
+   * @param {Object} noteData - Note data (pitch, startTime, duration, velocity)
+   * @returns {Object} The added note
+   */
+  addNote(trackIndex, noteData) {
+    // Validate that the track exists
+    if (trackIndex < 0 || trackIndex >= this.tracks.length) {
+      throw new Error(`Track index ${trackIndex} is out of bounds`);
     }
 
-    this.tracks[trackId].notes.push({
-      pitch,
-      startTime,
-      duration,
-      velocity,
-    });
+    // Create a new note with defaults
+    const note = {
+      pitch: noteData.pitch || 60, // Default to middle C
+      startTime: noteData.startTime || 0, // Start at the beginning
+      duration: noteData.duration || 1, // Default to a quarter note
+      velocity: noteData.velocity !== undefined ? noteData.velocity : 100, // Default velocity
+      ...noteData,
+    };
 
-    return this.tracks[trackId].notes.length - 1;
-  }
+    // Add note to track
+    this.tracks[trackIndex].notes.push(note);
 
-  removeNote(trackIdOrObj, noteIndex) {
-    if (typeof trackIdOrObj === 'object') {
-      // Test style
-      const { trackId, index } = trackIdOrObj;
-      return this.removeNoteByIndex(trackId, index);
+    // Update sequence duration if needed
+    const noteEnd = note.startTime + note.duration;
+    if (noteEnd > this.totalDuration) {
+      this.totalDuration = noteEnd;
     }
 
-    return this.removeNoteByIndex(trackIdOrObj, noteIndex);
+    return note;
   }
 
-  removeNoteByIndex(trackId, noteIndex) {
-    if (trackId < this.tracks.length && noteIndex < this.tracks[trackId].notes.length) {
-      this.tracks[trackId].notes.splice(noteIndex, 1);
-      return true;
+  /**
+   * Remove a note from a track
+   * @param {number} trackIndex - Index of the track
+   * @param {number} noteIndex - Index of the note to remove
+   * @returns {boolean} True if note was removed successfully
+   */
+  removeNote(trackIndex, noteIndex) {
+    // Validate track and note indices
+    if (
+      trackIndex < 0 ||
+      trackIndex >= this.tracks.length ||
+      noteIndex < 0 ||
+      noteIndex >= this.tracks[trackIndex].notes.length
+    ) {
+      return false;
     }
-    return false;
+
+    // Remove the note
+    this.tracks[trackIndex].notes.splice(noteIndex, 1);
+
+    // Recalculate total duration
+    this._recalculateDuration();
+
+    return true;
   }
 
+  /**
+   * Get the duration of the sequence in beats
+   * @returns {number} Duration in beats
+   */
   getDuration() {
-    let maxDuration = 0;
+    return this.totalDuration;
+  }
 
+  /**
+   * Recalculate the total duration of the sequence
+   * @private
+   */
+  _recalculateDuration() {
+    this.totalDuration = 0;
     this.tracks.forEach(track => {
       track.notes.forEach(note => {
         const noteEnd = note.startTime + note.duration;
-        if (noteEnd > maxDuration) {
-          maxDuration = noteEnd;
+        if (noteEnd > this.totalDuration) {
+          this.totalDuration = noteEnd;
         }
       });
     });
-
-    return maxDuration;
   }
 
-  quantizeNotes(gridSize) {
+  /**
+   * Quantize note timings to a grid
+   * @param {number} gridSize - Grid size in beats (e.g., 0.25 for sixteenth notes)
+   */
+  quantizeNotes(gridSize = 0.25) {
     this.tracks.forEach(track => {
       track.notes.forEach(note => {
-        // Quantize start time to nearest grid value
+        // Quantize start time
         note.startTime = Math.round(note.startTime / gridSize) * gridSize;
 
-        // Quantize duration to nearest grid value
-        note.duration = Math.round(note.duration / gridSize) * gridSize;
-
-        // Ensure minimum duration
-        if (note.duration < gridSize) {
-          note.duration = gridSize;
-        }
+        // Quantize duration
+        note.duration = Math.max(gridSize, Math.round(note.duration / gridSize) * gridSize);
       });
     });
+
+    // Recalculate duration after quantizing
+    this._recalculateDuration();
   }
 
-  transposeTrack(trackId, semitones) {
-    if (trackId < this.tracks.length) {
-      this.tracks[trackId].notes.forEach(note => {
+  /**
+   * Transpose all notes in the sequence
+   * @param {number} semitones - Number of semitones to transpose (positive or negative)
+   */
+  transpose(semitones) {
+    if (semitones === 0) return; // No change needed
+
+    this.tracks.forEach(track => {
+      track.notes.forEach(note => {
         note.pitch += semitones;
       });
-      return true;
-    }
-    return false;
-  }
-
-  wouldCollide(noteCandidate) {
-    const { trackId, pitch, startTime, duration } = noteCandidate;
-
-    if (trackId >= this.tracks.length) {
-      return false;
-    }
-
-    const endTime = startTime + duration;
-
-    return this.tracks[trackId].notes.some(note => {
-      if (note.pitch !== pitch) {
-        return false;
-      }
-
-      const noteEndTime = note.startTime + note.duration;
-
-      // Check for overlap
-      return startTime < noteEndTime && endTime > note.startTime;
     });
   }
 
-  // Function to load sequence from MIDI buffer (for tests)
-  loadFromBuffer(buffer) {
-    try {
-      // Check for MIDI header - a real implementation would do more validation
-      // but for tests, we'll do a simple check
-      const bufferString = buffer.toString();
-
-      // A very basic validation - checking if buffer contains 'this is not a MIDI file'
-      // which is used in the test
-      if (bufferString.includes('this is not a MIDI file')) {
-        return false;
-      }
-
-      // For testing, create a simple track with a C major chord
-      // In a real implementation, we'd parse the actual MIDI data
-
-      // Clear existing tracks
-      this.tracks = [];
-
-      // Create a simple test track with a C major chord
-      const trackId = this.addTrack(0, 'Imported Track');
-
-      // Add some sample notes (C major triad)
-      this.addNote({
-        track: trackId,
-        pitch: 60, // C4
-        startTime: 0,
-        duration: 1,
-        velocity: 100,
-      });
-
-      this.addNote({
-        track: trackId,
-        pitch: 64, // E4
-        startTime: 0,
-        duration: 1,
-        velocity: 100,
-      });
-
-      this.addNote({
-        track: trackId,
-        pitch: 67, // G4
-        startTime: 0,
-        duration: 1,
-        velocity: 100,
-      });
-
-      // Set tempo
-      this.setBpm(120);
-
-      return true;
-    } catch (error) {
-      // Use a proper logging method in production
-      console.error('Error loading MIDI data:', error);
-      return false;
+  /**
+   * Check for colliding notes in a track
+   * @param {number} trackIndex - Index of the track
+   * @returns {Array} Array of colliding note pairs
+   */
+  findNoteCollisions(trackIndex) {
+    if (trackIndex < 0 || trackIndex >= this.tracks.length) {
+      return [];
     }
+
+    const collisions = [];
+    const notes = this.tracks[trackIndex].notes;
+
+    // Check each pair of notes
+    for (let i = 0; i < notes.length; i++) {
+      for (let j = i + 1; j < notes.length; j++) {
+        const note1 = notes[i];
+        const note2 = notes[j];
+
+        // Check if the notes are the same pitch
+        if (note1.pitch !== note2.pitch) continue;
+
+        // Check for time overlap
+        const note1Start = note1.startTime;
+        const note1End = note1.startTime + note1.duration;
+        const note2Start = note2.startTime;
+        const note2End = note2.startTime + note2.duration;
+
+        if (note1Start < note2End && note1End > note2Start) {
+          collisions.push({ noteIndex1: i, noteIndex2: j });
+        }
+      }
+    }
+
+    return collisions;
+  }
+
+  /**
+   * Debug information about the sequence
+   */
+  debug() {
+    // eslint-disable-next-line no-console
+    console.log(
+      `MidiSequence: ${this.tracks.length} tracks, ${this.totalDuration} beats, tempo: ${this.tempo}`
+    );
+    this.tracks.forEach((track, i) => {
+      // eslint-disable-next-line no-console
+      console.log(`Track ${i}: ${track.name}, ${track.notes.length} notes`);
+    });
   }
 }
 
-module.exports = { MidiSequence };
+module.exports = MidiSequence;
