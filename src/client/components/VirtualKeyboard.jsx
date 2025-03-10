@@ -28,8 +28,11 @@ const VirtualKeyboard = ({
   
   // Update pressedKeys when activeNotes changes (for external control)
   useEffect(() => {
-    setPressedKeys(activeNotes);
-  }, [activeNotes]);
+    // Use object equality to prevent infinite loop
+    if (JSON.stringify(pressedKeys) !== JSON.stringify(activeNotes)) {
+      setPressedKeys(activeNotes);
+    }
+  }, [activeNotes, pressedKeys]);
   
   // Calculate MIDI note number from octave and note index
   const getMidiNote = (octave, noteIndex) => {
@@ -38,8 +41,10 @@ const VirtualKeyboard = ({
 
   // Handle mouse down on key
   const handleMouseDown = (midiNote) => {
-    setPressedKeys(prev => [...prev, midiNote]);
-    if (onNoteOn) onNoteOn(midiNote, 100); // 100 is velocity
+    if (!pressedKeys.includes(midiNote)) {
+      setPressedKeys(prev => [...prev, midiNote]);
+      if (onNoteOn) onNoteOn(midiNote, 100); // 100 is velocity
+    }
   };
   
   // Handle mouse up on key
@@ -55,7 +60,7 @@ const VirtualKeyboard = ({
     for (let octave = startOctave; octave < startOctave + octaves; octave++) {
       whiteKeyIndices.forEach(noteIndex => {
         const midiNote = getMidiNote(octave, noteIndex);
-        const isActive = pressedKeys.includes(midiNote) || activeNotes.includes(midiNote);
+        const isActive = pressedKeys.includes(midiNote);
         
         keys.push(
           <div
@@ -63,7 +68,11 @@ const VirtualKeyboard = ({
             className={`white-key ${isActive ? 'active' : ''}`}
             onMouseDown={() => handleMouseDown(midiNote)}
             onMouseUp={() => handleMouseUp(midiNote)}
-            onMouseLeave={() => handleMouseUp(midiNote)}
+            onMouseLeave={() => {
+              if (pressedKeys.includes(midiNote)) {
+                handleMouseUp(midiNote);
+              }
+            }}
           >
             {showNoteNames && (
               <div className="note-name">
@@ -91,7 +100,7 @@ const VirtualKeyboard = ({
         const leftPosition = offset * whiteKeyWidth - whiteKeyWidth * 0.25;
         
         const midiNote = getMidiNote(octave, noteIndex);
-        const isActive = pressedKeys.includes(midiNote) || activeNotes.includes(midiNote);
+        const isActive = pressedKeys.includes(midiNote);
         
         keys.push(
           <div
@@ -100,7 +109,11 @@ const VirtualKeyboard = ({
             style={{ left: `${leftPosition}%` }}
             onMouseDown={() => handleMouseDown(midiNote)}
             onMouseUp={() => handleMouseUp(midiNote)}
-            onMouseLeave={() => handleMouseUp(midiNote)}
+            onMouseLeave={() => {
+              if (pressedKeys.includes(midiNote)) {
+                handleMouseUp(midiNote);
+              }
+            }}
           >
             {showNoteNames && (
               <div className="note-name">
