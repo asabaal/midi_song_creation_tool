@@ -1,6 +1,6 @@
 // tests/unit/core/midiExport.test.js
 const { MidiExporter } = require('../../../src/core/midiExport');
-const { MidiSequence } = require('../../../src/core/midiSequence');
+const MidiSequence = require('../../../src/core/midiSequence');
 const fs = require('fs');
 const path = require('path');
 
@@ -8,7 +8,8 @@ const path = require('path');
 jest.mock('fs', () => ({
   writeFileSync: jest.fn(),
   promises: {
-    writeFile: jest.fn().mockResolvedValue(undefined)
+    writeFile: jest.fn().mockResolvedValue(undefined),
+    stat: jest.fn().mockResolvedValue({ isDirectory: () => true })
   }
 }));
 
@@ -22,22 +23,20 @@ describe('MidiExporter', () => {
     
     // Create a test sequence
     sequence = new MidiSequence({
-      bpm: 120,
-      timeSignature: [4, 4],
-      tracks: []
+      tempo: 120,
+      timeSignature: { numerator: 4, denominator: 4 }
     });
     
     // Add some notes to the sequence
-    sequence.addNote({
-      trackId: 0,
+    const trackIndex = 0;
+    sequence.addNote(trackIndex, {
       pitch: 60,
       startTime: 0,
       duration: 1,
       velocity: 100
     });
     
-    sequence.addNote({
-      trackId: 0,
+    sequence.addNote(trackIndex, {
       pitch: 64,
       startTime: 1,
       duration: 1,
@@ -80,10 +79,12 @@ describe('MidiExporter', () => {
   
   test('should handle empty sequence', () => {
     const emptySequence = new MidiSequence({
-      bpm: 120,
-      timeSignature: [4, 4],
-      tracks: []
+      tempo: 120,
+      timeSignature: { numerator: 4, denominator: 4 }
     });
+    
+    // Remove the default track to make it truly empty
+    emptySequence.tracks = [];
     
     const midiData = exporter.sequenceToMidi(emptySequence);
     
@@ -95,27 +96,27 @@ describe('MidiExporter', () => {
   });
   
   test('should preserve track-specific properties', () => {
-    // Create a sequence with track-specific settings
-    const sequenceWithTrackProps = new MidiSequence({
-      bpm: 120,
-      timeSignature: [4, 4],
-      tracks: [{
-        id: 0,
-        name: 'Piano',
-        instrument: 0,
-        notes: [{
-          pitch: 60,
-          startTime: 0,
-          duration: 1,
-          velocity: 100
-        }]
-      }]
+    // Add a track with specific name and instrument
+    const trackIndex = sequence.addTrack({
+      name: 'Piano',
+      instrument: 0
     });
     
-    const midiData = exporter.sequenceToMidi(sequenceWithTrackProps);
+    // Add a note to this new track
+    sequence.addNote(trackIndex, {
+      pitch: 60,
+      startTime: 0,
+      duration: 1,
+      velocity: 100
+    });
     
-    // Check if track name and instrument are preserved
-    const trackEvents = midiData.tracks[1];
+    const midiData = exporter.sequenceToMidi(sequence);
+    
+    // There should be at least 3 tracks (tempo + original + new)
+    expect(midiData.tracks.length).toBeGreaterThan(2);
+    
+    // Get the track we added (track 0 is tempo, track 1 is default track, track 2 is our new one)
+    const trackEvents = midiData.tracks[2];
     
     // Find track name meta event
     const trackNameEvent = trackEvents.find(event => 
