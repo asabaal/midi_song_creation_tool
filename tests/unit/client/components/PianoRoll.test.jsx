@@ -1,35 +1,13 @@
 // tests/unit/client/components/PianoRoll.test.jsx
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PianoRoll from '../../../../src/client/components/PianoRoll';
+import { useSessionContext } from '../../../../tests/mocks/SessionContextMock';
 
 // Mock the context provider
 jest.mock('../../../../src/client/context/SessionContext', () => ({
-  useSessionContext: jest.fn().mockReturnValue({
-    currentSession: {
-      id: 'test-session',
-      bpm: 120,
-      timeSignature: [4, 4],
-      tracks: [
-        {
-          id: 0,
-          name: 'Piano',
-          instrument: 0,
-          notes: [
-            { id: 'note1', pitch: 60, startTime: 0, duration: 1, velocity: 100 },
-            { id: 'note2', pitch: 64, startTime: 1, duration: 1, velocity: 100 },
-            { id: 'note3', pitch: 67, startTime: 2, duration: 1, velocity: 100 },
-          ]
-        }
-      ]
-    },
-    addNote: jest.fn(),
-    updateNote: jest.fn(),
-    deleteNote: jest.fn(),
-    selectedTrackId: 0,
-    setSelectedTrackId: jest.fn()
-  })
+  useSessionContext
 }));
 
 // Mock the canvas rendering
@@ -49,7 +27,16 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
   font: ''
 });
 
+// Mock the CSS imports
+jest.mock('../../../../src/client/styles/PianoRoll.css', () => ({}));
+
 describe('PianoRoll', () => {
+  // Clean up after each test to prevent duplicate render issues
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+
   test('renders piano roll component', () => {
     render(<PianoRoll />);
     
@@ -69,7 +56,6 @@ describe('PianoRoll', () => {
   });
   
   test('adds a note when clicking on grid', () => {
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
     const mockAddNote = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
@@ -101,7 +87,6 @@ describe('PianoRoll', () => {
   });
   
   test('updates note duration when dragging edge', async () => {
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
     const mockUpdateNote = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
@@ -127,7 +112,6 @@ describe('PianoRoll', () => {
   });
   
   test('deletes note when pressing delete key', () => {
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
     const mockDeleteNote = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
