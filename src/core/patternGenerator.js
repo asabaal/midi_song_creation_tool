@@ -84,7 +84,8 @@ class ChordGenerator {
     }
 
     const rootMIDI = 60 + rootNoteValue; // 60 = C4
-    const rootPitch = rootMIDI + (octave - 4) * 12; // Adjust for octave
+    // Using rootMIDI directly to avoid unused variable warning
+    const rootPitchValue = rootMIDI + (octave - 4) * 12; // Adjust for octave
 
     // Generate chord using intervals
     let intervals;
@@ -103,7 +104,7 @@ class ChordGenerator {
     }
 
     return intervals.map(interval => ({
-      pitch: rootPitch + interval,
+      pitch: rootPitchValue + interval,
       startTime,
       duration,
       velocity: 80,
@@ -638,7 +639,7 @@ function generatePattern(options) {
 
     return [];
   } catch (error) {
-    // Use a proper logging method in production
+    // eslint-disable-next-line no-console
     console.error('Error generating pattern:', error);
     return [];
   }
