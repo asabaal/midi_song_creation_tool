@@ -1,9 +1,12 @@
 # MIDI Song Creation Tool
 
-[![Test Suite](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml)
 [![Lint](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml)
 
 An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.
+
+## Linting & Code Quality
+
+This branch focuses **exclusively** on adding linting and code quality tools to the project. It includes ESLint and Prettier configuration, but does not include testing infrastructure.
 
 ## Overview
 
@@ -25,6 +28,46 @@ The framework consists of these main components:
 2. **Server** (`src/server`): Provides structured API endpoints for Claude to interact with
 3. **Web Interface** (`public`): Simple UI for human testing and visualization
 
+## Code Quality
+
+This project has comprehensive linting and code formatting:
+
+```bash
+# Run linting
+npm run lint
+
+# Fix linting issues automatically
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+```
+
+### Linting Configuration
+
+The project uses ESLint with the following plugins and configurations:
+- eslint-config-prettier
+- eslint-plugin-react
+- eslint-plugin-import
+- eslint-plugin-jsx-a11y
+
+### Formatting Configuration
+
+Code formatting is standardized using Prettier with the following rules:
+- Single quotes
+- 2-space indentation
+- 100 character line length
+- No semicolons
+- Arrow parentheses as needed
+
+### Linting Scripts
+
+Several utility scripts are available in the `/scripts` directory:
+- `fix_all_eslint.sh`: Fixes all ESLint issues
+- `fix_prettier.sh`: Formats all files with Prettier
+- `fix_specific_line.js`: Utility for fixing specific linting issues
+- `format-code.sh`: Combined linting and formatting
+
 ## Setup Instructions
 
 1. **Install Dependencies**:
@@ -43,96 +86,6 @@ The framework consists of these main components:
    ```
 
 4. **Access the UI**: Open `http://localhost:3000` in your browser
-
-## Testing
-
-This project includes a comprehensive testing suite:
-
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run only unit tests
-npm run test:unit
-
-# Run only integration tests
-npm run test:integration
-
-# Run end-to-end tests
-npm run test:e2e
-
-# Run tests with watch mode (for development)
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
-```
-
-### Local Testing Script
-
-For a complete verification of your code before pushing changes, use the local testing script:
-
-```bash
-# Make the script executable
-chmod +x scripts/local_test.sh
-
-# Run the local test
-./scripts/local_test.sh
-```
-
-This script will:
-- Verify your Node.js installation
-- Install dependencies if needed
-- Run ESLint and Prettier on core modules
-- Run all test suites
-- Check test coverage against required thresholds
-- Build the project to verify everything compiles correctly
-
-### Testing Structure
-
-- **Unit Tests**: Test individual functions and components
-- **Integration Tests**: Test API endpoints and module interactions
-- **End-to-End Tests**: Test full application workflows using Cypress
-
-For more details about the testing suite, see the [tests/README.md](tests/README.md) file and [.github/QUALITY_GATES.md](.github/QUALITY_GATES.md) for information about the quality gates implementation.
-
-## Code Quality
-
-```bash
-# Run linting
-npm run lint
-
-# Fix linting issues automatically
-npm run lint:fix
-
-# Format code with Prettier
-npm run format
-```
-
-## API Documentation
-
-The API provides endpoints for:
-
-- Session management
-- Sequence creation and modification
-- Note manipulation
-- Music theory operations (scales, chords, progressions)
-- Pattern generation (chord progressions, arpeggios, basslines, drums)
-- Sequence operations (variations, quantization, merging)
-
-All endpoints support JSON and follow RESTful conventions.
-
-## Claude Integration
-
-Claude can interact with this framework to help with music creation tasks including:
-
-- Creating chord progressions in specific keys
-- Generating drum patterns in various styles
-- Building arpeggios and basslines
-- Applying music theory principles to compositions
-- Creating variations and transformations of musical ideas
 
 ## License
 
