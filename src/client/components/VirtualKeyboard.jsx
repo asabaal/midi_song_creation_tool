@@ -68,11 +68,7 @@ const VirtualKeyboard = ({
             className={`white-key ${isActive ? 'active' : ''}`}
             onMouseDown={() => handleMouseDown(midiNote)}
             onMouseUp={() => handleMouseUp(midiNote)}
-            onMouseLeave={() => {
-              if (pressedKeys.includes(midiNote)) {
-                handleMouseUp(midiNote);
-              }
-            }}
+            onMouseLeave={() => handleMouseUp(midiNote)}
           >
             {showNoteNames && (
               <div className="note-name">
@@ -109,11 +105,7 @@ const VirtualKeyboard = ({
             style={{ left: `${leftPosition}%` }}
             onMouseDown={() => handleMouseDown(midiNote)}
             onMouseUp={() => handleMouseUp(midiNote)}
-            onMouseLeave={() => {
-              if (pressedKeys.includes(midiNote)) {
-                handleMouseUp(midiNote);
-              }
-            }}
+            onMouseLeave={() => handleMouseUp(midiNote)}
           >
             {showNoteNames && (
               <div className="note-name">
