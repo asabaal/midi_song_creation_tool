@@ -1,9 +1,10 @@
 # MIDI Song Creation Tool
 
-[![Test Suite](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml)
-[![Lint](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/lint.yml)
-
 An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.
+
+## Project Structure
+
+This branch focuses **exclusively** on the project structure reorganization. It moves files from the flat structure to a more organized directory layout without introducing testing or linting configurations.
 
 ## Overview
 
@@ -43,73 +44,6 @@ The framework consists of these main components:
    ```
 
 4. **Access the UI**: Open `http://localhost:3000` in your browser
-
-## Testing
-
-This project includes a comprehensive testing suite:
-
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run only unit tests
-npm run test:unit
-
-# Run only integration tests
-npm run test:integration
-
-# Run end-to-end tests
-npm run test:e2e
-
-# Run tests with watch mode (for development)
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
-```
-
-### Local Testing Script
-
-For a complete verification of your code before pushing changes, use the local testing script:
-
-```bash
-# Make the script executable
-chmod +x scripts/local_test.sh
-
-# Run the local test
-./scripts/local_test.sh
-```
-
-This script will:
-- Verify your Node.js installation
-- Install dependencies if needed
-- Run ESLint and Prettier on core modules
-- Run all test suites
-- Check test coverage against required thresholds
-- Build the project to verify everything compiles correctly
-
-### Testing Structure
-
-- **Unit Tests**: Test individual functions and components
-- **Integration Tests**: Test API endpoints and module interactions
-- **End-to-End Tests**: Test full application workflows using Cypress
-
-For more details about the testing suite, see the [tests/README.md](tests/README.md) file and [.github/QUALITY_GATES.md](.github/QUALITY_GATES.md) for information about the quality gates implementation.
-
-## Code Quality
-
-```bash
-# Run linting
-npm run lint
-
-# Fix linting issues automatically
-npm run lint:fix
-
-# Format code with Prettier
-npm run format
-```
 
 ## API Documentation
 
