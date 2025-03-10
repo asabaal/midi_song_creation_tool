@@ -120,8 +120,8 @@ class ChordGenerator {
         throw new Error(`Invalid root note: ${rootNote}`);
       }
 
-      // Calculate root pitch for the specified octave
-      const rootPitch = 60 + rootValue + (octave - 4) * 12; // 60 = C4
+      // Calculate root pitch for the specified octave - just for processing, will be used in generateChord
+      const rootPitchBase = 60 + rootValue + (octave - 4) * 12; // 60 = C4, unused but kept for context
 
       // Map Roman numerals to steps in major scale
       const steps = {
