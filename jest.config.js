@@ -29,11 +29,15 @@ module.exports = {
   
   // Module path mapping (adjust based on your project structure)
   moduleNameMapper: {
+    // Mock CSS and image imports
+    '\\.(css|less|scss)$': '<rootDir>/tests/mocks/styleMock.js',
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/mocks/fileMock.js',
+    
+    // Path aliases for simplifying imports
     '^@core/(.*)$': '<rootDir>/src/core/$1',
     '^@server/(.*)$': '<rootDir>/src/server/$1',
     '^@client/(.*)$': '<rootDir>/src/client/$1',
     '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
-    '\\.(css|less|scss)$': 'identity-obj-proxy',
   },
   
   // Threshold for code coverage
@@ -83,4 +87,15 @@ module.exports = {
       outputName: 'results.xml',
     }]
   ],
+
+  // Add moduleDirectories to help with resolution
+  moduleDirectories: ['node_modules', 'src'],
+
+  // Add resolver to help with module resolution
+  resolver: undefined,
+
+  // Make sure to transform jsx files
+  transform: {
+    '^.+\\.(js|jsx)$': 'babel-jest',
+  },
 };
