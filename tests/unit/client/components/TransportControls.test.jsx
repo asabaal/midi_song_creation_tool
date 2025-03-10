@@ -184,19 +184,22 @@ describe('TransportControls', () => {
     
     const { rerender } = render(<TransportControls />);
     
-    // Check that position display is rendered with correct format (e.g., "1.1.00")
-    const positionDisplay = screen.getByTestId('position-display');
-    expect(positionDisplay).toBeInTheDocument();
-    expect(positionDisplay.textContent).toBe('1.1.00');
+    // After cleanup, only one instance should exist
+    // Check position display using getAllByTestId since we want to make sure there's only one
+    const positionDisplays = screen.getAllByTestId('position-display');
+    expect(positionDisplays).toHaveLength(1);
+    expect(positionDisplays[0].textContent).toBe('1.1.00');
     
     // Update the tick position
     transportService.getCurrentTick.mockReturnValue(960); // 2 quarter notes
     
-    // Re-render the same component instance to update position display
+    // Re-render with new props
     rerender(<TransportControls />);
     
-    // Now check the updated position display
-    expect(positionDisplay.textContent).toBe('1.2.00');
+    // Get the position display again
+    const updatedDisplays = screen.getAllByTestId('position-display');
+    expect(updatedDisplays).toHaveLength(1);
+    expect(updatedDisplays[0].textContent).toBe('1.2.00');
   });
   
   test('toggles loop mode', () => {
