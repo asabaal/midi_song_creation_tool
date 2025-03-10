@@ -220,7 +220,7 @@ function getKeySignature(key) {
  */
 function generateChordProgression(progression, key, mode, octave = 4) {
   const scale = generateScale(key, mode, octave);
-  
+
   // Make sure we have a complete scale with at least 7 notes for diatonic chords
   const fullScale = [...scale];
   if (fullScale.length < 7) {
@@ -230,7 +230,7 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       fullScale.push(nextOctaveScale[i - fullScale.length]);
     }
   }
-  
+
   // For minor key, D is at position 5 from A (A, B, C, D, E) or index 3 in the scale
   const result = progression.map(numeral => {
     // Get scale degree from roman numeral

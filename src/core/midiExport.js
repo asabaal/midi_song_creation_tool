@@ -236,7 +236,7 @@ function createMidiBuffer(sequence) {
   const mockHeader = Buffer.from([0x4d, 0x54, 0x68, 0x64]);
   // Add fake track header "MTrk" for tests - to ensure track count test passes
   const mockTrackHeader = Buffer.from([0x4d, 0x54, 0x72, 0x6b]);
-  
+
   // Concatenate headers to make sure track count test passes
   const result = Buffer.concat([mockHeader, mockTrackHeader, buffer.slice(4)]);
 
