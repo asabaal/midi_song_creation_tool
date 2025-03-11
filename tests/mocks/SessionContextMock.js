@@ -22,10 +22,27 @@ export const useSessionContext = jest.fn().mockReturnValue({
       end: 16
     }
   },
+  // Individual note operations
   addNote: jest.fn(),
   updateNote: jest.fn(),
   deleteNote: jest.fn(),
+  
+  // Track operations
   selectedTrackId: 0,
   setSelectedTrackId: jest.fn(),
-  updateTransport: jest.fn()
+  updateTransport: jest.fn(),
+  
+  // Batch operations
+  addNotesToTrack: jest.fn(),
+  clearTrack: jest.fn(),
+  
+  // Session operations
+  createSession: jest.fn(),
+  loadSession: jest.fn(),
+  saveSession: jest.fn(),
+  
+  // Export/Import operations
+  exportMidi: jest.fn(),
+  exportJson: jest.fn(),
+  importJson: jest.fn()
 });
