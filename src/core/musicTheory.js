@@ -200,6 +200,7 @@ function getKeySignature(key) {
  */
 function generateChordProgression(progression, key, mode, octave = 4) {
   const scale = generateScale(key, mode, octave);
+  
   // Make sure we have a complete scale with at least 7 notes for diatonic chords
   const fullScale = [...scale];
   if (fullScale.length < 7) {
@@ -209,20 +210,21 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       fullScale.push(nextOctaveScale[i - fullScale.length]);
     }
   }
-  // For minor key, D is at position 5 from A (A, B, C, D, E) or index 3 in the scale
+  
   const result = progression.map(numeral => {
     // Get scale degree from roman numeral
     let scaleDegree = ROMAN_NUMERALS[numeral];
     if (scaleDegree === undefined) {
       throw new Error(`Invalid Roman numeral: ${numeral}`);
     }
+    
     // Get root note of chord from scale degree
     const rootNote = fullScale[scaleDegree];
     const rootName = midiToNote(rootNote).replace(/\d/, ''); // Remove octave number
     const chordOctave = Math.floor(rootNote / 12) - 1;
+    
     // Determine chord type based on scale position and mode
     let chordType;
-    // Adjust for major/minor chord types based on mode and position in the scale
     if (mode === 'major') {
       // In major keys: I, IV, V are major; ii, iii, vi are minor; vii° is diminished
       if ([0, 3, 4].includes(scaleDegree)) {
@@ -234,7 +236,6 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       }
     } else if (mode === 'minor') {
       // In minor keys: i, iv, v are minor; III, VI, VII are major; ii° is diminished
-      // Note: v could be minor or major (harmonic minor would make it major)
       if ([2, 5, 6].includes(scaleDegree)) {
         chordType = 'major';
       } else if ([0, 3, 4].includes(scaleDegree)) {
@@ -246,9 +247,11 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       // Default based on numeral case if mode is not recognized
       chordType = numeral === numeral.toUpperCase() ? 'major' : 'minor';
     }
+    
     // Generate the chord
     return generateChord(rootName, chordType, chordOctave);
   });
+  
   return result;
 }
 module.exports = {
