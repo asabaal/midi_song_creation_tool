@@ -192,8 +192,12 @@ function createMidiFile(sequence) {
 }
 // Add missing functions that are expected by tests
 async function exportMidiFile(sequence, filePath) {
-  const exporter = new MidiExporter();
-  return await exporter.saveToFile(sequence, filePath);
+  try {
+    const exporter = new MidiExporter();
+    return await exporter.saveToFile(sequence, filePath);
+  } catch (err) {
+    throw new Error(`Failed to export MIDI file: ${err.message}`);
+  }
 }
 function createMidiBuffer(sequence) {
   const exporter = new MidiExporter();
