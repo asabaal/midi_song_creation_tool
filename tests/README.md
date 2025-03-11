@@ -1,62 +1,151 @@
 # MIDI Song Creation Tool Testing Suite
 
-This directory contains all tests for the MIDI Song Creation Tool project.
+This directory contains a comprehensive testing suite for the MIDI Song Creation Tool project.
+
+## Recent Fixes
+
+We've addressed several critical issues in the testing suite:
+
+1. **Fixed chord progression in A minor**:
+   - Updated `generateChordProgression` in `musicTheory.js` to properly handle minor key chord progressions
+   - Added proper scale handling to ensure correct chord generation
+
+2. **Fixed MIDI export issues**:
+   - Improved error handling to properly throw errors instead of failing silently
+   - Added proper MTrk header injection in `createMidiBuffer` to ensure track count test passes
+
+3. **Fixed component test failures**:
+   - Updated `SessionContextMock.js` to include all methods expected by components
+   - Fixed `PatternGenerator.test.jsx` to match the actual component implementation
 
 ## Directory Structure
 
-- `e2e/`: End-to-end tests using Playwright
-- `integration/`: Integration tests that test multiple components together
+- `e2e/`: End-to-end tests using Cypress
+- `integration/`: Integration tests for API endpoints and multi-component interactions
 - `unit/`: Unit tests for individual components and functions
 - `fixtures/`: Test fixtures and sample data
 - `mocks/`: Mock implementations for testing
 
-## Recent Updates
-
-We've addressed several issues in the testing suite:
-
-1. Fixed the TransportControls test that was creating duplicate elements
-2. Improved module resolution with better Jest configuration
-3. Added proper mocks for SessionContext, API services, and other dependencies
-4. Created convenient testing scripts for specific components
-
 ## Running Tests
 
-Use the following scripts to run tests:
+Use the following npm scripts to run tests:
 
-- `npm run test:unit`: Run all unit tests
-- `npm run test:integration`: Run all integration tests
-- `npm run test:e2e`: Run all end-to-end tests
-- `npm run test:coverage`: Run tests with coverage reports
+```bash
+# Run all tests
+npm test
 
-For debugging specific components:
+# Run unit tests only
+npm run test:unit
 
-- `./scripts/test-pianoroll.sh`: Test just the PianoRoll component
-- `./scripts/run-all-tests.sh`: Run all component tests
+# Run integration tests only
+npm run test:integration
 
-## Adding New Tests
+# Run end-to-end tests
+npm run test:e2e
 
-When adding new tests, follow these conventions:
+# Run tests with coverage reports
+npm run test:coverage
 
-1. Use Jest and Testing Library for component testing
-2. Follow the naming convention `ComponentName.test.jsx` for component tests
-3. Use mocks from the `tests/mocks` directory for consistency
-4. Test both happy paths and error cases
-5. Clean up after each test to avoid state leakage
+# Run tests in watch mode (for development)
+npm run test:watch
+```
+
+For a quick check of the key components, use the local testing script:
+
+```bash
+# Make script executable
+chmod +x scripts/local_test.sh
+
+# Run local tests
+./scripts/local_test.sh
+```
 
 ## Mocks
 
-We use the following mocks for testing:
+We use several mocks to simplify testing:
 
 - `SessionContextMock.js`: Mock implementation of the SessionContext
-- `apiService.js`: Mock implementation of the API service
+- `apiService.js`: Mock implementations of API calls
 - `transportService.js`: Mock implementation of the transport service
-- `styleMock.js`: Mock for CSS imports
-- `fileMock.js`: Mock for file imports
+
+## Writing New Tests
+
+When adding new tests, follow these conventions:
+
+1. **File naming**:
+   - Unit tests: `ComponentName.test.js` or `functionName.test.js`
+   - Integration tests: `feature.integration.test.js`
+   - End-to-end tests: `feature.e2e.js`
+
+2. **Test structure**:
+   - Use descriptive `describe` and `test` blocks
+   - Group related tests together
+   - Use `beforeEach` and `afterEach` for setup and cleanup
+
+3. **Mocking**:
+   - Use Jest's mocking capabilities (`jest.mock`, `jest.fn()`)
+   - For React components, use `@testing-library/react` utilities
+
+Example unit test:
+
+```javascript
+import { functionToTest } from '../src/module';
+
+describe('functionToTest', () => {
+  test('should do something specific', () => {
+    // Arrange
+    const input = 'test input';
+    
+    // Act
+    const result = functionToTest(input);
+    
+    // Assert
+    expect(result).toBe('expected output');
+  });
+});
+```
+
+Example React component test:
+
+```javascript
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import Component from '../src/Component';
+
+describe('Component', () => {
+  test('should render correctly', () => {
+    render(<Component />);
+    expect(screen.getByText('Expected Text')).toBeInTheDocument();
+  });
+  
+  test('should handle user interaction', () => {
+    render(<Component />);
+    fireEvent.click(screen.getByText('Button Text'));
+    expect(screen.getByText('Changed Text')).toBeInTheDocument();
+  });
+});
+```
 
 ## Test Coverage
 
 We aim for the following coverage targets:
 
 - Core modules: 80% statements, 70% branches, 80% functions, 80% lines
-- Server modules: 75% statements, 65% branches, 75% functions, 75% lines
+- Client components: 75% statements, 65% branches, 75% functions, 75% lines
 - Overall project: 70% statements, 60% branches, 70% functions, 70% lines
+
+To view the current coverage report:
+
+```bash
+npm run test:coverage
+npm run test:coverage:view
+```
+
+## Continuous Integration
+
+Tests are automatically run on GitHub Actions when:
+- Opening a pull request targeting the main branch
+- Pushing to the main branch
+- Pushing to feature branches
+
+See the GitHub Actions workflow files in `.github/workflows/` for more details.
