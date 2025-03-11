@@ -12,41 +12,13 @@ jest.mock('../../../../src/client/context/SessionContext', () => ({
 
 // Mock the API service
 jest.mock('../../../../src/client/services/apiService', () => ({
-  generateChordProgression: jest.fn().mockResolvedValue({
-    success: true,
-    progression: [
-      { root: 'C', octave: 4, chordType: 'major', notes: [60, 64, 67] },
-      { root: 'G', octave: 4, chordType: 'major', notes: [67, 71, 74] },
-      { root: 'A', octave: 4, chordType: 'minor', notes: [69, 72, 76] },
-      { root: 'F', octave: 4, chordType: 'major', notes: [65, 69, 72] }
-    ]
-  }),
-  generateBassline: jest.fn().mockResolvedValue({
-    success: true,
-    bassline: [
-      { pitch: 48, startTime: 0, duration: 1, velocity: 100 },
-      { pitch: 55, startTime: 1, duration: 1, velocity: 100 },
-      { pitch: 57, startTime: 2, duration: 1, velocity: 100 },
-      { pitch: 53, startTime: 3, duration: 1, velocity: 100 }
-    ]
-  }),
-  generateDrumPattern: jest.fn().mockResolvedValue({
-    success: true,
-    drumPattern: [
-      { pitch: 36, startTime: 0, duration: 0.25, velocity: 100 },
-      { pitch: 38, startTime: 1, duration: 0.25, velocity: 90 },
-      { pitch: 36, startTime: 2, duration: 0.25, velocity: 100 },
-      { pitch: 38, startTime: 3, duration: 0.25, velocity: 90 }
-    ]
-  }),
-  generateArpeggio: jest.fn().mockResolvedValue({
-    success: true,
-    arpeggio: [
-      { pitch: 60, startTime: 0, duration: 0.25, velocity: 90 },
-      { pitch: 64, startTime: 0.25, duration: 0.25, velocity: 90 },
-      { pitch: 67, startTime: 0.5, duration: 0.25, velocity: 90 },
-      { pitch: 72, startTime: 0.75, duration: 0.25, velocity: 90 }
-    ]
+  generatePattern: jest.fn().mockResolvedValue({
+    notes: [
+      { id: 'note1', pitch: 60, startTime: 0, duration: 1, velocity: 100 },
+      { id: 'note2', pitch: 64, startTime: 0, duration: 1, velocity: 100 },
+      { id: 'note3', pitch: 67, startTime: 0, duration: 1, velocity: 100 }
+    ],
+    type: 'chord'
   })
 }));
 
@@ -62,135 +34,148 @@ describe('PatternGenerator', () => {
   
   test('renders pattern generator component', () => {
     render(<PatternGenerator />);
-    expect(screen.getByText(/Pattern Generator/i)).toBeInTheDocument();
-    expect(screen.getByText(/Chord Progression/i)).toBeInTheDocument();
-    expect(screen.getByText(/Bassline/i)).toBeInTheDocument();
-    expect(screen.getByText(/Drum Pattern/i)).toBeInTheDocument();
+    
+    // Check for the tab buttons in the component
+    expect(screen.getByText(/Chord Patterns/i)).toBeInTheDocument();
+    expect(screen.getByText(/Bassline Patterns/i)).toBeInTheDocument();
+    expect(screen.getByText(/Drum Patterns/i)).toBeInTheDocument();
   });
   
-  test('generates chord progression', async () => {
-    const mockAddNotes = jest.fn();
+  test('generates chord pattern', async () => {
+    const mockAddNotesToTrack = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
-      addNotes: mockAddNotes
+      addNotesToTrack: mockAddNotesToTrack
     });
     
     render(<PatternGenerator />);
     
-    // Find and click the generate chord progression button
-    const generateButton = screen.getByText('Generate Chord Progression');
+    // Find and click the generate chord button
+    const generateButton = screen.getByText(/Generate Chord/i);
     fireEvent.click(generateButton);
     
     // Wait for the API call to resolve
     await waitFor(() => {
-      expect(mockAddNotes).toHaveBeenCalled();
+      expect(mockAddNotesToTrack).toHaveBeenCalled();
     });
   });
   
-  test('generates bassline', async () => {
-    const mockAddNotes = jest.fn();
+  test('generates bassline pattern', async () => {
+    const mockAddNotesToTrack = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
-      addNotes: mockAddNotes
+      addNotesToTrack: mockAddNotesToTrack
     });
     
     render(<PatternGenerator />);
+    
+    // Click on the Bassline Patterns tab
+    fireEvent.click(screen.getByText(/Bassline Patterns/i));
     
     // Find and click the generate bassline button
-    const generateButton = screen.getByText('Generate Bassline');
+    const generateButton = screen.getByText(/Generate Bassline/i);
     fireEvent.click(generateButton);
     
     // Wait for the API call to resolve
     await waitFor(() => {
-      expect(mockAddNotes).toHaveBeenCalled();
+      expect(mockAddNotesToTrack).toHaveBeenCalled();
     });
   });
   
   test('generates drum pattern', async () => {
-    const mockAddNotes = jest.fn();
+    const mockAddNotesToTrack = jest.fn();
     useSessionContext.mockReturnValue({
       ...useSessionContext(),
-      addNotes: mockAddNotes
+      addNotesToTrack: mockAddNotesToTrack
     });
     
     render(<PatternGenerator />);
     
+    // Click on the Drum Patterns tab
+    fireEvent.click(screen.getByText(/Drum Patterns/i));
+    
     // Find and click the generate drum pattern button
-    const generateButton = screen.getByText('Generate Drum Pattern');
+    const generateButton = screen.getByText(/Generate Drum Pattern/i);
     fireEvent.click(generateButton);
     
     // Wait for the API call to resolve
     await waitFor(() => {
-      expect(mockAddNotes).toHaveBeenCalled();
+      expect(mockAddNotesToTrack).toHaveBeenCalled();
     });
   });
   
-  test('changes key parameter', () => {
+  test('changes root note parameter', () => {
     render(<PatternGenerator />);
     
-    // Find the key selector
-    const keySelector = screen.getByLabelText('Key');
+    // Find the root note selector
+    const rootSelector = screen.getByLabelText(/Root Note/i);
     
-    // Change key value
-    fireEvent.change(keySelector, { target: { value: 'G' } });
+    // Change root value
+    fireEvent.change(rootSelector, { target: { value: 'G' } });
     
     // Verify the select value was updated
-    expect(keySelector.value).toBe('G');
+    expect(rootSelector.value).toBe('G');
   });
   
-  test('changes scale type parameter', () => {
+  test('changes chord type parameter', () => {
     render(<PatternGenerator />);
     
-    // Find the scale type selector
-    const scaleTypeSelector = screen.getByLabelText('Scale Type');
+    // Find the chord type selector
+    const chordTypeSelector = screen.getByLabelText(/Chord Type/i);
     
-    // Change scale type value
-    fireEvent.change(scaleTypeSelector, { target: { value: 'minor' } });
+    // Change chord type value
+    fireEvent.change(chordTypeSelector, { target: { value: 'minor' } });
     
     // Verify the select value was updated
-    expect(scaleTypeSelector.value).toBe('minor');
+    expect(chordTypeSelector.value).toBe('minor');
   });
   
-  test('changes pattern type parameter', () => {
+  test('changes style parameter in bassline tab', () => {
     render(<PatternGenerator />);
     
-    // Find the pattern type selector
-    const patternTypeSelector = screen.getByLabelText('Pattern Type');
+    // Click on the Bassline Patterns tab
+    fireEvent.click(screen.getByText(/Bassline Patterns/i));
     
-    // Change pattern type value
-    fireEvent.change(patternTypeSelector, { target: { value: 'funk' } });
+    // Find the style selector
+    const styleSelector = screen.getByLabelText(/Style/i);
+    
+    // Change style value
+    fireEvent.change(styleSelector, { target: { value: 'pattern' } });
     
     // Verify the select value was updated
-    expect(patternTypeSelector.value).toBe('funk');
+    expect(styleSelector.value).toBe('pattern');
   });
   
-  test('changes pattern length parameter', () => {
+  test('changes bars parameter in drum tab', () => {
     render(<PatternGenerator />);
     
-    // Find the pattern length selector
-    const patternLengthSelector = screen.getByLabelText('Pattern Length');
+    // Click on the Drum Patterns tab
+    fireEvent.click(screen.getByText(/Drum Patterns/i));
     
-    // Change pattern length value
-    fireEvent.change(patternLengthSelector, { target: { value: '8' } });
+    // Find the bars selector
+    const barsSelector = screen.getByLabelText(/Bars/i);
+    
+    // Change bars value
+    fireEvent.change(barsSelector, { target: { value: '4' } });
     
     // Verify the select value was updated
-    expect(patternLengthSelector.value).toBe('8');
+    expect(barsSelector.value).toBe('4');
   });
   
   test('tracks loading state while generating', async () => {
     // Mock a delayed API response
     const apiService = require('../../../../src/client/services/apiService');
-    apiService.generateChordProgression.mockImplementation(
+    apiService.generatePattern.mockImplementation(
       () => new Promise(resolve => setTimeout(() => resolve({
-        success: true,
-        progression: []
+        notes: [],
+        type: 'chord'
       }), 100))
     );
     
     render(<PatternGenerator />);
     
     // Find and click the generate button
-    const generateButton = screen.getByText('Generate Chord Progression');
+    const generateButton = screen.getByText(/Generate Chord/i);
     fireEvent.click(generateButton);
     
     // Button should be disabled while loading
@@ -202,20 +187,26 @@ describe('PatternGenerator', () => {
     });
   });
   
-  test('shows error when generation fails', async () => {
-    // Mock an API error
+  test('shows preview when clicking preview button', async () => {
     const apiService = require('../../../../src/client/services/apiService');
-    apiService.generateChordProgression.mockRejectedValue(new Error('API error'));
+    apiService.generatePattern.mockResolvedValue({
+      notes: [
+        { id: 'note1', pitch: 60, startTime: 0, duration: 1, velocity: 100 },
+        { id: 'note2', pitch: 64, startTime: 0, duration: 1, velocity: 100 },
+        { id: 'note3', pitch: 67, startTime: 0, duration: 1, velocity: 100 }
+      ],
+      type: 'chord'
+    });
     
     render(<PatternGenerator />);
     
-    // Find and click the generate button
-    const generateButton = screen.getByText('Generate Chord Progression');
-    fireEvent.click(generateButton);
+    // Find and click the preview button
+    const previewButton = screen.getByText('Preview');
+    fireEvent.click(previewButton);
     
-    // Wait for error to be displayed
+    // Wait for the preview to appear
     await waitFor(() => {
-      expect(screen.getByText(/Error generating pattern/i)).toBeInTheDocument();
+      expect(screen.getByTestId('pattern-preview')).toBeInTheDocument();
     });
   });
 });
