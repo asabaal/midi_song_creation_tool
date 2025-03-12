@@ -320,6 +320,70 @@ function createMockApiServer() {
     res.status(201).json({ notes });
   });
   
+  // Export routes
+  
+  // GET /api/export/json/:sessionId
+  app.get('/api/export/json/:sessionId', (req, res) => {
+    const session = sessions.find(s => s.id === req.params.sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ 
+      data: session,
+      exportDate: new Date().toISOString()
+    });
+  });
+  
+  // GET /api/export/midi/:sessionId
+  app.get('/api/export/midi/:sessionId', (req, res) => {
+    const session = sessions.find(s => s.id === req.params.sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    // For testing, just return a simple buffer
+    const buffer = Buffer.from('MIDI content');
+    
+    res.setHeader('Content-Type', 'audio/midi');
+    res.setHeader('Content-Disposition', 'attachment; filename="export.mid"');
+    res.send(buffer);
+  });
+  
+  // POST /api/export/import
+  app.post('/api/export/import', (req, res) => {
+    const { data, name } = req.body;
+    
+    if (!data) {
+      return res.status(400).json({ error: 'No data provided for import' });
+    }
+    
+    try {
+      // Parse the data if it's a string
+      const sessionData = typeof data === 'string' ? JSON.parse(data) : data;
+      
+      // Create a new session from the imported data
+      const newSession = {
+        id: `imported-${Date.now()}`,
+        name: name || sessionData.name || 'Imported Session',
+        tempo: sessionData.tempo || sessionData.bpm || 120,
+        timeSignature: sessionData.timeSignature || '4/4',
+        author: sessionData.author || 'Imported',
+        tracks: sessionData.tracks || []
+      };
+      
+      sessions.push(newSession);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.status(201).json({ session: newSession });
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid import data' });
+    }
+  });
+  
   // Export MIDI
   app.get('/api/sessions/:id/export/midi', (req, res) => {
     // Check if session exists
