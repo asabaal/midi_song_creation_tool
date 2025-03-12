@@ -1,2 +1,2 @@
-// tests/__mocks__/fileMock.js
-module.exports = 'test-file-stub';
+// Use the root fileMock.js instead
+module.exports = require('../../__mocks__/fileMock.js');
