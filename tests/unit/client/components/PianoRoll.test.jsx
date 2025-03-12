@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import PianoRoll from '../../src/client/components/PianoRoll';
-import { useSessionContext } from '../../src/client/contexts/SessionContext';
+import PianoRoll from '../../../../src/client/components/PianoRoll';
+import { useSessionContext } from '../../../../src/client/contexts/SessionContext';
 
 // Mock the SessionContext module
-jest.mock('../../src/client/contexts/SessionContext', () => ({
+jest.mock('../../../../src/client/contexts/SessionContext', () => ({
   useSessionContext: jest.fn()
 }));
 
