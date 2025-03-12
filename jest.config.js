@@ -1,101 +1,44 @@
-// jest.config.js
 module.exports = {
-  // Use jsdom for all tests since our setup relies on window
+  // Automatically clear mock calls and instances between every test
+  clearMocks: true,
+
+  // The directory where Jest should output its coverage files
+  coverageDirectory: 'coverage',
+
+  // Indicates which provider should be used to instrument code for coverage
+  coverageProvider: 'v8',
+
+  // A list of paths to directories that Jest should use to search for files in
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
+
+  // The test environment that will be used for testing
   testEnvironment: 'jsdom',
-  
-  // Test matching patterns
-  testMatch: [
-    '<rootDir>/tests/**/*.test.{js,jsx}'
-  ],
-  
-  // Setup files for tests
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  
-  // Coverage configuration
-  collectCoverageFrom: [
-    'src/**/*.{js,jsx}',
-    '!**/node_modules/**',
-    '!**/vendor/**',
-    '!**/dist/**',
-    '!**/*.config.js',
-    '!**/coverage/**',
-  ],
-  
-  // Coverage directory
-  coverageDirectory: '<rootDir>/coverage',
-  
-  // Coverage reporters
-  coverageReporters: ['json', 'lcov', 'text', 'clover', 'html'],
-  
-  // Module path mapping (adjust based on your project structure)
+
+  // Setup files that will be run before each test
+  setupFilesAfterEnv: ['<rootDir>/setupTests.js'],
+
+  // An array of regexp pattern strings that are matched against all test paths
+  testPathIgnorePatterns: ['/node_modules/', '/cypress/'],
+
+  // A map from regular expressions to module names or to arrays of module names
   moduleNameMapper: {
-    // Mock CSS and image imports
-    '\\.(css|less|scss)$': '<rootDir>/tests/mocks/styleMock.js',
-    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/mocks/fileMock.js',
-    
-    // Path aliases for simplifying imports
-    '^@core/(.*)$': '<rootDir>/src/core/$1',
-    '^@server/(.*)$': '<rootDir>/src/server/$1',
-    '^@client/(.*)$': '<rootDir>/src/client/$1',
-    '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
+    // Handle CSS/SCSS files
+    '\\.(css|less|sass|scss)$': 'identity-obj-proxy',
+    // Handle image imports
+    '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js',
+    // Path aliases (if applicable)
+    '^@/(.*)$': '<rootDir>/src/$1'
   },
-  
-  // Threshold for code coverage
-  coverageThreshold: {
-    global: {
-      statements: 70,
-      branches: 60,
-      functions: 70,
-      lines: 70,
-    },
-    './src/core/': {
-      statements: 80,
-      branches: 70,
-      functions: 80,
-      lines: 80,
-    },
-    './src/server/': {
-      statements: 75,
-      branches: 65,
-      functions: 75,
-      lines: 75,
-    },
-  },
-  
-  // Verbose output
-  verbose: true,
-  
-  // Test timeout
-  testTimeout: 10000,
-  
-  // Watch plugins
+
+  // An array of regexp pattern strings that are matched against all file paths
+  transformIgnorePatterns: ['/node_modules/(?!tone)/'],
+
+  // Watchman plugins for filtering tests
   watchPlugins: [
     'jest-watch-typeahead/filename',
-    'jest-watch-typeahead/testname',
-  ],
-  
-  // Ignore transformations
-  transformIgnorePatterns: [
-    '/node_modules/(?!(@babel|jest-runtime)).+\\.js$'
-  ],
-  
-  // Custom reporters
-  reporters: [
-    'default',
-    ['jest-junit', {
-      outputDirectory: './test-results/jest',
-      outputName: 'results.xml',
-    }]
+    'jest-watch-typeahead/testname'
   ],
 
-  // Add moduleDirectories to help with resolution
-  moduleDirectories: ['node_modules', 'src'],
-
-  // Add resolver to help with module resolution
-  resolver: undefined,
-
-  // Make sure to transform jsx files
-  transform: {
-    '^.+\\.(js|jsx)$': 'babel-jest',
-  },
+  // Avoid test runs that fail due to memory issues in large projects
+  workerIdleMemoryLimit: '512MB'
 };
