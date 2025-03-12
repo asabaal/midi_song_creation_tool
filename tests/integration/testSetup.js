@@ -25,9 +25,17 @@ beforeAll(async () => {
 
 // Clean up after all tests
 afterAll(async () => {
+  // Close Express server if it's running
+  if (app && app.server) {
+    await new Promise(resolve => app.server.close(resolve));
+  }
+  
+  // Disconnect from mongoose
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
   }
+  
+  // Stop MongoDB memory server
   if (mongoServer) {
     await mongoServer.stop();
   }
