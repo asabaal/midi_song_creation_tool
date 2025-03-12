@@ -3,11 +3,28 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PatternGenerator from '../../../../src/client/components/PatternGenerator';
-import { useSessionContext } from '../../../../tests/mocks/SessionContextMock';
+
+// Define mock session context
+const mockSessionContext = {
+  currentSession: {
+    id: 'test-session',
+    bpm: 120,
+    timeSignature: [4, 4],
+    tracks: [
+      {
+        id: 0,
+        name: 'Piano',
+        instrument: 0,
+        notes: []
+      }
+    ]
+  },
+  addNotesToTrack: jest.fn()
+};
 
 // Mock the context provider
 jest.mock('../../../../src/client/context/SessionContext', () => ({
-  useSessionContext
+  useSessionContext: jest.fn().mockReturnValue(mockSessionContext)
 }));
 
 // Mock the API service
@@ -43,8 +60,9 @@ describe('PatternGenerator', () => {
   
   test('generates chord pattern', async () => {
     const mockAddNotesToTrack = jest.fn();
+    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
     useSessionContext.mockReturnValue({
-      ...useSessionContext(),
+      ...mockSessionContext,
       addNotesToTrack: mockAddNotesToTrack
     });
     
@@ -62,8 +80,9 @@ describe('PatternGenerator', () => {
   
   test('generates bassline pattern', async () => {
     const mockAddNotesToTrack = jest.fn();
+    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
     useSessionContext.mockReturnValue({
-      ...useSessionContext(),
+      ...mockSessionContext,
       addNotesToTrack: mockAddNotesToTrack
     });
     
@@ -84,8 +103,9 @@ describe('PatternGenerator', () => {
   
   test('generates drum pattern', async () => {
     const mockAddNotesToTrack = jest.fn();
+    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
     useSessionContext.mockReturnValue({
-      ...useSessionContext(),
+      ...mockSessionContext,
       addNotesToTrack: mockAddNotesToTrack
     });
     
