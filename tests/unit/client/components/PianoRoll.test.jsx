@@ -1,199 +1,166 @@
-// tests/unit/client/components/PianoRoll.test.jsx
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '../../../test-utils';
-import userEvent from '@testing-library/user-event';
-import PianoRoll from '../../../../src/client/components/PianoRoll';
+import { render, screen, fireEvent } from '@testing-library/react';
+import PianoRoll from '../../src/client/components/PianoRoll';
+import { useSessionContext } from '../../src/client/contexts/SessionContext';
 
-// Import the mocked session context hook for testing
-import { useSessionContext } from '../../../../src/client/context/SessionContext';
-
-// Create a custom mock session context for testing
-const mockSessionContext = {
-  currentSession: {
-    id: 'test-session',
-    bpm: 120,
-    timeSignature: [4, 4],
-    tracks: [
-      {
-        id: 0,
-        name: 'Piano',
-        instrument: 0,
-        notes: [
-          { id: 'note1', pitch: 60, startTime: 0, duration: 1, velocity: 100 },
-          { id: 'note2', pitch: 64, startTime: 1, duration: 1, velocity: 100 },
-          { id: 'note3', pitch: 67, startTime: 2, duration: 1, velocity: 100 },
-        ]
-      }
-    ],
-    loop: {
-      enabled: false,
-      start: 0,
-      end: 16
-    }
-  },
-  addNote: jest.fn(),
-  updateNote: jest.fn(),
-  deleteNote: jest.fn(),
-  selectedTrackId: 0,
-  setSelectedTrackId: jest.fn()
-};
-
-// Mock the CSS imports
-jest.mock('../../../../src/client/styles/PianoRoll.css', () => ({}));
+// Mock the SessionContext module
+jest.mock('../../src/client/contexts/SessionContext', () => ({
+  useSessionContext: jest.fn()
+}));
 
 describe('PianoRoll', () => {
-  // Clean up after each test to prevent duplicate render issues
-  afterEach(() => {
-    cleanup();
+  // Mock session context data
+  const mockSessionContext = {
+    currentSession: {
+      id: 'test-session-id',
+      name: 'Test Session',
+      tracks: [
+        {
+          id: 'track1',
+          name: 'Test Track', 
+          instrument: 'piano',
+          notes: [
+            { id: 'note1', pitch: 60, start: 0, duration: 1, velocity: 100 }
+          ]
+        }
+      ],
+      tempo: 120,
+      timeSignature: '4/4'
+    },
+    selectedTrackId: 'track1',
+    setSelectedTrackId: jest.fn(),
+    addNoteToTrack: jest.fn(),
+    removeNoteFromTrack: jest.fn(),
+    updateNoteInTrack: jest.fn()
+  };
+
+  beforeEach(() => {
+    // Reset mocks before each test
     jest.clearAllMocks();
+    
+    // Set up the mock return value
+    useSessionContext.mockReturnValue(mockSessionContext);
   });
 
   test('renders piano roll component', () => {
-    // Set mock context for this test
-    useSessionContext.mockReturnValue(mockSessionContext);
-    
     render(<PianoRoll />);
-    
-    // Check that piano keys and grid are rendered
-    expect(screen.getByTestId('piano-roll-container')).toBeInTheDocument();
-    expect(screen.getByTestId('piano-keys')).toBeInTheDocument();
-    expect(screen.getByTestId('note-grid')).toBeInTheDocument();
+    // Check for piano roll elements
+    expect(screen.getByTestId('piano-roll')).toBeInTheDocument();
   });
-  
+
   test('displays notes from current track', () => {
-    // Set mock context for this test
-    useSessionContext.mockReturnValue(mockSessionContext);
-    
     render(<PianoRoll />);
-    
-    // Note: In a real test we'd check that notes are rendered on the canvas
-    // Since we've mocked the canvas, we'll just verify the component doesn't crash
-    const noteGrid = screen.getByTestId('note-grid');
-    expect(noteGrid).toBeInTheDocument();
+    // This will depend on how you render notes in your component
+    // You might need to adjust this test to match your implementation
+    const noteElements = screen.getAllByTestId('note-element');
+    expect(noteElements.length).toBe(1);
   });
-  
+
   test('adds a note when clicking on grid', () => {
     const customMockContext = {
       ...mockSessionContext,
-      addNote: jest.fn()
+      addNoteToTrack: jest.fn()
     };
     
-    // Set mock context for this test
     useSessionContext.mockReturnValue(customMockContext);
-    
+
     render(<PianoRoll />);
     
-    const noteGrid = screen.getByTestId('note-grid');
-    fireEvent.mouseDown(noteGrid, { clientX: 100, clientY: 200 });
-    fireEvent.mouseUp(noteGrid);
+    // Find the grid element
+    const grid = screen.getByTestId('piano-roll-grid');
     
-    expect(customMockContext.addNote).toHaveBeenCalled();
+    // Simulate a click on the grid
+    fireEvent.click(grid, { clientX: 100, clientY: 200 });
+    
+    // Check if addNoteToTrack was called
+    expect(customMockContext.addNoteToTrack).toHaveBeenCalled();
   });
-  
+
   test('selects note when clicking on an existing note', () => {
-    // Set mock context for this test
-    useSessionContext.mockReturnValue(mockSessionContext);
-    
     render(<PianoRoll />);
     
-    // In a real test, we'd simulate clicking on a specific note position
-    // Since canvas testing is limited, we'll just check the selection behavior
-    const noteGrid = screen.getByTestId('note-grid');
+    // Find a note element
+    const noteElement = screen.getByTestId('note-element');
     
-    // Simulate mousedown at position where a note exists (would need positioning calculation in a real test)
-    fireEvent.mouseDown(noteGrid, { clientX: 50, clientY: 60 });
+    // Simulate a click on the note
+    fireEvent.click(noteElement);
     
-    // This would typically set a selected note state which we could check
-    // In this mocked version, we just ensure it doesn't crash
-    expect(noteGrid).toBeInTheDocument();
+    // Check if the note is selected (this will depend on your implementation)
+    expect(noteElement).toHaveClass('selected');
   });
-  
-  test('updates note duration when dragging edge', async () => {
+
+  test('updates note duration when dragging edge', () => {
     const customMockContext = {
       ...mockSessionContext,
-      updateNote: jest.fn()
+      updateNoteInTrack: jest.fn()
     };
     
-    // Set mock context for this test
     useSessionContext.mockReturnValue(customMockContext);
-    
+
     render(<PianoRoll />);
     
-    const noteGrid = screen.getByTestId('note-grid');
+    // Find a note element
+    const noteElement = screen.getByTestId('note-element');
     
-    // Simulate selecting a note and then dragging its edge
-    // 1. Select note
-    fireEvent.mouseDown(noteGrid, { clientX: 50, clientY: 60 });
+    // Find the resize handle
+    const resizeHandle = screen.getByTestId('note-resize-handle');
     
-    // 2. Simulate mouse movement to resize
-    fireEvent.mouseMove(noteGrid, { clientX: 70, clientY: 60 });
+    // Simulate dragging the resize handle
+    fireEvent.mouseDown(resizeHandle);
+    fireEvent.mouseMove(document, { clientX: 150 });
+    fireEvent.mouseUp(document);
     
-    // 3. Release mouse
-    fireEvent.mouseUp(noteGrid);
-    
-    // In a real test, we'd check specific parameters of updateNote()
-    expect(noteGrid).toBeInTheDocument();
+    // Check if updateNoteInTrack was called
+    expect(customMockContext.updateNoteInTrack).toHaveBeenCalled();
   });
-  
+
   test('deletes note when pressing delete key', () => {
     const customMockContext = {
       ...mockSessionContext,
-      deleteNote: jest.fn()
+      removeNoteFromTrack: jest.fn()
     };
     
-    // Set mock context for this test
     useSessionContext.mockReturnValue(customMockContext);
-    
+
     render(<PianoRoll />);
     
-    // 1. First select a note
-    const noteGrid = screen.getByTestId('note-grid');
-    fireEvent.mouseDown(noteGrid, { clientX: 50, clientY: 60 });
+    // Find a note element
+    const noteElement = screen.getByTestId('note-element');
     
-    // 2. Press delete key
+    // Select the note
+    fireEvent.click(noteElement);
+    
+    // Press delete key
     fireEvent.keyDown(document, { key: 'Delete' });
     
-    expect(customMockContext.deleteNote).toHaveBeenCalled();
+    // Check if removeNoteFromTrack was called
+    expect(customMockContext.removeNoteFromTrack).toHaveBeenCalled();
   });
-  
+
   test('changes view when using zoom controls', () => {
-    // Set mock context for this test
-    useSessionContext.mockReturnValue(mockSessionContext);
-    
     render(<PianoRoll />);
     
-    const zoomInButton = screen.getByLabelText('Zoom In');
-    const zoomOutButton = screen.getByLabelText('Zoom Out');
+    // Find zoom controls
+    const zoomInBtn = screen.getByTestId('zoom-in-btn');
     
-    // Initial render should be complete
-    expect(zoomInButton).toBeInTheDocument();
-    expect(zoomOutButton).toBeInTheDocument();
+    // Click zoom in button
+    fireEvent.click(zoomInBtn);
     
-    // Click zoom in
-    fireEvent.click(zoomInButton);
-    
-    // Click zoom out
-    fireEvent.click(zoomOutButton);
-    
-    // Just check that these actions don't cause errors (actual zoom logic would be tested in more detail)
-    expect(screen.getByTestId('note-grid')).toBeInTheDocument();
+    // Check for zoomed state (this will depend on your implementation)
+    const pianoRoll = screen.getByTestId('piano-roll');
+    expect(pianoRoll).toHaveAttribute('data-zoom-level', '2');
   });
-  
+
   test('allows quantize setting change', () => {
-    // Set mock context for this test
-    useSessionContext.mockReturnValue(mockSessionContext);
-    
     render(<PianoRoll />);
     
-    const quantizeSelect = screen.getByLabelText('Quantize');
-    
-    // Check that select exists
-    expect(quantizeSelect).toBeInTheDocument();
+    // Find quantize select
+    const quantizeSelect = screen.getByTestId('quantize-select');
     
     // Change quantize value
-    fireEvent.change(quantizeSelect, { target: { value: '0.25' } });
+    fireEvent.change(quantizeSelect, { target: { value: '8' } });
     
-    // Verify the select value was updated
-    expect(quantizeSelect.value).toBe('0.25');
+    // Check for updated quantize value
+    expect(quantizeSelect.value).toBe('8');
   });
 });

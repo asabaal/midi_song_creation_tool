@@ -1,24 +1,12 @@
 // jest.setup.js
-
-// Polyfill for setImmediate in the test environment
-if (typeof setImmediate === 'undefined') {
-  global.setImmediate = (callback) => setTimeout(callback, 0);
+// Polyfill for setImmediate and clearImmediate
+if (typeof global.setImmediate !== 'function') {
+  global.setImmediate = (callback, ...args) => global.setTimeout(callback, 0, ...args);
 }
 
-// Mock global browser APIs that might be used in tests
-if (typeof window === 'undefined') {
-  global.window = {};
+if (typeof global.clearImmediate !== 'function') {
+  global.clearImmediate = (id) => global.clearTimeout(id);
 }
 
-if (typeof document === 'undefined') {
-  global.document = {
-    createElement: jest.fn(),
-    getElementById: jest.fn(),
-    querySelector: jest.fn(),
-    querySelectorAll: jest.fn(() => []),
-  };
-}
-
-// Add any additional test environment setup here
-
-// Setup testing framework extensions if needed
+// This line helps with act() warnings in React tests
+global.IS_REACT_ACT_ENVIRONMENT = true;
