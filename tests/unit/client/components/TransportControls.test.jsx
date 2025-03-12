@@ -3,6 +3,18 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import TransportControls from '../../../../src/client/components/TransportControls';
 import { act } from 'react-dom/test-utils';
 
+// Mock the SessionContext module
+jest.mock('../../../../src/client/context/SessionContext', () => ({
+  useSessionContext: jest.fn(() => ({
+    currentSession: {
+      id: 'test-session-id',
+      tempo: 120,
+      timeSignature: '4/4'
+    },
+    updateSession: jest.fn()
+  }))
+}));
+
 // Mock Tone.js
 jest.mock('tone', () => {
   return {
