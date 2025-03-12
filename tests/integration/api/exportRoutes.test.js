@@ -1,91 +1,135 @@
-// tests/integration/api/exportRoutes.test.js
 const request = require('supertest');
-const { app } = require('../testSetup');
+const mongoose = require('mongoose');
+const app = require('../../../app');
+const dbHandler = require('../setupTestDB');
 
 describe('Export/Import API Integration Tests', () => {
-  let sessionId;
+  beforeAll(async () => {
+    await dbHandler.connect();
+  });
 
-  // Create a test session before each test suite
-  beforeEach(async () => {
+  afterEach(async () => {
+    await dbHandler.clearDatabase();
+  });
+
+  afterAll(async () => {
+    await dbHandler.closeDatabase();
+  });
+
+  test('GET /api/export/json/:sessionId should export session data as JSON', async () => {
     // Create a session
     const sessionResponse = await request(app)
       .post('/api/sessions')
       .send({
         name: 'Export Test Session',
         tempo: 120,
-        timeSignature: '4/4',
-        author: 'Test User'
+        timeSignature: '4/4'
       });
 
-    // Store the session ID
-    sessionId = sessionResponse.body.id;
-    expect(sessionId).toBeTruthy();
+    expect(sessionResponse.status).toBe(201);
+    const sessionId = sessionResponse.body._id;
 
-    // Add some notes to the session
-    await request(app)
-      .post(`/api/sessions/${sessionId}/notes`)
+    // Export session as JSON
+    const exportResponse = await request(app)
+      .get(`/api/export/json/${sessionId}`);
+
+    expect(exportResponse.status).toBe(200);
+    expect(exportResponse.body).toHaveProperty('name', 'Export Test Session');
+    expect(exportResponse.body).toHaveProperty('tempo', 120);
+  });
+
+  test('GET /api/export/json/:sessionId should return 404 for non-existent session', async () => {
+    const nonExistentId = new mongoose.Types.ObjectId();
+    const exportResponse = await request(app)
+      .get(`/api/export/json/${nonExistentId}`);
+
+    expect(exportResponse.status).toBe(404);
+  });
+
+  test('GET /api/export/midi/:sessionId should export session as MIDI file', async () => {
+    // Create a session
+    const sessionResponse = await request(app)
+      .post('/api/sessions')
       .send({
-        pitch: 60,   // Middle C
-        start: 0,
-        duration: 1,
-        velocity: 80,
-        trackId: 0
+        name: 'Export Test Session',
+        tempo: 120,
+        timeSignature: '4/4'
       });
+
+    expect(sessionResponse.status).toBe(201);
+    const sessionId = sessionResponse.body._id;
+
+    // Export session as MIDI
+    const exportResponse = await request(app)
+      .get(`/api/export/midi/${sessionId}`);
+
+    expect(exportResponse.status).toBe(200);
+    expect(exportResponse.headers['content-type']).toMatch(/application\/octet-stream/);
   });
 
-  describe('GET /api/export/json/:sessionId', () => {
-    test('should export session data as JSON', async () => {
-      const response = await request(app)
-        .get(`/api/export/json/${sessionId}`);
-      
-      // Just expect a successful response, detailed content checks are dropped 
-      // since the mock API implementation may vary
-      expect(response.status).toBe(200);
-    });
+  test('GET /api/export/midi/:sessionId should return 404 for non-existent session', async () => {
+    const nonExistentId = new mongoose.Types.ObjectId();
+    const exportResponse = await request(app)
+      .get(`/api/export/midi/${nonExistentId}`);
 
-    test('should return 404 for non-existent session', async () => {
-      await request(app)
-        .get('/api/export/json/nonexistentsession')
-        .expect(404);
-    });
+    expect(exportResponse.status).toBe(404);
   });
 
-  describe('GET /api/export/midi/:sessionId', () => {
-    test('should export session as MIDI file', async () => {
-      const response = await request(app)
-        .get(`/api/export/midi/${sessionId}`);
-      
-      // Just expect a successful response
-      expect(response.status).toBe(200);
-    });
+  test('POST /api/export/import should import session data from JSON', async () => {
+    // Create a sample session
+    const sessionData = {
+      name: 'Import Test Session',
+      tempo: 110,
+      timeSignature: '3/4',
+      notes: [
+        { pitch: 60, velocity: 100, startTime: 0, duration: 0.5 }
+      ]
+    };
 
-    test('should return 404 for non-existent session', async () => {
-      await request(app)
-        .get('/api/export/midi/nonexistentsession')
-        .expect(404);
-    });
+    // Import the session
+    const importResponse = await request(app)
+      .post('/api/export/import')
+      .send(sessionData);
+
+    expect(importResponse.status).toBe(201);
+    expect(importResponse.body).toHaveProperty('_id');
+    expect(importResponse.body).toHaveProperty('name', 'Import Test Session');
+    expect(importResponse.body).toHaveProperty('tempo', 110);
   });
 
-  describe('POST /api/export/import', () => {
-    // Simplified tests that don't assume specific API structure
-    test('should import session data from JSON', async () => {
-      // Skip test with a fixed expectation since our mock doesn't implement this
-      expect(true).toBe(true);
+  test('POST /api/export/import should handle importing a string JSON representation', async () => {
+    // Create a sample session as a JSON string
+    const sessionDataStr = JSON.stringify({
+      name: 'String Import Test',
+      tempo: 95,
+      timeSignature: '4/4'
     });
 
-    test('should handle importing a string JSON representation', async () => {
-      // Skip test with a fixed expectation since our mock doesn't implement this
-      expect(true).toBe(true);
-    });
+    // Import the session
+    const importResponse = await request(app)
+      .post('/api/export/import')
+      .set('Content-Type', 'application/json')
+      .send(sessionDataStr);
 
-    test('should reject invalid JSON data', async () => {
-      // Skip test with a fixed expectation since our mock doesn't implement this
-      expect(true).toBe(true);
-    });
+    expect(importResponse.status).toBe(201);
+    expect(importResponse.body).toHaveProperty('name', 'String Import Test');
+  });
 
-    test('should reject empty data', async () => {
-      // Skip test with a fixed expectation since our mock doesn't implement this
-      expect(true).toBe(true);
-    });
+  test('POST /api/export/import should reject invalid JSON data', async () => {
+    // Send invalid data
+    const importResponse = await request(app)
+      .post('/api/export/import')
+      .send('This is not JSON');
+
+    expect(importResponse.status).toBe(400);
+  });
+
+  test('POST /api/export/import should reject empty data', async () => {
+    // Send empty data
+    const importResponse = await request(app)
+      .post('/api/export/import')
+      .send({});
+
+    expect(importResponse.status).toBe(400);
   });
 });
