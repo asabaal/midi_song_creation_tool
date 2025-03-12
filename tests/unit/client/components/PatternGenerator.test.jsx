@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PatternGenerator from '../../../../src/client/components/PatternGenerator';
-import { useSessionContext } from '../../../../src/client/contexts/SessionContext';
+import { useSessionContext } from '../../../../src/client/context/SessionContext';
 
 // Mock the SessionContext
-jest.mock('../../../../src/client/contexts/SessionContext', () => ({
+jest.mock('../../../../src/client/context/SessionContext', () => ({
   useSessionContext: jest.fn()
 }));
 
