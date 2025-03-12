@@ -1,32 +1,819 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIDI Song Creation Tool</title>
-    <link rel="stylesheet" href="/css/main.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIDI Song Creation Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    h1, h2 { color: #333; }
+    button { background: #4CAF50; color: white; border: none; padding: 10px 15px; 
+             border-radius: 4px; cursor: pointer; margin: 5px; }
+    button.blue { background: #2196F3; }
+    button.red { background: #F44336; }
+    button.purple { background: #9C27B0; }
+    button.orange { background: #FF9800; }
+    button:disabled { background: #cccccc; cursor: not-allowed; }
+    .card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
+    .controls { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    #piano-roll { height: 400px; background: #f5f5f5; overflow: auto; position: relative; }
+    .piano-key { position: absolute; height: 20px; border-bottom: 1px solid #ddd; display: flex;
+                align-items: center; padding-left: 10px; font-size: 12px; width: 100px; }
+    .piano-key.white { background: white; }
+    .piano-key.black { background: #f8f8f8; }
+    .piano-note { position: absolute; height: 18px; background: #4285f4; border-radius: 3px; opacity: 0.8; 
+                 cursor: pointer; color: white; font-size: 10px; display: flex; align-items: center; 
+                 justify-content: center; overflow: hidden; }
+    .bassline-note { background: #0f9d58; }
+    .drum-note { background: #db4437; }
+    .status { padding: 10px; background: #f1f1f1; margin-top: 20px; border-radius: 4px; }
+    .log { height: 100px; overflow: auto; background: #f1f1f1; padding: 10px; 
+          font-family: monospace; margin-top: 10px; }
+    .success { color: green; }
+    .error { color: red; }
+    textarea { width: 100%; height: 100px; margin-top: 10px; font-family: monospace; }
+    .hidden { display: none; }
+    .info-text { font-size: 0.9em; color: #666; margin: 5px 0; }
+  </style>
 </head>
 <body>
-    <div id="app">
-        <header>
-            <h1>MIDI Song Creation Tool</h1>
-        </header>
-        
-        <main>
-            <div id="transport-controls">
-                <!-- Transport controls will be rendered here -->
-            </div>
-            
-            <div id="piano-roll">
-                <!-- Piano roll will be rendered here -->
-            </div>
-            
-            <div id="pattern-generator">
-                <!-- Pattern generator will be rendered here -->
-            </div>
-        </main>
+  <h1>MIDI Song Creation Tool</h1>
+  <p>Create music with just a few clicks:</p>
+  
+  <div class="card">
+    <h2>1. Create a Session and Sequence</h2>
+    <div class="controls">
+      <button id="setupBtn">Set Up (Create Session + Sequence)</button>
+      <span id="setupStatus">Not set up yet</span>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>2. Generate Music</h2>
+    <div class="controls">
+      <button id="chordBtn" disabled>Add Chord Progression</button>
+      <button id="bassBtn" class="blue" disabled>Add Bassline</button>
+      <button id="drumBtn" class="blue" disabled>Add Drums</button>
+      <button id="clearBtn" class="red" disabled>Clear Notes</button>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>3. Play Music</h2>
+    <div class="controls">
+      <button id="playBtn" disabled>▶️ Play</button>
+      <button id="stopBtn" disabled>⏹️ Stop</button>
+      <span id="playStatus">Nothing to play</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. Import/Export</h2>
+    <div class="controls">
+      <button id="exportMidiBtn" class="purple" disabled>💾 Export to MIDI File</button>
+      <button id="exportJsonBtn" class="purple" disabled>📄 Export as JSON</button>
+      <button id="importBtn" class="orange" disabled>📂 Import</button>
+      <span id="exportStatus">Create music to export</span>
+    </div>
+    <p class="info-text">Export your song as a .mid file to open in any DAW (Ableton, Logic, FL Studio, etc.) or as JSON for sharing and reimporting.</p>
+    
+    <div id="exportArea" class="hidden">
+      <p>Exported MIDI Data (JSON format):</p>
+      <textarea id="exportText" readonly></textarea>
+      <p>Save this JSON data or copy it to import later.</p>
+      <button id="copyJsonBtn" class="blue">Copy to Clipboard</button>
+      <button id="saveJsonBtn" class="blue">Save as File</button>
     </div>
     
-    <script src="/js/main.js"></script>
+    <div id="importArea" class="hidden">
+      <p>Paste MIDI Data (JSON format) to import:</p>
+      <textarea id="importText"></textarea>
+      <button id="processImportBtn" class="orange">Process Import</button>
+      <p>Or upload a JSON file:</p>
+      <input type="file" id="fileInput" accept=".json">
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Piano Roll</h2>
+    <div id="piano-roll"></div>
+  </div>
+  
+  <div class="status">Status: Ready</div>
+  <div class="log" id="log"></div>
+  
+  <script>
+    // Global state
+    let state = {
+      sessionId: null,
+      sequenceId: null,
+      audioContext: null,
+      isPlaying: false,
+      oscillators: [],
+      noteCount: 0
+    };
+    
+    // DOM elements
+    const setupStatus = document.getElementById('setupStatus');
+    const playStatus = document.getElementById('playStatus');
+    const exportStatus = document.getElementById('exportStatus');
+    const pianoRoll = document.getElementById('piano-roll');
+    const statusBar = document.querySelector('.status');
+    const logElement = document.getElementById('log');
+    const exportText = document.getElementById('exportText');
+    const importText = document.getElementById('importText');
+    const exportArea = document.getElementById('exportArea');
+    const importArea = document.getElementById('importArea');
+    const fileInput = document.getElementById('fileInput');
+    
+    // Buttons
+    const setupBtn = document.getElementById('setupBtn');
+    const chordBtn = document.getElementById('chordBtn');
+    const bassBtn = document.getElementById('bassBtn');
+    const drumBtn = document.getElementById('drumBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const playBtn = document.getElementById('playBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const exportMidiBtn = document.getElementById('exportMidiBtn');
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+    const importBtn = document.getElementById('importBtn');
+    const processImportBtn = document.getElementById('processImportBtn');
+    const copyJsonBtn = document.getElementById('copyJsonBtn');
+    const saveJsonBtn = document.getElementById('saveJsonBtn');
+    
+    // Logging function
+    function log(message, type = 'info') {
+      console.log(message);
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      entry.className = type;
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+    
+    // Update status
+    function updateStatus(message) {
+      statusBar.textContent = 'Status: ' + message;
+    }
+    
+    // API helper
+    async function callApi(endpoint, method = 'GET', body = null) {
+      try {
+        const options = {
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        };
+
+        if (body) {
+          options.body = JSON.stringify(body);
+        }
+
+        log(`API Call: ${method} ${endpoint}`);
+        const response = await fetch(`/api${endpoint}`, options);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          log(`API error (${response.status}): ${errorText}`, 'error');
+          return null;
+        }
+        
+        // For binary responses (like MIDI files), return the Response object
+        if (response.headers.get('Content-Type') === 'audio/midi') {
+          return response;
+        }
+        
+        const data = await response.json();
+
+        // The new API structure might not include success property
+        if (data.error) {
+          log(`API Error: ${data.error}`, 'error');
+          return null;
+        }
+
+        return data;
+      } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        return null;
+      }
+    }
+    
+    // Initialize audio context
+    function initAudio() {
+      try {
+        state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        log('Audio initialized', 'success');
+        return true;
+      } catch (error) {
+        log(`Audio initialization error: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Setup (create session and sequence)
+    async function setup() {
+      // Create session
+      const sessionData = await callApi('/sessions', 'POST', {
+        name: 'My Music',
+        bpm: 120,
+        timeSignature: [4, 4]
+      });
+      
+      if (!sessionData) {
+        log('Failed to create session', 'error');
+        return false;
+      }
+      
+      state.sessionId = sessionData._id || sessionData.id;
+      log(`Session created: ${state.sessionId}`, 'success');
+      
+      // Update UI
+      setupStatus.textContent = `Ready (Session: ${state.sessionId.substring(0, 8)}...)`;
+      chordBtn.disabled = false;
+      bassBtn.disabled = false;
+      drumBtn.disabled = false;
+      clearBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
+      importBtn.disabled = false;
+      
+      // Get piano roll ready
+      initPianoRoll();
+      
+      return true;
+    }
+    
+    // Generate chord progression
+    async function generateChords() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Generating chord progression...');
+      
+      const data = await callApi(`/patterns/chord-progression`, 'POST', {
+        sessionId: state.sessionId,
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 4,
+        rhythmPattern: [4]
+      });
+      
+      if (!data) {
+        updateStatus('Failed to generate chord progression');
+        return;
+      }
+      
+      state.noteCount = data.noteCount;
+      updateStatus(`Generated chord progression with ${data.noteCount} notes`);
+      log(`Added ${data.noteCount} notes`, 'success');
+      
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Enable play and export buttons
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export`;
+    }
+    
+    // Generate bassline
+    async function generateBass() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Generating bassline...');
+      
+      const data = await callApi(`/patterns/bassline`, 'POST', {
+        sessionId: state.sessionId,
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 3,
+        rhythmPattern: [1, 0.5, 0.5]
+      });
+      
+      if (!data) {
+        updateStatus('Failed to generate bassline');
+        return;
+      }
+      
+      state.noteCount = data.noteCount;
+      updateStatus(`Added bassline (total: ${data.noteCount} notes)`);
+      log(`Sequence now has ${data.noteCount} notes`, 'success');
+      
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Enable play and export buttons
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export`;
+    }
+    
+    // Generate drums
+    async function generateDrums() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Generating drum pattern...');
+      
+      const data = await callApi(`/patterns/drums`, 'POST', {
+        sessionId: state.sessionId,
+        patternType: 'basic',
+        measures: 2
+      });
+      
+      if (!data) {
+        updateStatus('Failed to generate drum pattern');
+        return;
+      }
+      
+      state.noteCount = data.noteCount;
+      updateStatus(`Added drums (total: ${data.noteCount} notes)`);
+      log(`Sequence now has ${data.noteCount} notes`, 'success');
+      
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Enable play and export buttons
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      exportMidiBtn.disabled = false;
+      exportJsonBtn.disabled = false;
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
+      exportStatus.textContent = `Ready to export`;
+    }
+    
+    // Clear all notes
+    async function clearNotes() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Clearing notes...');
+      
+      // Find what track to clear based on the current session
+      const sessionInfo = await callApi(`/sessions/${state.sessionId}`, 'GET');
+      if (!sessionInfo) {
+        updateStatus('Failed to get session info');
+        return;
+      }
+      
+      // In the new structure, we need to delete notes from each track
+      if (sessionInfo.tracks && sessionInfo.tracks.length > 0) {
+        for (const track of sessionInfo.tracks) {
+          const data = await callApi(`/patterns/notes/${state.sessionId}/${track.id}`, 'DELETE');
+          if (!data) {
+            log(`Failed to clear notes from track ${track.id}`, 'error');
+          }
+        }
+      }
+      
+      state.noteCount = 0;
+      updateStatus('All notes cleared');
+      log('Notes cleared', 'success');
+      
+      // Refresh piano roll
+      refreshPianoRoll();
+      
+      // Disable play and export buttons
+      playBtn.disabled = true;
+      stopBtn.disabled = true;
+      exportMidiBtn.disabled = true;
+      exportJsonBtn.disabled = true;
+      playStatus.textContent = 'Nothing to play';
+      exportStatus.textContent = 'Create music to export';
+    }
+    
+    // Export MIDI file
+    async function exportMidiFile() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      if (state.noteCount === 0) {
+        log('No notes to export', 'error');
+        updateStatus('No notes to export');
+        return;
+      }
+      
+      updateStatus('Exporting MIDI file...');
+      
+      try {
+        // Trigger file download using the export endpoint
+        const response = await callApi(`/export/midi/${state.sessionId}`);
+        
+        if (!response) {
+          throw new Error('Failed to get MIDI file from server');
+        }
+        
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Extract filename from the Content-Disposition header if possible
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = 'my_music.mid';
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+          const filenameRegex = /filename[^;=\\n]*=((['\"]).*?\\2|[^;\\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) { 
+            filename = matches[1].replace(/['\"]/g, '');
+          }
+        }
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        updateStatus(`Exported MIDI file successfully: ${filename}`);
+        log(`Exported MIDI file: ${filename}`, 'success');
+        exportStatus.textContent = `MIDI file exported successfully`;
+      } catch (error) {
+        console.error(error);
+        log(`Error exporting MIDI: ${error.message}`, 'error');
+        updateStatus('Failed to export MIDI file');
+      }
+    }
+    
+    // Export as JSON
+    async function exportJson() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Exporting JSON data...');
+      
+      const data = await callApi(`/export/json/${state.sessionId}`, 'GET');
+      
+      if (!data) {
+        updateStatus('Failed to export JSON data');
+        return;
+      }
+      
+      // Show exported data in textarea
+      exportText.value = JSON.stringify(data.data, null, 2);
+      exportArea.classList.remove('hidden');
+      importArea.classList.add('hidden');
+      
+      updateStatus(`Exported session data to JSON format`);
+      log(`Exported session ${state.sessionId}`, 'success');
+    }
+    
+    // Copy JSON to clipboard
+    function copyJsonToClipboard() {
+      exportText.select();
+      document.execCommand('copy');
+      log('JSON data copied to clipboard', 'success');
+    }
+    
+    // Save JSON to file
+    function saveJsonToFile() {
+      const blob = new Blob([exportText.value], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'midi_session.json';
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      log('JSON data saved to file', 'success');
+    }
+    
+    // Show import area
+    function showImportArea() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      exportArea.classList.add('hidden');
+      importArea.classList.remove('hidden');
+      importText.value = '';
+      importText.focus();
+      
+      updateStatus('Ready to import data');
+    }
+    
+    // Process import
+    async function processImport() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      const jsonData = importText.value.trim();
+      if (!jsonData) {
+        log('No data to import', 'error');
+        return;
+      }
+      
+      updateStatus('Importing data...');
+      
+      // Parse JSON to validate it first
+      try {
+        JSON.parse(jsonData);
+      } catch (e) {
+        log(`Invalid JSON data: ${e.message}`, 'error');
+        updateStatus('Invalid JSON data');
+        return;
+      }
+      
+      const data = await callApi(`/export/import`, 'POST', {
+        data: jsonData
+      });
+      
+      if (!data) {
+        updateStatus('Failed to import data');
+        return;
+      }
+      
+      state.sessionId = data.sessionId;
+      state.noteCount = data.session.noteCount || 0;
+      
+      updateStatus(`Imported session data successfully`);
+      log(`Imported session ${data.sessionId}`, 'success');
+      
+      // Hide import area
+      importArea.classList.add('hidden');
+      
+      // Refresh piano roll and update UI
+      refreshPianoRoll();
+      
+      // Enable play button if notes were imported
+      playBtn.disabled = state.noteCount === 0;
+      stopBtn.disabled = state.noteCount === 0;
+      exportMidiBtn.disabled = state.noteCount === 0;
+      exportJsonBtn.disabled = state.noteCount === 0;
+      playStatus.textContent = state.noteCount > 0 ? 
+        `${state.noteCount} notes ready to play` : 'Nothing to play';
+      exportStatus.textContent = state.noteCount > 0 ?
+        `Ready to export` : 'Create music to export';
+    }
+    
+    // Handle file upload
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        importText.value = e.target.result;
+        log(`File loaded: ${file.name}`, 'success');
+      };
+      reader.onerror = function(e) {
+        log(`Error reading file: ${e.target.error}`, 'error');
+      };
+      reader.readAsText(file);
+    }
+    
+    // Initialize piano roll
+    function initPianoRoll() {
+      pianoRoll.innerHTML = '';
+      
+      // Create piano keys (just one octave for simplicity)
+      const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      
+      for (let octave = 5; octave >= 2; octave--) {
+        for (let i = 11; i >= 0; i--) {
+          const note = noteNames[i];
+          const isBlack = note.includes('#');
+          
+          const pianoKey = document.createElement('div');
+          pianoKey.className = `piano-key ${isBlack ? 'black' : 'white'}`;
+          const midiNote = octave * 12 + i;
+          pianoKey.dataset.note = midiNote;
+          pianoKey.style.top = `${(127 - midiNote) * 20}px`;
+          pianoKey.textContent = `${note}${octave}`;
+          
+          pianoRoll.appendChild(pianoKey);
+        }
+      }
+    }
+    
+    // Refresh piano roll with notes
+    async function refreshPianoRoll() {
+      // Get session data
+      const data = await callApi(`/sessions/${state.sessionId}`);
+      if (!data) {
+        log('Failed to get session data', 'error');
+        return;
+      }
+      
+      // Clear existing notes
+      document.querySelectorAll('.piano-note').forEach(note => note.remove());
+      
+      // Add notes from all tracks
+      if (data.tracks && data.tracks.length > 0) {
+        let allNotes = [];
+        
+        // Collect notes from all tracks
+        data.tracks.forEach(track => {
+          if (track.notes && track.notes.length > 0) {
+            // Add track info to each note
+            const notesWithTrackInfo = track.notes.map(note => ({
+              ...note,
+              trackId: track.id,
+              instrument: track.instrument
+            }));
+            allNotes = [...allNotes, ...notesWithTrackInfo];
+          }
+        });
+        
+        // Display all notes
+        allNotes.forEach(note => {
+          const noteElement = document.createElement('div');
+          
+          // Select class based on instrument/track
+          if (note.instrument === 9) {
+            noteElement.className = 'piano-note drum-note';
+          } else if (note.instrument === 32) {
+            noteElement.className = 'piano-note bassline-note';
+          } else {
+            noteElement.className = 'piano-note';
+          }
+          
+          // Position and size
+          noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
+          noteElement.style.left = `${note.startTime * 30 + 100}px`;
+          noteElement.style.width = `${note.duration * 30}px`;
+          
+          // Add data for playback
+          noteElement.dataset.pitch = note.pitch;
+          noteElement.dataset.start = note.startTime;
+          noteElement.dataset.duration = note.duration;
+          noteElement.dataset.velocity = note.velocity || 100;
+          noteElement.dataset.instrument = note.instrument;
+          
+          // Add note name for better visibility
+          noteElement.textContent = note.pitch;
+          
+          pianoRoll.appendChild(noteElement);
+        });
+        
+        log(`Displayed ${allNotes.length} notes in piano roll`, 'success');
+        state.noteCount = allNotes.length;
+      }
+    }
+    
+    // Play the sequence
+    function playSequence() {
+      if (!state.audioContext) {
+        initAudio();
+      }
+      
+      if (state.isPlaying) {
+        stopPlayback();
+      }
+      
+      // Refresh notes to make sure we have the latest
+      refreshPianoRoll().then(() => {
+        const notes = document.querySelectorAll('.piano-note');
+        if (notes.length === 0) {
+          updateStatus('No notes to play');
+          return;
+        }
+        
+        state.isPlaying = true;
+        updateStatus('Playing...');
+        playStatus.textContent = 'Playing...';
+        
+        const startTime = state.audioContext.currentTime;
+        const tempo = 120; // beats per minute
+        const secondsPerBeat = 60 / tempo;
+        
+        notes.forEach(noteElement => {
+          // Skip drum notes for now (they sound strange)
+          if (parseInt(noteElement.dataset.instrument) === 9) {
+            return;
+          }
+          
+          const pitch = parseInt(noteElement.dataset.pitch);
+          const noteStartTime = startTime + (parseFloat(noteElement.dataset.start) * secondsPerBeat);
+          const noteDuration = parseFloat(noteElement.dataset.duration) * secondsPerBeat;
+          const velocity = parseInt(noteElement.dataset.velocity) / 127;
+          
+          // Create oscillator
+          const oscillator = state.audioContext.createOscillator();
+          const gainNode = state.audioContext.createGain();
+          
+          // Configure oscillator
+          oscillator.type = parseInt(noteElement.dataset.instrument) === 32 ? 'triangle' : 'sine';
+          oscillator.frequency.value = midiToFrequency(pitch);
+          
+          // Connect
+          oscillator.connect(gainNode);
+          gainNode.connect(state.audioContext.destination);
+          
+          // Set volume
+          gainNode.gain.value = velocity * 0.2;
+          
+          // Schedule note
+          oscillator.start(noteStartTime);
+          oscillator.stop(noteStartTime + noteDuration);
+          
+          // Add visual feedback
+          setTimeout(() => {
+            noteElement.style.backgroundColor = 'yellow';
+            setTimeout(() => {
+              if (noteElement.dataset.instrument === '9') {
+                noteElement.style.backgroundColor = '#db4437';
+              } else if (noteElement.dataset.instrument === '32') {
+                noteElement.style.backgroundColor = '#0f9d58';
+              } else {
+                noteElement.style.backgroundColor = '#4285f4';
+              }
+            }, noteDuration * 1000);
+          }, (noteStartTime - startTime) * 1000);
+          
+          // Save for cleanup
+          state.oscillators.push(oscillator);
+        });
+        
+        // Find the longest note to stop playback
+        const longestDuration = Math.max(...Array.from(notes).map(note => 
+          parseFloat(note.dataset.start) + parseFloat(note.dataset.duration)
+        ));
+        
+        // Auto-stop at end
+        setTimeout(() => {
+          if (state.isPlaying) {
+            stopPlayback();
+          }
+        }, longestDuration * secondsPerBeat * 1000);
+      });
+    }
+    
+    // Stop playback
+    function stopPlayback() {
+      if (!state.isPlaying) return;
+      
+      // Stop all oscillators
+      state.oscillators.forEach(osc => {
+        try {
+          osc.stop();
+        } catch (e) {
+          // Ignore errors for oscillators that are already stopped
+        }
+      });
+      
+      state.oscillators = [];
+      state.isPlaying = false;
+      
+      updateStatus('Playback stopped');
+      playStatus.textContent = `${state.noteCount} notes ready to play`;
+    }
+    
+    // Convert MIDI note to frequency
+    function midiToFrequency(note) {
+      return 440 * Math.pow(2, (note - 69) / 12);
+    }
+    
+    // Event listeners
+    setupBtn.addEventListener('click', setup);
+    chordBtn.addEventListener('click', generateChords);
+    bassBtn.addEventListener('click', generateBass);
+    drumBtn.addEventListener('click', generateDrums);
+    clearBtn.addEventListener('click', clearNotes);
+    playBtn.addEventListener('click', playSequence);
+    stopBtn.addEventListener('click', stopPlayback);
+    exportMidiBtn.addEventListener('click', exportMidiFile);
+    exportJsonBtn.addEventListener('click', exportJson);
+    importBtn.addEventListener('click', showImportArea);
+    processImportBtn.addEventListener('click', processImport);
+    copyJsonBtn.addEventListener('click', copyJsonToClipboard);
+    saveJsonBtn.addEventListener('click', saveJsonToFile);
+    fileInput.addEventListener('change', handleFileUpload);
+    
+    // Initialize
+    updateStatus('Ready - click "Set Up" to begin');
+    log('Interface loaded, click "Set Up" to begin', 'success');
+  </script>
 </body>
 </html>
