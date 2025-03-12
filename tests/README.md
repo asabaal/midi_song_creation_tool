@@ -1,146 +1,120 @@
-# MIDI Song Creation Tool Testing Suite
+# MIDI Song Creation Tool - Testing Suite
 
-This directory contains the comprehensive testing suite for the MIDI Song Creation Tool. The tests are organized in a hierarchical structure to test various aspects of the application.
+This directory contains the comprehensive test suite for the MIDI Song Creation Tool. The test organization follows industry best practices with a clear separation of unit, integration, and end-to-end tests.
 
 ## Test Structure
 
 ```
 tests/
-├── unit/                  # Unit tests for individual components
-│   ├── core/              # Tests for core music functionality
-│   ├── client/            # Tests for client-side components 
-│   └── server/            # Tests for server-side functionality
-├── integration/           # Integration tests for API and components
-│   └── api/               # API endpoint tests
+├── unit/                  # Unit tests for isolated components
+│   ├── core/              # Tests for core MIDI processing functionality
+│   ├── client/            # Tests for React components
+│   │   └── components/    # Tests for individual UI components
+│   └── server/            # Tests for server-side code
+├── integration/           # Integration tests between components
+│   └── api/               # Tests for API endpoints
 ├── e2e/                   # End-to-end tests with Cypress
 │   └── cypress/
-│       ├── specs/         # Cypress test specifications
-│       └── support/       # Cypress support files
-├── fixtures/              # Test fixtures and sample data
-└── mocks/                 # Mocks for external dependencies
+│       ├── fixtures/      # Test data for E2E tests
+│       ├── plugins/       # Cypress plugins
+│       ├── support/       # Support files and commands
+│       └── specs/         # E2E test specifications
+├── mocks/                 # Mock objects and functions
+├── fixtures/              # Test fixtures (sample MIDI files, etc.)
+└── README.md              # This file
 ```
 
 ## Running Tests
 
-### Prerequisites
-
-Before running tests, make sure you have installed dependencies:
+The project includes several npm scripts to run different types of tests:
 
 ```bash
-npm install
-```
-
-### Running All Tests
-
-To run the entire test suite:
-
-```bash
+# Run all tests
 npm test
-```
 
-### Running Specific Test Types
+# Run tests in watch mode (automatically re-run on file changes)
+npm run test:watch
 
-#### Unit Tests
+# Run tests with coverage report
+npm run test:coverage
 
-```bash
+# Run only unit tests
 npm run test:unit
-```
 
-#### Integration Tests
-
-```bash
+# Run only integration tests
 npm run test:integration
-```
 
-#### End-to-End Tests
-
-```bash
-# Run Cypress tests in headless mode
+# Run end-to-end tests with Cypress
 npm run test:e2e
 
-# Open Cypress test runner UI
+# Open Cypress test runner in interactive mode
 npm run test:e2e:open
-```
 
-### Test Coverage
+# Run tests in CI environment with coverage
+npm run test:ci
 
-To generate test coverage reports:
-
-```bash
-npm run test:coverage
-```
-
-Coverage reports will be available in the `coverage` directory. To view the coverage report in your browser:
-
-```bash
+# View coverage report in browser
 npm run test:coverage:view
 ```
 
-## Test Categories
+## Testing Tools
 
-### Unit Tests
-
-Unit tests focus on testing individual components in isolation. They ensure that each function or class behaves as expected.
-
-Key unit test areas:
-- Music theory functionality (scales, chords, progressions)
-- MIDI sequence manipulation
-- Pattern generation (chords, basslines, drums)
-- MIDI export functionality
-
-### Integration Tests
-
-Integration tests verify that different parts of the application work together correctly.
-
-Key integration test areas:
-- API endpoints
-- Data persistence
-- Session management
-- Pattern generation endpoints
-- Export/import functionality
-
-### End-to-End Tests
-
-End-to-end tests simulate user interactions with the application using Cypress.
-
-Key E2E test scenarios:
-- Creating a new session
-- Generating music patterns
-- Visualizing notes in the piano roll
-- Playing back generated music
-- Exporting and importing session data
-- Handling errors and edge cases
-
-## Writing New Tests
-
-### Test Naming Conventions
-
-- **Unit tests**: `[component-name].test.js`
-- **Integration tests**: `[feature-name].test.js`
-- **E2E tests**: `[workflow-name].cy.js`
-
-### Test Structure Guidelines
-
-- Use descriptive test names
-- Follow the AAA pattern (Arrange, Act, Assert)
-- Group related tests in nested `describe` blocks
-- Use beforeEach/afterEach hooks for setup and teardown
-
-### Using Mocks and Fixtures
-
-- Place reusable test data in `/tests/fixtures`
-- Create mocks for external dependencies in `/tests/mocks`
-- Use Jest's mocking capabilities for unit tests
-- Use Cypress interceptors for mocking in E2E tests
-
-## Test Migration
-
-When moving to new project structures, follow the guidelines in the `TEST_MIGRATION.md` file at the project root to update test paths and imports.
+- **Jest**: Primary testing framework for unit and integration tests
+- **React Testing Library**: Testing React components
+- **Cypress**: End-to-end testing
+- **Supertest**: API testing
 
 ## Best Practices
 
-1. **Isolation**: Tests should not depend on each other
-2. **Deterministic**: Tests should produce the same results every time
-3. **Fast**: Keep tests, especially unit tests, running quickly
-4. **Maintainable**: Keep test code clean and DRY
-5. **Realistic**: Test real user scenarios in E2E tests
+1. **Unit Tests**
+   - Focus on testing individual functions, methods, or components in isolation
+   - Mock dependencies
+   - Keep assertions focused on behavior, not implementation details
+   - Aim for high coverage of core business logic
+
+2. **Integration Tests**
+   - Test interactions between modules
+   - Focus on API endpoints and data flow
+   - Verify correct error handling
+
+3. **End-to-End Tests**
+   - Test full user workflows from UI to backend
+   - Focus on critical paths that users will take
+   - Use data attributes like `data-cy` as selectors
+
+## Writing New Tests
+
+When adding new functionality, follow this process:
+
+1. Add unit tests for the core logic
+2. Add integration tests if the functionality spans multiple modules
+3. Add E2E tests for critical user flows
+
+All tests should be clear, focused, and maintainable. Use descriptive test names that explain the expected behavior.
+
+## Mocking
+
+The `mocks/` directory contains shared mock implementations. Use these to ensure consistent mocking across tests.
+
+When creating new mocks:
+- Keep them focused on what you need to test
+- Document any assumptions made
+- Make them reusable when appropriate
+
+## Coverage Requirements
+
+The project aims for the following coverage targets:
+- Core functionality: 90%+ line coverage
+- Server API endpoints: 80%+ line coverage
+- UI components: 70%+ line coverage
+
+## Test Fixtures
+
+Test fixtures are stored in the `fixtures/` directory. These include:
+- Sample MIDI files
+- Test data for API responses
+- Other static assets needed for testing
+
+## Migration Guide
+
+When moving from the `develop` branch structure to the new structure in the `feature/project-structure` branch, refer to the [TEST_MIGRATION.md](../TEST_MIGRATION.md) file for guidance on how to adapt tests.
