@@ -10,9 +10,10 @@ module.exports.connect = async () => {
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
 
+    // Remove deprecated options - they are default in Mongoose 6+
     const mongooseOpts = {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+        // No options needed - useNewUrlParser and useUnifiedTopology 
+        // are default in Mongoose 6+
     };
 
     await mongoose.connect(uri, mongooseOpts);
