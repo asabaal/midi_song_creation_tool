@@ -1,7 +1,7 @@
 // jest.config.js
 module.exports = {
   // Setup environment
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/jest.setup.js'],
   
   // Test timeout
   testTimeout: 15000,
@@ -27,8 +27,8 @@ module.exports = {
   
   // Mock file extensions
   moduleNameMapper: {
-    '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
-    '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js',
+    '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+    '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js',
     '^tone$': '<rootDir>/tests/__mocks__/tone.js',
     '^../../src/client/contexts/SessionContext$': '<rootDir>/tests/__mocks__/SessionContext.js',
     '^@/components/(.*)$': '<rootDir>/src/client/components/$1',
