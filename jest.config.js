@@ -27,7 +27,9 @@ module.exports = {
     // Handle image imports
     '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js',
     // Path aliases (if applicable)
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1',
+    // Explicit mock for SessionContext
+    '^src/client/context/SessionContext$': '<rootDir>/__mocks__/src/client/context/SessionContext.js'
   },
 
   // An array of regexp pattern strings that are matched against all file paths
