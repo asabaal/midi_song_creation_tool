@@ -40,5 +40,14 @@ module.exports = {
   ],
 
   // Avoid test runs that fail due to memory issues in large projects
-  workerIdleMemoryLimit: '512MB'
+  workerIdleMemoryLimit: '512MB',
+  
+  // Mock resolution
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  
+  // Automatically restore mock state between every test
+  restoreMocks: true,
+  
+  // Indicates whether each individual test should be reported during the run
+  verbose: true
 };
