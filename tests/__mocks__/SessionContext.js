@@ -1,66 +1,92 @@
 // tests/__mocks__/SessionContext.js
 import React from 'react';
 
-// Mock data
-const defaultSession = {
+// Mock session state
+const defaultSessionState = {
   id: 'test-session-id',
   name: 'Test Session',
-  tracks: [
-    {
-      id: 'track1',
-      name: 'Test Track',
-      instrument: 'piano',
-      notes: [
-        { id: 'note1', pitch: 60, start: 0, duration: 1, velocity: 100 }
-      ]
-    }
-  ],
   tempo: 120,
-  timeSignature: '4/4'
+  timeSignature: '4/4',
+  tracks: [
+    { id: 'track1', name: 'Piano', instrument: 'piano', notes: [] }
+  ],
+  transport: {
+    isPlaying: false,
+    isRecording: false,
+    currentPosition: '1.1.1',
+    loopStart: 0,
+    loopEnd: 16,
+    isLooping: false
+  }
 };
 
 // Mock context functions
 const mockFunctions = {
-  setSelectedTrackId: jest.fn(),
-  addNoteToTrack: jest.fn(),
-  removeNoteFromTrack: jest.fn(),
-  updateNoteInTrack: jest.fn(),
-  addNotesToTrack: jest.fn(),
-  createTrack: jest.fn(),
-  deleteTrack: jest.fn(),
-  updateTrackSettings: jest.fn(),
+  // Transport controls
+  play: jest.fn(),
+  pause: jest.fn(),
+  stop: jest.fn(),
   setTempo: jest.fn(),
   setTimeSignature: jest.fn(),
+  toggleRecording: jest.fn(),
+  toggleLoop: jest.fn(),
+  setLoopPoints: jest.fn(),
+  
+  // Note operations
+  addNote: jest.fn(),
+  updateNote: jest.fn(),
+  deleteNote: jest.fn(),
+  clearNotes: jest.fn(),
+  
+  // Track operations
+  addTrack: jest.fn(),
+  updateTrack: jest.fn(),
+  deleteTrack: jest.fn(),
+  
+  // Session operations
+  createSession: jest.fn(),
   loadSession: jest.fn(),
   saveSession: jest.fn(),
-  exportSession: jest.fn(),
-  importSession: jest.fn(),
-  clearSession: jest.fn()
+  updateSessionName: jest.fn(),
+  
+  // Pattern generation
+  generatePattern: jest.fn(),
+  
+  // Import/Export
+  exportMIDI: jest.fn(),
+  importMIDI: jest.fn()
 };
 
-// Create context with default values
-export const SessionContext = React.createContext({
-  currentSession: defaultSession,
-  selectedTrackId: 'track1',
+// Create a mock context object
+const SessionContext = React.createContext({
+  ...defaultSessionState,
   ...mockFunctions
 });
 
-// Custom hook to use the session context
-export const useSessionContext = jest.fn().mockReturnValue({
-  currentSession: defaultSession,
-  selectedTrackId: 'track1',
-  ...mockFunctions
-});
-
-// Provider component
-export const SessionProvider = ({ children }) => {
+// Create a custom provider for tests
+export const SessionProvider = ({ children, customState = {} }) => {
+  // Merge default state with any custom state passed in
+  const sessionState = {
+    ...defaultSessionState,
+    ...customState
+  };
+  
+  // Combined context value
+  const contextValue = {
+    ...sessionState,
+    ...mockFunctions
+  };
+  
   return (
-    <SessionContext.Provider value={{
-      currentSession: defaultSession,
-      selectedTrackId: 'track1',
-      ...mockFunctions
-    }}>
+    <SessionContext.Provider value={contextValue}>
       {children}
     </SessionContext.Provider>
   );
 };
+
+// Export custom hook
+export const useSessionContext = () => {
+  return React.useContext(SessionContext);
+};
+
+export default SessionContext;
