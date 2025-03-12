@@ -24,6 +24,15 @@ npm install
 
 ### Running Tests
 
+Use the provided script to run tests with better configuration:
+
+```bash
+chmod +x run-tests.sh
+./run-tests.sh
+```
+
+Or run using npm:
+
 ```bash
 npm test
 ```
@@ -37,9 +46,24 @@ If you encounter issues with the tests, try the following steps:
 npm install
 ```
 
-2. If you see Mongoose-related warnings, they're handled by the Jest configuration but can be safely ignored.
+2. If you see duplicate mock warnings, use the provided script instead:
+```bash
+./run-tests.sh
+```
 
-3. If you encounter SuperTest-related errors, make sure your Express app is properly configured for testing.
+3. For API test failures, make sure the mock server is being properly initialized. Check that you're using the API routes correctly in your tests.
+
+4. For React component test failures, ensure you're importing the testing-library utilities correctly and using them as expected.
+
+## API Documentation
+
+The MIDI Song Creation Tool offers a comprehensive API for interacting with MIDI sequences:
+
+- `/api/sessions` - Session management (CRUD)
+- `/api/sessions/:id/notes` - Note manipulation
+- `/api/sessions/:id/patterns` - Pattern generation
+- `/api/music-theory` - Music theory utilities
+- `/api/export` - Import/export functionality
 
 ## Tech Stack
 
