@@ -2,27 +2,31 @@
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const createMockApiServer = require('./api/apiMockSetup');
+const http = require('http');
 
 let mongoServer;
 let app;
+let server;
 
 // Setup MongoDB Memory Server and API server before all tests
 beforeAll(async () => {
   // Create mock API server - this must be initialized before any tests run
   app = createMockApiServer();
   
-  // Add a special address method for SuperTest compatibility
-  app.address = function() {
-    return { port: app.server.port };
-  };
+  // Start the server explicitly for SuperTest
+  server = http.createServer(app);
+  server.listen(0); // Use random port
+  
+  // Add the server to the app for cleanup
+  app.server = server;
   
   // Setup MongoDB in memory server for tests that need it
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
   
   const mongooseOpts = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+    // Remove deprecated options
+    // useNewUrlParser and useUnifiedTopology are default in Mongoose 6+
   };
 
   await mongoose.connect(uri, mongooseOpts);
