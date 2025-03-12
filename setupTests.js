@@ -34,43 +34,8 @@ HTMLCanvasElement.prototype.getContext = () => {
   };
 };
 
-// Mock the SessionContext for components that use it
-jest.mock('../src/client/context/SessionContext', () => {
-  const mockContext = {
-    currentSession: {
-      id: 'test-session-id',
-      name: 'Test Session',
-      author: 'Test User',
-      bpm: 120,
-      timeSignature: [4, 4],
-      tracks: [
-        { id: 0, name: 'Piano', type: 'instrument' },
-        { id: 1, name: 'Bass', type: 'instrument' },
-        { id: 2, name: 'Drums', type: 'drums' }
-      ],
-      sequences: {},
-      notes: []
-    },
-    selectedTrackId: 0,
-    setSelectedTrackId: jest.fn(),
-    addNote: jest.fn(),
-    updateNote: jest.fn(),
-    deleteNote: jest.fn(),
-    addNotesToTrack: jest.fn(),
-    clearNotes: jest.fn(),
-    createNewSession: jest.fn(),
-    loadSession: jest.fn(),
-    saveSession: jest.fn(),
-    exportSession: jest.fn(),
-    importSession: jest.fn()
-  };
-
-  return {
-    useSessionContext: jest.fn(() => mockContext),
-    SessionProvider: ({ children }) => children
-  };
-});
-
 // Mock any browser APIs not available in the test environment
 global.URL.createObjectURL = jest.fn();
 global.URL.revokeObjectURL = jest.fn();
+
+// We'll move the SessionContext mock to a dedicated mock file
