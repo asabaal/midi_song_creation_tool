@@ -2,6 +2,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const http = require('http');
 
 // Create a mock API server for testing
 function createMockApiServer() {
@@ -583,7 +584,8 @@ function createMockApiServer() {
   
   // Helper functions
   function isValidNote(note) {
-    const baseNote = note.replace(/\\d+$/, '');
+    // Important fix: Modify the regex to handle notes with octaves like C4
+    const baseNote = note.replace(/\d+$/, '');
     return /^[A-G][#b]?$/.test(baseNote);
   }
   
@@ -609,14 +611,20 @@ function createMockApiServer() {
     return notes;
   }
   
-  // This is the critical change for SuperTest compatibility
-  // Start the server on a random unused port
-  const server = app.listen(0);
+  // Create an HTTP server for the Express app
+  const server = http.createServer(app);
   
-  // Store the server instance on the app for later use
-  app.server = server;
+  // Start the server on a random port
+  server.listen(0);
   
-  return app;
+  // Wait for the server to start listening
+  return new Promise((resolve) => {
+    server.on('listening', () => {
+      // Attach the server to the app for later reference
+      app.server = server;
+      resolve(app);
+    });
+  });
 }
 
 module.exports = createMockApiServer;
