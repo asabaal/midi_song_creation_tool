@@ -1,10 +1,10 @@
 // tests/unit/client/components/PianoRoll.test.jsx
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '../../../test-utils';
 import userEvent from '@testing-library/user-event';
 import PianoRoll from '../../../../src/client/components/PianoRoll';
 
-// Mock the session context
+// Create a custom mock session context for testing
 const mockSessionContext = {
   currentSession: {
     id: 'test-session',
@@ -35,28 +35,6 @@ const mockSessionContext = {
   setSelectedTrackId: jest.fn()
 };
 
-// Mock the context provider
-jest.mock('../../../../src/client/context/SessionContext', () => ({
-  useSessionContext: jest.fn().mockReturnValue(mockSessionContext)
-}));
-
-// Mock the canvas rendering
-HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
-  clearRect: jest.fn(),
-  fillRect: jest.fn(),
-  fillText: jest.fn(),
-  strokeRect: jest.fn(),
-  beginPath: jest.fn(),
-  moveTo: jest.fn(),
-  lineTo: jest.fn(),
-  stroke: jest.fn(),
-  setLineDash: jest.fn(),
-  fillStyle: '',
-  strokeStyle: '',
-  lineWidth: 1,
-  font: ''
-});
-
 // Mock the CSS imports
 jest.mock('../../../../src/client/styles/PianoRoll.css', () => ({}));
 
@@ -68,7 +46,7 @@ describe('PianoRoll', () => {
   });
 
   test('renders piano roll component', () => {
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: mockSessionContext });
     
     // Check that piano keys and grid are rendered
     expect(screen.getByTestId('piano-roll-container')).toBeInTheDocument();
@@ -77,7 +55,7 @@ describe('PianoRoll', () => {
   });
   
   test('displays notes from current track', () => {
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: mockSessionContext });
     
     // Note: In a real test we'd check that notes are rendered on the canvas
     // Since we've mocked the canvas, we'll just verify the component doesn't crash
@@ -86,24 +64,22 @@ describe('PianoRoll', () => {
   });
   
   test('adds a note when clicking on grid', () => {
-    const mockAddNote = jest.fn();
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
-    useSessionContext.mockReturnValue({
+    const customMockContext = {
       ...mockSessionContext,
-      addNote: mockAddNote
-    });
+      addNote: jest.fn()
+    };
     
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: customMockContext });
     
     const noteGrid = screen.getByTestId('note-grid');
     fireEvent.mouseDown(noteGrid, { clientX: 100, clientY: 200 });
     fireEvent.mouseUp(noteGrid);
     
-    expect(mockAddNote).toHaveBeenCalled();
+    expect(customMockContext.addNote).toHaveBeenCalled();
   });
   
   test('selects note when clicking on an existing note', () => {
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: mockSessionContext });
     
     // In a real test, we'd simulate clicking on a specific note position
     // Since canvas testing is limited, we'll just check the selection behavior
@@ -118,14 +94,12 @@ describe('PianoRoll', () => {
   });
   
   test('updates note duration when dragging edge', async () => {
-    const mockUpdateNote = jest.fn();
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
-    useSessionContext.mockReturnValue({
+    const customMockContext = {
       ...mockSessionContext,
-      updateNote: mockUpdateNote
-    });
+      updateNote: jest.fn()
+    };
     
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: customMockContext });
     
     const noteGrid = screen.getByTestId('note-grid');
     
@@ -144,14 +118,12 @@ describe('PianoRoll', () => {
   });
   
   test('deletes note when pressing delete key', () => {
-    const mockDeleteNote = jest.fn();
-    const { useSessionContext } = require('../../../../src/client/context/SessionContext');
-    useSessionContext.mockReturnValue({
+    const customMockContext = {
       ...mockSessionContext,
-      deleteNote: mockDeleteNote
-    });
+      deleteNote: jest.fn()
+    };
     
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: customMockContext });
     
     // 1. First select a note
     const noteGrid = screen.getByTestId('note-grid');
@@ -160,11 +132,11 @@ describe('PianoRoll', () => {
     // 2. Press delete key
     fireEvent.keyDown(document, { key: 'Delete' });
     
-    expect(mockDeleteNote).toHaveBeenCalled();
+    expect(customMockContext.deleteNote).toHaveBeenCalled();
   });
   
   test('changes view when using zoom controls', () => {
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: mockSessionContext });
     
     const zoomInButton = screen.getByLabelText('Zoom In');
     const zoomOutButton = screen.getByLabelText('Zoom Out');
@@ -184,7 +156,7 @@ describe('PianoRoll', () => {
   });
   
   test('allows quantize setting change', () => {
-    render(<PianoRoll />);
+    render(<PianoRoll />, { sessionContext: mockSessionContext });
     
     const quantizeSelect = screen.getByLabelText('Quantize');
     
