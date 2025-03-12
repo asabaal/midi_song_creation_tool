@@ -13,19 +13,6 @@ function createMockApiServer() {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
   
-  // Store the original listen function
-  const originalListen = app.listen;
-  
-  // Override listen to store the server and port
-  app.listen = function(port) {
-    app.server = originalListen.call(this, port);
-    app.server.port = port || 0;
-    return app.server;
-  };
-  
-  // Start server on a random port
-  app.listen(0);
-  
   // Mock session data
   const sessions = [
     {
@@ -128,7 +115,7 @@ function createMockApiServer() {
     }
     
     // Handle root with octave (e.g., C4)
-    const rootOnly = root.replace(/\d+$/, '');
+    const rootOnly = root.replace(/\\d+$/, '');
     
     // Get scale based on type
     let notes;
@@ -164,7 +151,7 @@ function createMockApiServer() {
     }
     
     // Handle root with octave (e.g., G4)
-    const rootOnly = root.replace(/\d+$/, '');
+    const rootOnly = root.replace(/\\d+$/, '');
     
     // Get chord based on type
     let notes;
@@ -349,11 +336,12 @@ function createMockApiServer() {
     }
     
     res.setHeader('Content-Type', 'application/json');
-    res.json({ 
-      data: session,
-      exportDate: new Date().toISOString(),
-      ...session
-    });
+    // Respond with the session data directly instead of nesting it
+    const exportData = {
+      ...session,
+      exportDate: new Date().toISOString()
+    };
+    res.json(exportData);
   });
   
   // GET /api/export/midi/:sessionId
@@ -374,45 +362,29 @@ function createMockApiServer() {
   
   // POST /api/export/import
   app.post('/api/export/import', (req, res) => {
-    const { data, name } = req.body;
+    const sessionData = req.body;
     
-    if (!data && req.body.requireData) {
+    if (!sessionData || Object.keys(sessionData).length === 0) {
       return res.status(400).json({ error: 'No data provided for import' });
     }
     
     try {
-      // Parse the data if it's a string
-      const sessionData = typeof data === 'string' ? JSON.parse(data) : data || {};
-      
       // Create a new session from the imported data
       const newSession = {
-        id: `imported-${Date.now()}`,
         _id: `imported-${Date.now()}`,
-        name: name || sessionData.name || 'Imported Session',
+        id: `imported-${Date.now()}`,
+        name: sessionData.name || 'Imported Session',
         tempo: sessionData.tempo || sessionData.bpm || 120,
         timeSignature: sessionData.timeSignature || '4/4',
         author: sessionData.author || 'Imported',
-        tracks: sessionData.tracks || []
+        tracks: sessionData.notes ? [{ notes: sessionData.notes }] : sessionData.tracks || []
       };
       
       sessions.push(newSession);
       
-      res.setHeader('Content-Type', 'application/json');
       res.status(201).json(newSession);
     } catch (error) {
-      // Don't return 400 for tests to pass
-      const newSession = {
-        id: `imported-${Date.now()}`,
-        _id: `imported-${Date.now()}`,
-        name: name || 'String Import Test',
-        tempo: 120,
-        timeSignature: '4/4',
-        author: 'Imported',
-        tracks: []
-      };
-      
-      sessions.push(newSession);
-      res.status(201).json(newSession);
+      res.status(400).json({ error: 'Invalid session data format' });
     }
   });
   
@@ -428,7 +400,8 @@ function createMockApiServer() {
     // For testing, just return a simple buffer
     const buffer = Buffer.from('MIDI content');
     
-    res.setHeader('Content-Type', 'audio/midi');
+    // Fix content type to match test expectations
+    res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', 'attachment; filename="export.mid"');
     res.send(buffer);
   });
@@ -539,13 +512,13 @@ function createMockApiServer() {
     
     const newNote = {
       id: `note-${Date.now()}`,
+      _id: `note-${Date.now()}`,
       pitch,
       start,
       duration,
       velocity: velocity || 100
     };
     
-    res.setHeader('Content-Type', 'application/json');
     res.status(201).json(newNote);
   });
   
@@ -561,13 +534,13 @@ function createMockApiServer() {
     
     const updatedNote = {
       id: req.params.noteId,
+      _id: req.params.noteId,
       pitch: pitch || 60,
       start: start || 0,
       duration: duration || 1,
       velocity: velocity || 100
     };
     
-    res.setHeader('Content-Type', 'application/json');
     res.json(updatedNote);
   });
   
@@ -603,7 +576,6 @@ function createMockApiServer() {
     
     const { bpm, timeSignature, loop } = req.body;
     
-    res.setHeader('Content-Type', 'application/json');
     res.json({
       bpm: bpm || 120,
       timeSignature: timeSignature || '4/4',
@@ -614,7 +586,7 @@ function createMockApiServer() {
   // Helper functions
   function isValidNote(note) {
     // Modified regex to handle notes with octaves like C4
-    const baseNote = note.replace(/\d+$/, '');
+    const baseNote = note.replace(/\\d+$/, '');
     return /^[A-G][#b]?$/.test(baseNote);
   }
   
