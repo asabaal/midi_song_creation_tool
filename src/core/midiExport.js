@@ -1,10 +1,12 @@
 // src/core/midiExport.js
 const fs = require('fs').promises;
 const path = require('path');
+
 class MidiExporter {
   constructor() {
     this.ppq = 480; // Pulses Per Quarter note - standard MIDI timing resolution
   }
+
   sequenceToMidi(sequence) {
     if (!sequence || !sequence.tracks) {
       // Create a minimal valid MIDI structure
@@ -30,6 +32,7 @@ class MidiExporter {
         ],
       };
     }
+
     // Create MIDI header
     const midiData = {
       header: {
@@ -39,6 +42,7 @@ class MidiExporter {
       },
       tracks: [],
     };
+
     // Create tempo track (track 0)
     const tempoTrack = [
       {
@@ -52,9 +56,11 @@ class MidiExporter {
       },
     ];
     midiData.tracks.push(tempoTrack);
+
     // Create a track for each sequence track
     sequence.tracks.forEach(track => {
       const midiTrack = [];
+
       // Track name if available
       if (track.name) {
         midiTrack.push({
@@ -63,6 +69,7 @@ class MidiExporter {
           text: track.name,
         });
       }
+
       // Set instrument if specified
       if (track.instrument !== undefined) {
         midiTrack.push({
@@ -71,6 +78,7 @@ class MidiExporter {
           programNumber: track.instrument,
         });
       }
+
       // Add note events
       const noteOnEvents = [];
       const noteOffEvents = [];
@@ -83,6 +91,7 @@ class MidiExporter {
             noteNumber: note.pitch,
             velocity: note.velocity || 100,
           });
+
           // Note Off event
           noteOffEvents.push({
             deltaTime: this._timeToTicks(note.startTime + note.duration),
@@ -92,10 +101,12 @@ class MidiExporter {
           });
         });
       }
+
       // Sort events by time
       const allEvents = [...noteOnEvents, ...noteOffEvents].sort(
         (a, b) => a.deltaTime - b.deltaTime
       );
+
       // Convert absolute times to delta times
       let lastTime = 0;
       allEvents.forEach(event => {
@@ -103,6 +114,7 @@ class MidiExporter {
         event.deltaTime = absoluteTime - lastTime;
         lastTime = absoluteTime;
       });
+
       // Add end of track event
       if (allEvents.length === 0) {
         // Empty track, just add end of track
@@ -117,13 +129,17 @@ class MidiExporter {
           type: 'endOfTrack',
         });
       }
+
       midiData.tracks.push([...midiTrack, ...allEvents]);
     });
+
     return midiData;
   }
+
   async saveToFile(sequence, filePath) {
     const midiData = this.sequenceToMidi(sequence);
     const buffer = this._serializeMidiData(midiData);
+
     try {
       // Create directory if it doesn't exist
       const directory = path.dirname(filePath);
@@ -136,6 +152,7 @@ class MidiExporter {
         // Directory doesn't exist, try to create it
         await this._ensureDirectoryExists(directory);
       }
+
       // Write the file
       await fs.writeFile(filePath, buffer);
       return filePath;
@@ -144,6 +161,7 @@ class MidiExporter {
       throw new Error(`Failed to save MIDI file: ${err.message}`);
     }
   }
+
   async _ensureDirectoryExists(directory) {
     try {
       if (typeof fs.mkdir === 'function') {
@@ -154,15 +172,18 @@ class MidiExporter {
       throw new Error(`Failed to create directory: ${err.message}`);
     }
   }
+
   // This method is not currently used but kept for future expansion
   exportToFile(_sequence) {
     // For testing purposes, just return success
     return true;
   }
+
   // Helper methods
   _timeToTicks(timeInBeats) {
     return Math.round(timeInBeats * this.ppq);
   }
+
   _getSequenceLengthInTicks(sequence) {
     let maxTime = 0;
     sequence.tracks.forEach(track => {
@@ -179,17 +200,67 @@ class MidiExporter {
     maxTime += 2;
     return this._timeToTicks(maxTime);
   }
+
   _serializeMidiData(midiData) {
     // This would normally convert the MIDI data structure to a binary buffer
     // For testing purposes, return a mock buffer
     return Buffer.from(JSON.stringify(midiData));
   }
 }
+
 // Function that creates a MIDI file from a sequence
 function createMidiFile(sequence) {
   const exporter = new MidiExporter();
   return exporter._serializeMidiData(exporter.sequenceToMidi(sequence));
 }
+
+// Missing functions needed by the tests
+async function sessionToMidiFile(session) {
+  if (!session) {
+    throw new Error('Session is required');
+  }
+  
+  const exporter = new MidiExporter();
+  // Convert session format to MIDI data
+  const midiData = exporter.sequenceToMidi(session);
+  // Create a buffer from the MIDI data
+  return exporter._serializeMidiData(midiData);
+}
+
+async function sequenceToMidiFile(sequence) {
+  if (!sequence) {
+    throw new Error('Sequence is required');
+  }
+  
+  // Convert old format sequence to new format if needed
+  const formattedSequence = {
+    tracks: [],
+    bpm: sequence.tempo || 120
+  };
+  
+  // If it has a notes array directly, create a single track
+  if (sequence.notes && Array.isArray(sequence.notes)) {
+    formattedSequence.tracks.push({
+      notes: sequence.notes,
+      name: sequence.name || 'Track 1',
+      instrument: 0
+    });
+  } else if (!sequence.tracks) {
+    // Create a minimal valid sequence
+    formattedSequence.tracks.push({
+      notes: [],
+      name: 'Empty Track',
+      instrument: 0
+    });
+  } else {
+    // Use the tracks as is
+    formattedSequence.tracks = sequence.tracks;
+  }
+  
+  const exporter = new MidiExporter();
+  return exporter._serializeMidiData(exporter.sequenceToMidi(formattedSequence));
+}
+
 // Add missing functions that are expected by tests
 async function exportMidiFile(sequence, filePath) {
   try {
@@ -199,6 +270,7 @@ async function exportMidiFile(sequence, filePath) {
     throw new Error(`Failed to export MIDI file: ${err.message}`);
   }
 }
+
 function createMidiBuffer(sequence) {
   const exporter = new MidiExporter();
 
@@ -231,4 +303,6 @@ module.exports = {
   createMidiFile,
   exportMidiFile,
   createMidiBuffer,
+  sessionToMidiFile,
+  sequenceToMidiFile
 };
