@@ -25,7 +25,7 @@ module.exports = {
   // Module file extensions
   moduleFileExtensions: ['js', 'jsx', 'json'],
   
-  // Mock file extensions
+  // Mock file extensions - using only the root mocks directory
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
     '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js',
@@ -37,11 +37,14 @@ module.exports = {
     '^@/utils/(.*)$': '<rootDir>/src/client/utils/$1'
   },
   
-  // Indicates whether each individual test should be reported during the run
-  verbose: true,
-  
-  // Test path ignore patterns
+  // Set up paths to ignore for tests
   testPathIgnorePatterns: ['/node_modules/'],
+  
+  // Set up paths to ignore for mocks to avoid duplicate mock warnings
+  modulePathIgnorePatterns: [
+    '<rootDir>/tests/__mocks__/fileMock.js',
+    '<rootDir>/tests/__mocks__/styleMock.js'
+  ],
   
   // Module directories
   moduleDirectories: ['node_modules', 'src'],
@@ -53,5 +56,20 @@ module.exports = {
   resetModules: false,
   
   // Restore mocks for each test
-  restoreMocks: false
+  restoreMocks: false,
+  
+  // Configure coverage thresholds
+  coverageThreshold: {
+    global: {
+      statements: 70,
+      branches: 60,
+      functions: 70,
+      lines: 70
+    }
+  },
+  
+  // Configure Jest to suppress Mongoose warnings in test output
+  globals: {
+    SUPPRESS_JEST_WARNINGS: true
+  }
 };
