@@ -6,10 +6,10 @@ const createMockApiServer = require('./api/apiMockSetup');
 let mongoServer;
 let app;
 
-// Setup MongoDB Memory Server before all tests
+// Setup MongoDB Memory Server and API server before all tests
 beforeAll(async () => {
   // Create mock API server - this must be initialized before any tests run
-  app = createMockApiServer();
+  app = await createMockApiServer();
   
   // Setup MongoDB in memory server for tests that need it
   mongoServer = await MongoMemoryServer.create();
@@ -21,6 +21,8 @@ beforeAll(async () => {
   };
 
   await mongoose.connect(uri, mongooseOpts);
+  
+  return app;
 });
 
 // Clean up after all tests
