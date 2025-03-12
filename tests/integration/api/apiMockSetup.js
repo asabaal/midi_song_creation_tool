@@ -1,12 +1,14 @@
 // tests/integration/api/apiMockSetup.js
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 // Create a mock API server for testing
 function createMockApiServer() {
   const app = express();
   
   // Configure middleware
+  app.use(cors());
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
   
@@ -110,7 +112,7 @@ function createMockApiServer() {
     }
     
     // Handle root with octave (e.g., C4)
-    const rootOnly = root.replace(/\d+$/, '');
+    const rootOnly = root.replace(/\\d+$/, '');
     
     // Get scale based on type
     let notes;
@@ -146,7 +148,7 @@ function createMockApiServer() {
     }
     
     // Handle root with octave (e.g., G4)
-    const rootOnly = root.replace(/\d+$/, '');
+    const rootOnly = root.replace(/\\d+$/, '');
     
     // Get chord based on type
     let notes;
@@ -349,7 +351,7 @@ function createMockApiServer() {
     const buffer = Buffer.from('MIDI content');
     
     res.setHeader('Content-Type', 'audio/midi');
-    res.setHeader('Content-Disposition', 'attachment; filename="export.mid"');
+    res.setHeader('Content-Disposition', 'attachment; filename=\"export.mid\"');
     res.send(buffer);
   });
   
@@ -397,7 +399,7 @@ function createMockApiServer() {
     const buffer = Buffer.from('MIDI content');
     
     res.setHeader('Content-Type', 'audio/midi');
-    res.setHeader('Content-Disposition', 'attachment; filename="export.mid"');
+    res.setHeader('Content-Disposition', 'attachment; filename=\"export.mid\"');
     res.send(buffer);
   });
   
@@ -581,7 +583,7 @@ function createMockApiServer() {
   
   // Helper functions
   function isValidNote(note) {
-    const baseNote = note.replace(/\d+$/, '');
+    const baseNote = note.replace(/\\d+$/, '');
     return /^[A-G][#b]?$/.test(baseNote);
   }
   
@@ -606,6 +608,13 @@ function createMockApiServer() {
     // Simple transpose for testing
     return notes;
   }
+  
+  // This is the critical change for SuperTest compatibility
+  // Start the server on a random unused port
+  const server = app.listen(0);
+  
+  // Store the server instance on the app for later use
+  app.server = server;
   
   return app;
 }
