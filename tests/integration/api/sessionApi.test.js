@@ -1,16 +1,24 @@
 // tests/integration/api/sessionApi.test.js
 const request = require('supertest');
-const app = require('../../../src/server/app');
-const { setupTestDb, teardownTestDb } = require('../../fixtures/mock-data/db-setup');
+const { setupTestDB, teardownTestDB, clearDatabase } = require('../testSetup');
+
+let app;
 
 describe('Session API', () => {
   // Setup and teardown for the test database
   beforeAll(async () => {
-    await setupTestDb();
+    await setupTestDB();
+    // Import the app after database is ready
+    app = require('../../../src/server/app');
+  });
+  
+  // Clear the database between tests
+  beforeEach(async () => {
+    await clearDatabase();
   });
   
   afterAll(async () => {
-    await teardownTestDb();
+    await teardownTestDB();
   });
   
   describe('POST /api/sessions', () => {
@@ -20,7 +28,8 @@ describe('Session API', () => {
         .send({
           name: 'Test Session',
           bpm: 120,
-          timeSignature: [4, 4]
+          timeSignature: [4, 4],
+          author: 'Test User'
         })
         .expect('Content-Type', /json/)
         .expect(201);
@@ -46,6 +55,27 @@ describe('Session API', () => {
   });
   
   describe('GET /api/sessions', () => {
+    // Add a couple of sessions before testing retrieval
+    beforeEach(async () => {
+      await request(app)
+        .post('/api/sessions')
+        .send({
+          name: 'Session 1',
+          bpm: 120,
+          timeSignature: [4, 4],
+          author: 'Test User'
+        });
+      
+      await request(app)
+        .post('/api/sessions')
+        .send({
+          name: 'Session 2',
+          bpm: 140,
+          timeSignature: [3, 4],
+          author: 'Another User'
+        });
+    });
+    
     test('should retrieve all sessions', async () => {
       const response = await request(app)
         .get('/api/sessions')
@@ -53,13 +83,16 @@ describe('Session API', () => {
         .expect(200);
       
       expect(Array.isArray(response.body)).toBeTruthy();
-      expect(response.body.length).toBeGreaterThan(0);
+      expect(response.body.length).toBeGreaterThanOrEqual(2);
     });
     
     test('should support filtering by date', async () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
       const response = await request(app)
         .get('/api/sessions')
-        .query({ from: new Date().toISOString() })
+        .query({ from: tomorrow.toISOString() })
         .expect('Content-Type', /json/)
         .expect(200);
       
@@ -72,17 +105,19 @@ describe('Session API', () => {
   describe('GET /api/sessions/:id', () => {
     let sessionId;
     
-    // Create a session to test with
-    beforeAll(async () => {
+    // Create a session before each test
+    beforeEach(async () => {
       const response = await request(app)
         .post('/api/sessions')
         .send({
           name: 'Retrieve Test Session',
           bpm: 100,
-          timeSignature: [3, 4]
+          timeSignature: [3, 4],
+          author: 'Test User'
         });
       
       sessionId = response.body.id;
+      expect(sessionId).toBeTruthy();
     });
     
     test('should retrieve a session by ID', async () => {
@@ -105,17 +140,19 @@ describe('Session API', () => {
   describe('PUT /api/sessions/:id', () => {
     let sessionId;
     
-    // Create a session to test with
-    beforeAll(async () => {
+    // Create a session before each test
+    beforeEach(async () => {
       const response = await request(app)
         .post('/api/sessions')
         .send({
           name: 'Update Test Session',
           bpm: 90,
-          timeSignature: [4, 4]
+          timeSignature: [4, 4],
+          author: 'Test User'
         });
       
       sessionId = response.body.id;
+      expect(sessionId).toBeTruthy();
     });
     
     test('should update a session', async () => {
@@ -139,17 +176,19 @@ describe('Session API', () => {
   describe('DELETE /api/sessions/:id', () => {
     let sessionId;
     
-    // Create a session to test with
+    // Create a session before each test
     beforeEach(async () => {
       const response = await request(app)
         .post('/api/sessions')
         .send({
           name: 'Delete Test Session',
           bpm: 120,
-          timeSignature: [4, 4]
+          timeSignature: [4, 4],
+          author: 'Test User'
         });
       
       sessionId = response.body.id;
+      expect(sessionId).toBeTruthy();
     });
     
     test('should delete a session', async () => {
