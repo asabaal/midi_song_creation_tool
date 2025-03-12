@@ -1,104 +1,60 @@
 # MIDI Song Creation Tool
 
-[![Test Suite](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml/badge.svg)](https://github.com/asabaal/midi_song_creation_tool/actions/workflows/test.yml)
+A full-featured MIDI song creation tool with piano roll, pattern generators, and more.
 
-An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.
+## Development Setup
 
-## Testing Infrastructure
+### Prerequisites
 
-This branch focuses **exclusively** on adding testing infrastructure to the project. It includes Jest configuration, test files, and test utilities without introducing linting or code style changes.
+- Node.js (v14 or higher)
+- npm (v6 or higher)
 
-## Overview
+### Installation
 
-This framework provides a robust set of tools for working with MIDI data programmatically. It includes core modules for music theory, note manipulation, pattern generation, and sequence operations.
+1. Clone the repository:
+```bash
+git clone https://github.com/asabaal/midi_song_creation_tool.git
+cd midi_song_creation_tool
+```
 
-## Features
-
-- Creating and manipulating MIDI note sequences
-- Working with musical scales, chords, and progressions
-- Generating rhythmic patterns for different instruments
-- Exporting/importing standard MIDI files
-- API for Claude to access programmatically
-
-## Components
-
-The framework consists of these main components:
-
-1. **Core Library** (`src/core`): Handles note creation, manipulation and basic music theory
-2. **Server** (`src/server`): Provides structured API endpoints for Claude to interact with
-3. **Web Interface** (`public`): Simple UI for human testing and visualization
-
-## Testing
-
-This project includes a comprehensive testing suite:
+2. Install dependencies:
+```bash
+npm install
+```
 
 ### Running Tests
 
 ```bash
-# Run all tests
 npm test
-
-# Run only unit tests
-npm run test:unit
-
-# Run only integration tests
-npm run test:integration
-
-# Run end-to-end tests
-npm run test:e2e
-
-# Run tests with watch mode (for development)
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
 ```
 
-### Local Testing Script
+## Test Troubleshooting
 
-For a complete verification of your code before pushing changes, use the local testing script:
+If you encounter issues with the tests, try the following steps:
 
+1. Make sure all dependencies are installed:
 ```bash
-# Make the script executable
-chmod +x scripts/local_test.sh
-
-# Run the local test
-./scripts/local_test.sh
+npm install
 ```
 
-This script will:
-- Verify your Node.js installation
-- Install dependencies if needed
-- Run all test suites
-- Check test coverage against required thresholds
-- Build the project to verify everything compiles correctly
+2. If you see Mongoose-related warnings, they're handled by the Jest configuration but can be safely ignored.
 
-### Testing Structure
+3. If you encounter SuperTest-related errors, make sure your Express app is properly configured for testing.
 
-- **Unit Tests**: Test individual functions and components
-- **Integration Tests**: Test API endpoints and module interactions
-- **End-to-End Tests**: Test full application workflows using Cypress
+## Tech Stack
 
-For more details about the testing suite, see the [tests/README.md](tests/README.md) file.
+- **Frontend:** React
+- **Backend:** Express.js, Node.js
+- **Database:** MongoDB with Mongoose
+- **Music Processing:** Tone.js, MIDI-Writer-js
+- **Testing:** Jest, React Testing Library, SuperTest
 
-## Setup Instructions
+## Project Structure
 
-1. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
-
-2. **Start the Server**:
-   ```bash
-   npm start
-   ```
-
-3. **Development Mode**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Access the UI**: Open `http://localhost:3000` in your browser
+- `src/client`: React frontend
+- `src/server`: Express.js backend
+- `src/core`: Core music processing functionality
+- `tests`: Test suite (unit and integration tests)
 
 ## License
 
