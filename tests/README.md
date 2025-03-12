@@ -1,151 +1,146 @@
 # MIDI Song Creation Tool Testing Suite
 
-This directory contains a comprehensive testing suite for the MIDI Song Creation Tool project.
+This directory contains the comprehensive testing suite for the MIDI Song Creation Tool. The tests are organized in a hierarchical structure to test various aspects of the application.
 
-## Recent Fixes
+## Test Structure
 
-We've addressed several critical issues in the testing suite:
-
-1. **Fixed chord progression in A minor**:
-   - Updated `generateChordProgression` in `musicTheory.js` to properly handle minor key chord progressions
-   - Added proper scale handling to ensure correct chord generation
-
-2. **Fixed MIDI export issues**:
-   - Improved error handling to properly throw errors instead of failing silently
-   - Added proper MTrk header injection in `createMidiBuffer` to ensure track count test passes
-
-3. **Fixed component test failures**:
-   - Updated `SessionContextMock.js` to include all methods expected by components
-   - Fixed `PatternGenerator.test.jsx` to match the actual component implementation
-
-## Directory Structure
-
-- `e2e/`: End-to-end tests using Cypress
-- `integration/`: Integration tests for API endpoints and multi-component interactions
-- `unit/`: Unit tests for individual components and functions
-- `fixtures/`: Test fixtures and sample data
-- `mocks/`: Mock implementations for testing
+```
+tests/
+├── unit/                  # Unit tests for individual components
+│   ├── core/              # Tests for core music functionality
+│   ├── client/            # Tests for client-side components 
+│   └── server/            # Tests for server-side functionality
+├── integration/           # Integration tests for API and components
+│   └── api/               # API endpoint tests
+├── e2e/                   # End-to-end tests with Cypress
+│   └── cypress/
+│       ├── specs/         # Cypress test specifications
+│       └── support/       # Cypress support files
+├── fixtures/              # Test fixtures and sample data
+└── mocks/                 # Mocks for external dependencies
+```
 
 ## Running Tests
 
-Use the following npm scripts to run tests:
+### Prerequisites
+
+Before running tests, make sure you have installed dependencies:
 
 ```bash
-# Run all tests
+npm install
+```
+
+### Running All Tests
+
+To run the entire test suite:
+
+```bash
 npm test
+```
 
-# Run unit tests only
+### Running Specific Test Types
+
+#### Unit Tests
+
+```bash
 npm run test:unit
+```
 
-# Run integration tests only
+#### Integration Tests
+
+```bash
 npm run test:integration
+```
 
-# Run end-to-end tests
+#### End-to-End Tests
+
+```bash
+# Run Cypress tests in headless mode
 npm run test:e2e
 
-# Run tests with coverage reports
-npm run test:coverage
-
-# Run tests in watch mode (for development)
-npm run test:watch
+# Open Cypress test runner UI
+npm run test:e2e:open
 ```
 
-For a quick check of the key components, use the local testing script:
+### Test Coverage
 
-```bash
-# Make script executable
-chmod +x scripts/local_test.sh
-
-# Run local tests
-./scripts/local_test.sh
-```
-
-## Mocks
-
-We use several mocks to simplify testing:
-
-- `SessionContextMock.js`: Mock implementation of the SessionContext
-- `apiService.js`: Mock implementations of API calls
-- `transportService.js`: Mock implementation of the transport service
-
-## Writing New Tests
-
-When adding new tests, follow these conventions:
-
-1. **File naming**:
-   - Unit tests: `ComponentName.test.js` or `functionName.test.js`
-   - Integration tests: `feature.integration.test.js`
-   - End-to-end tests: `feature.e2e.js`
-
-2. **Test structure**:
-   - Use descriptive `describe` and `test` blocks
-   - Group related tests together
-   - Use `beforeEach` and `afterEach` for setup and cleanup
-
-3. **Mocking**:
-   - Use Jest's mocking capabilities (`jest.mock`, `jest.fn()`)
-   - For React components, use `@testing-library/react` utilities
-
-Example unit test:
-
-```javascript
-import { functionToTest } from '../src/module';
-
-describe('functionToTest', () => {
-  test('should do something specific', () => {
-    // Arrange
-    const input = 'test input';
-    
-    // Act
-    const result = functionToTest(input);
-    
-    // Assert
-    expect(result).toBe('expected output');
-  });
-});
-```
-
-Example React component test:
-
-```javascript
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import Component from '../src/Component';
-
-describe('Component', () => {
-  test('should render correctly', () => {
-    render(<Component />);
-    expect(screen.getByText('Expected Text')).toBeInTheDocument();
-  });
-  
-  test('should handle user interaction', () => {
-    render(<Component />);
-    fireEvent.click(screen.getByText('Button Text'));
-    expect(screen.getByText('Changed Text')).toBeInTheDocument();
-  });
-});
-```
-
-## Test Coverage
-
-We aim for the following coverage targets:
-
-- Core modules: 80% statements, 70% branches, 80% functions, 80% lines
-- Client components: 75% statements, 65% branches, 75% functions, 75% lines
-- Overall project: 70% statements, 60% branches, 70% functions, 70% lines
-
-To view the current coverage report:
+To generate test coverage reports:
 
 ```bash
 npm run test:coverage
+```
+
+Coverage reports will be available in the `coverage` directory. To view the coverage report in your browser:
+
+```bash
 npm run test:coverage:view
 ```
 
-## Continuous Integration
+## Test Categories
 
-Tests are automatically run on GitHub Actions when:
-- Opening a pull request targeting the main branch
-- Pushing to the main branch
-- Pushing to feature branches
+### Unit Tests
 
-See the GitHub Actions workflow files in `.github/workflows/` for more details.
+Unit tests focus on testing individual components in isolation. They ensure that each function or class behaves as expected.
+
+Key unit test areas:
+- Music theory functionality (scales, chords, progressions)
+- MIDI sequence manipulation
+- Pattern generation (chords, basslines, drums)
+- MIDI export functionality
+
+### Integration Tests
+
+Integration tests verify that different parts of the application work together correctly.
+
+Key integration test areas:
+- API endpoints
+- Data persistence
+- Session management
+- Pattern generation endpoints
+- Export/import functionality
+
+### End-to-End Tests
+
+End-to-end tests simulate user interactions with the application using Cypress.
+
+Key E2E test scenarios:
+- Creating a new session
+- Generating music patterns
+- Visualizing notes in the piano roll
+- Playing back generated music
+- Exporting and importing session data
+- Handling errors and edge cases
+
+## Writing New Tests
+
+### Test Naming Conventions
+
+- **Unit tests**: `[component-name].test.js`
+- **Integration tests**: `[feature-name].test.js`
+- **E2E tests**: `[workflow-name].cy.js`
+
+### Test Structure Guidelines
+
+- Use descriptive test names
+- Follow the AAA pattern (Arrange, Act, Assert)
+- Group related tests in nested `describe` blocks
+- Use beforeEach/afterEach hooks for setup and teardown
+
+### Using Mocks and Fixtures
+
+- Place reusable test data in `/tests/fixtures`
+- Create mocks for external dependencies in `/tests/mocks`
+- Use Jest's mocking capabilities for unit tests
+- Use Cypress interceptors for mocking in E2E tests
+
+## Test Migration
+
+When moving to new project structures, follow the guidelines in the `TEST_MIGRATION.md` file at the project root to update test paths and imports.
+
+## Best Practices
+
+1. **Isolation**: Tests should not depend on each other
+2. **Deterministic**: Tests should produce the same results every time
+3. **Fast**: Keep tests, especially unit tests, running quickly
+4. **Maintainable**: Keep test code clean and DRY
+5. **Realistic**: Test real user scenarios in E2E tests
