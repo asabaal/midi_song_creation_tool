@@ -6,8 +6,42 @@ module.exports = {
   // Test timeout
   testTimeout: 15000,
   
-  // Test environment
+  // Test environment configuration - Node for API tests, jsdom for React components
   testEnvironment: 'jsdom',
+  testEnvironmentOptions: {
+    // Configure testEnvironment options for Node.js environment
+    url: 'http://localhost/',
+    // Allow setting environment variables
+    NODE_ENV: 'test'
+  },
+  
+  // Project configuration
+  projects: [
+    // Node environment for API tests
+    {
+      displayName: 'API Tests',
+      testMatch: ['<rootDir>/tests/integration/api/**/*.test.js'],
+      testEnvironment: 'node',
+      globals: {
+        SUPPRESS_JEST_WARNINGS: true
+      }
+    },
+    // jsdom for client components
+    {
+      displayName: 'Client Tests',
+      testMatch: ['<rootDir>/tests/unit/client/**/*.test.{js,jsx}'],
+      testEnvironment: 'jsdom'
+    },
+    // Node for server and core functions
+    {
+      displayName: 'Server/Core Tests',
+      testMatch: [
+        '<rootDir>/tests/unit/server/**/*.test.js',
+        '<rootDir>/tests/unit/core/**/*.test.js'
+      ],
+      testEnvironment: 'node'
+    }
+  ],
   
   // Coverage configuration
   collectCoverageFrom: [
