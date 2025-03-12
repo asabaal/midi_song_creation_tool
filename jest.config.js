@@ -6,13 +6,11 @@ module.exports = {
   // Test timeout
   testTimeout: 15000,
   
-  // Test environment configuration - Node for API tests, jsdom for React components
+  // Test environment configuration
   testEnvironment: 'jsdom',
   testEnvironmentOptions: {
-    // Configure testEnvironment options for Node.js environment
-    url: 'http://localhost/',
-    // Allow setting environment variables
-    NODE_ENV: 'test'
+    // Configure testEnvironment options
+    url: 'http://localhost/'
   },
   
   // Project configuration
@@ -22,6 +20,10 @@ module.exports = {
       displayName: 'API Tests',
       testMatch: ['<rootDir>/tests/integration/api/**/*.test.js'],
       testEnvironment: 'node',
+      moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js'
+      },
       globals: {
         SUPPRESS_JEST_WARNINGS: true
       }
@@ -30,16 +32,31 @@ module.exports = {
     {
       displayName: 'Client Tests',
       testMatch: ['<rootDir>/tests/unit/client/**/*.test.{js,jsx}'],
-      testEnvironment: 'jsdom'
+      testEnvironment: 'jsdom',
+      moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js',
+        '^tone$': '<rootDir>/tests/__mocks__/tone.js',
+        '^../../src/client/contexts/SessionContext$': '<rootDir>/tests/__mocks__/SessionContext.js',
+        '^@/components/(.*)$': '<rootDir>/src/client/components/$1',
+        '^@/services/(.*)$': '<rootDir>/src/client/services/$1',
+        '^@/contexts/(.*)$': '<rootDir>/src/client/contexts/$1',
+        '^@/utils/(.*)$': '<rootDir>/src/client/utils/$1'
+      }
     },
     // Node for server and core functions
     {
       displayName: 'Server/Core Tests',
       testMatch: [
         '<rootDir>/tests/unit/server/**/*.test.js',
-        '<rootDir>/tests/unit/core/**/*.test.js'
+        '<rootDir>/tests/unit/core/**/*.test.js',
+        '<rootDir>/tests/integration/placeholder.test.js'
       ],
-      testEnvironment: 'node'
+      testEnvironment: 'node',
+      moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js'
+      }
     }
   ],
   
@@ -59,28 +76,10 @@ module.exports = {
   // Module file extensions
   moduleFileExtensions: ['js', 'jsx', 'json'],
   
-  // Mock file extensions - using only the root mocks directory
-  moduleNameMapper: {
-    '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
-    '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js',
-    '^tone$': '<rootDir>/tests/__mocks__/tone.js',
-    '^../../src/client/contexts/SessionContext$': '<rootDir>/tests/__mocks__/SessionContext.js',
-    '^@/components/(.*)$': '<rootDir>/src/client/components/$1',
-    '^@/services/(.*)$': '<rootDir>/src/client/services/$1',
-    '^@/contexts/(.*)$': '<rootDir>/src/client/contexts/$1',
-    '^@/utils/(.*)$': '<rootDir>/src/client/utils/$1'
-  },
-  
-  // Set up paths to ignore for tests
+  // Paths to ignore for tests
   testPathIgnorePatterns: ['/node_modules/'],
   
-  // Set up paths to ignore for mocks to avoid duplicate mock warnings
-  modulePathIgnorePatterns: [
-    '<rootDir>/tests/__mocks__/fileMock.js',
-    '<rootDir>/tests/__mocks__/styleMock.js'
-  ],
-  
-  // Module directories
+  // Only use one set of mocks to avoid duplicate warnings
   moduleDirectories: ['node_modules', 'src'],
   
   // Reset mocks for each test
@@ -102,7 +101,7 @@ module.exports = {
     }
   },
   
-  // Configure Jest to suppress Mongoose warnings in test output
+  // Configure Jest to suppress Mongoose warnings
   globals: {
     SUPPRESS_JEST_WARNINGS: true
   }
