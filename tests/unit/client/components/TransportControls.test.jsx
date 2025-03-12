@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import TransportControls from '../../src/client/components/TransportControls';
+import TransportControls from '../../../../src/client/components/TransportControls';
 import { act } from 'react-dom/test-utils';
 
 // Mock Tone.js
