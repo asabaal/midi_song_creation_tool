@@ -1,15 +1,15 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import PatternGenerator from '../../src/client/components/PatternGenerator';
-import { useSessionContext } from '../../src/client/contexts/SessionContext';
+import PatternGenerator from '../../../../src/client/components/PatternGenerator';
+import { useSessionContext } from '../../../../src/client/contexts/SessionContext';
 
 // Mock the SessionContext
-jest.mock('../../src/client/contexts/SessionContext', () => ({
+jest.mock('../../../../src/client/contexts/SessionContext', () => ({
   useSessionContext: jest.fn()
 }));
 
 // Mock the pattern generator API
-jest.mock('../../src/client/services/api', () => ({
+jest.mock('../../../../src/client/services/apiService', () => ({
   generateChordPattern: jest.fn(() => Promise.resolve({ notes: [] })),
   generateBasslinePattern: jest.fn(() => Promise.resolve({ notes: [] })),
   generateDrumPattern: jest.fn(() => Promise.resolve({ notes: [] }))
@@ -48,7 +48,7 @@ describe('PatternGenerator', () => {
   });
 
   test('generates chord pattern', async () => {
-    const api = require('../../src/client/services/api');
+    const api = require('../../../../src/client/services/apiService');
     api.generateChordPattern.mockResolvedValue({ notes: [{ id: 'note1', pitch: 60, start: 0, duration: 1 }] });
 
     render(<PatternGenerator />);
@@ -69,7 +69,7 @@ describe('PatternGenerator', () => {
   });
 
   test('generates bassline pattern', async () => {
-    const api = require('../../src/client/services/api');
+    const api = require('../../../../src/client/services/apiService');
     api.generateBasslinePattern.mockResolvedValue({ notes: [{ id: 'note1', pitch: 48, start: 0, duration: 0.5 }] });
 
     render(<PatternGenerator />);
@@ -90,7 +90,7 @@ describe('PatternGenerator', () => {
   });
 
   test('generates drum pattern', async () => {
-    const api = require('../../src/client/services/api');
+    const api = require('../../../../src/client/services/apiService');
     api.generateDrumPattern.mockResolvedValue({ notes: [{ id: 'note1', pitch: 36, start: 0, duration: 0.25 }] });
 
     render(<PatternGenerator />);
@@ -160,7 +160,7 @@ describe('PatternGenerator', () => {
 
   test('tracks loading state while generating', async () => {
     // Delay the API resolution to observe loading state
-    const api = require('../../src/client/services/api');
+    const api = require('../../../../src/client/services/apiService');
     api.generateChordPattern.mockImplementation(() => {
       return new Promise(resolve => {
         setTimeout(() => {
