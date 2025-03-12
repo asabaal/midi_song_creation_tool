@@ -8,7 +8,7 @@ let app;
 
 // Setup MongoDB Memory Server before all tests
 beforeAll(async () => {
-  // Create mock API server
+  // Create mock API server - this must be initialized before any tests run
   app = createMockApiServer();
   
   // Setup MongoDB in memory server for tests that need it
@@ -43,4 +43,5 @@ afterEach(async () => {
   }
 });
 
+// Export app instance for supertest to use
 module.exports = { mongoose, MongoMemoryServer, app };
