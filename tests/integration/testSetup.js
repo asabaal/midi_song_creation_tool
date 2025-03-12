@@ -9,7 +9,12 @@ let app;
 // Setup MongoDB Memory Server and API server before all tests
 beforeAll(async () => {
   // Create mock API server - this must be initialized before any tests run
-  app = await createMockApiServer();
+  app = createMockApiServer();
+  
+  // Add a special address method for SuperTest compatibility
+  app.address = function() {
+    return { port: app.server.port };
+  };
   
   // Setup MongoDB in memory server for tests that need it
   mongoServer = await MongoMemoryServer.create();
