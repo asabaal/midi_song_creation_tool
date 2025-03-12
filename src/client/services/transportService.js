@@ -1,169 +1,94 @@
-/**
- * Transport Service - handles playback, timing, and transport controls
- */
+// src/client/services/transportService.js
 
-// Internal state
-let playing = false;
+let isPlayingState = false;
 let currentTick = 0;
 let bpm = 120;
-let loop = { enabled: false, start: 0, end: 16 * 480 }; // 16 beats by default
 let tickListeners = [];
-let timerHandle = null;
-let ppq = 480; // Pulses Per Quarter note
+let tickIntervalId = null;
 
 /**
- * Start playback
+ * Play the transport
  */
-export function play() {
-  if (playing) return;
+export const play = () => {
+  isPlayingState = true;
   
-  playing = true;
-  startTimer();
-}
+  // Start tick interval
+  if (!tickIntervalId) {
+    const tickInterval = 10; // ms between ticks
+    tickIntervalId = setInterval(() => {
+      currentTick += 1;
+      notifyListeners();
+    }, tickInterval);
+  }
+};
 
 /**
- * Pause playback
+ * Pause the transport
  */
-export function pause() {
-  playing = false;
-  stopTimer();
-}
+export const pause = () => {
+  isPlayingState = false;
+  
+  // Stop tick interval
+  if (tickIntervalId) {
+    clearInterval(tickIntervalId);
+    tickIntervalId = null;
+  }
+};
 
 /**
- * Stop playback and reset position
+ * Stop the transport (pause and reset position)
  */
-export function stop() {
-  playing = false;
-  stopTimer();
-  setPosition(0);
-}
+export const stop = () => {
+  pause();
+  currentTick = 0;
+  notifyListeners();
+};
 
 /**
- * Check if transport is playing
+ * Set the BPM (tempo)
+ * @param {number} newBpm - New BPM value
+ */
+export const setBpm = (newBpm) => {
+  bpm = newBpm;
+};
+
+/**
+ * Check if transport is currently playing
  * @returns {boolean} True if playing
  */
-export function isPlaying() {
-  return playing;
-}
+export const isPlaying = () => {
+  return isPlayingState;
+};
 
 /**
- * Set the tempo in beats per minute
- * @param {number} newBpm - Tempo in BPM
+ * Get current tick position
+ * @returns {number} Current tick
  */
-export function setBpm(newBpm) {
-  bpm = Math.max(40, Math.min(240, newBpm));
-  
-  // Update timing if playing
-  if (playing) {
-    stopTimer();
-    startTimer();
-  }
-}
-
-/**
- * Set the loop parameters
- * @param {Object} loopParams - Loop parameters
- * @param {boolean} loopParams.enabled - Whether loop is enabled
- * @param {number} loopParams.start - Loop start position in ticks
- * @param {number} loopParams.end - Loop end position in ticks
- */
-export function setLoop(loopParams) {
-  loop = {
-    ...loop,
-    ...loopParams
-  };
-}
-
-/**
- * Get the current position in ticks
- * @returns {number} Current position in ticks
- */
-export function getCurrentTick() {
+export const getCurrentTick = () => {
   return currentTick;
-}
-
-/**
- * Set the current position
- * @param {number} tick - Position in ticks
- */
-export function setPosition(tick) {
-  currentTick = Math.max(0, tick);
-  notifyTickListeners();
-}
+};
 
 /**
  * Subscribe to tick updates
- * @param {Function} callback - Function to call with current tick position
+ * @param {Function} listener - Function to call on tick update
  */
-export function subscribeToTick(callback) {
-  if (typeof callback === 'function' && !tickListeners.includes(callback)) {
-    tickListeners.push(callback);
-  }
-}
+export const subscribeToTick = (listener) => {
+  tickListeners.push(listener);
+};
 
 /**
  * Unsubscribe from tick updates
- * @param {Function} callback - Function to remove from listeners
+ * @param {Function} listener - Function to remove
  */
-export function unsubscribeFromTick(callback) {
-  tickListeners = tickListeners.filter(listener => listener !== callback);
-}
+export const unsubscribeFromTick = (listener) => {
+  tickListeners = tickListeners.filter(l => l !== listener);
+};
 
 /**
- * Start the timer for playback
- * @private
+ * Notify all listeners of current tick
  */
-function startTimer() {
-  if (timerHandle) {
-    clearInterval(timerHandle);
-  }
-  
-  // Calculate tick interval (in milliseconds)
-  // 60000 ms per minute / BPM = ms per beat
-  // ms per beat / ppq = ms per tick
-  const tickInterval = Math.floor(60000 / bpm / ppq);
-  
-  timerHandle = setInterval(() => {
-    advanceTick();
-  }, tickInterval);
-}
-
-/**
- * Stop the playback timer
- * @private
- */
-function stopTimer() {
-  if (timerHandle) {
-    clearInterval(timerHandle);
-    timerHandle = null;
-  }
-}
-
-/**
- * Advance the current tick position
- * @private
- */
-function advanceTick() {
-  currentTick++;
-  
-  // Handle looping
-  if (loop.enabled && currentTick >= loop.end) {
-    currentTick = loop.start;
-  }
-  
-  notifyTickListeners();
-}
-
-/**
- * Notify all tick listeners with the current position
- * @private
- */
-function notifyTickListeners() {
+const notifyListeners = () => {
   tickListeners.forEach(listener => {
-    try {
-      listener(currentTick);
-    } catch (e) {
-      console.error('Error in tick listener:', e);
-    }
+    listener(currentTick);
   });
-}
+};
