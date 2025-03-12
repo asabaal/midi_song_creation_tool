@@ -28,9 +28,30 @@ module.exports = {
   // Mock file extensions
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
-    '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js'
+    '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js',
+    '^tone$': '<rootDir>/tests/__mocks__/tone.js',
+    '^../../src/client/contexts/SessionContext$': '<rootDir>/tests/__mocks__/SessionContext.js',
+    '^@/components/(.*)$': '<rootDir>/src/client/components/$1',
+    '^@/services/(.*)$': '<rootDir>/src/client/services/$1',
+    '^@/contexts/(.*)$': '<rootDir>/src/client/contexts/$1',
+    '^@/utils/(.*)$': '<rootDir>/src/client/utils/$1'
   },
   
   // Indicates whether each individual test should be reported during the run
-  verbose: true
+  verbose: true,
+  
+  // Test path ignore patterns
+  testPathIgnorePatterns: ['/node_modules/'],
+  
+  // Module directories
+  moduleDirectories: ['node_modules', 'src'],
+  
+  // Reset mocks for each test
+  resetMocks: false,
+  
+  // Reset modules for each test
+  resetModules: false,
+  
+  // Restore mocks for each test
+  restoreMocks: false
 };
