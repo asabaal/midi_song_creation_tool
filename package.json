@@ -7,11 +7,7 @@
     "start": "node src/server/server.js",
     "dev": "nodemon src/server/server.js",
     "build": "webpack --mode production",
-    "test": "jest --testTimeout=15000"
-  },
-  "jest": {
-    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
-    "testTimeout": 15000
+    "test": "jest --config jest.config.js"
   },
   "keywords": [
     "midi",
