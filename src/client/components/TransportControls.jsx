@@ -83,6 +83,7 @@ const TransportControls = () => {
       <div className="transport-main">
         {/* Play/Pause Button */}
         <button
+          data-testid="play-button"
           className={`transport-button ${isPlaying ? 'active' : ''}`}
           aria-label={isPlaying ? 'Pause' : 'Play'}
           onClick={() => isPlaying ? transportService.pause() : transportService.play()}
@@ -92,6 +93,7 @@ const TransportControls = () => {
         
         {/* Stop Button */}
         <button
+          data-testid="stop-button"
           className="transport-button"
           aria-label="Stop"
           onClick={() => transportService.stop()}
@@ -101,6 +103,7 @@ const TransportControls = () => {
         
         {/* Record Button */}
         <button
+          data-testid="record-button"
           className={`transport-button ${isRecording ? 'active' : ''}`}
           aria-label="Record"
           onClick={toggleRecording}
@@ -110,6 +113,7 @@ const TransportControls = () => {
         
         {/* Loop Button */}
         <button
+          data-testid="loop-button"
           className={`transport-button ${currentSession.loop?.enabled ? 'active' : ''}`}
           aria-label="Loop"
           onClick={toggleLoop}
@@ -128,6 +132,7 @@ const TransportControls = () => {
         <label>
           <span>BPM</span>
           <input
+            data-testid="bpm-input"
             type="number"
             aria-label="BPM"
             value={bpmValue}
@@ -142,6 +147,7 @@ const TransportControls = () => {
         <label>
           <span>Time Signature</span>
           <select
+            data-testid="time-signature-select"
             aria-label="Time Signature"
             value={`${currentSession.timeSignature?.[0]}/${currentSession.timeSignature?.[1]}`}
             onChange={handleTimeSignatureChange}
