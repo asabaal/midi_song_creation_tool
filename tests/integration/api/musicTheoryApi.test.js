@@ -1,8 +1,20 @@
 // tests/integration/api/musicTheoryApi.test.js
 const request = require('supertest');
-const { app } = require('../testSetup');
+const { setupTestDB, teardownTestDB, clearDatabase } = require('../../utils/testDB');
+const apiMockSetup = require('./apiMockSetup');
+
+// Use the mock API directly
+const app = apiMockSetup();
 
 describe('Music Theory API Integration Tests', () => {
+  // Setup and teardown for the test database
+  beforeAll(async () => {
+    await setupTestDB();
+  });
+  
+  afterAll(async () => {
+    await teardownTestDB();
+  });
   
   describe('GET /api/music-theory/scales/:root/:type', () => {
     test('should return a correctly formatted scale', async () => {
