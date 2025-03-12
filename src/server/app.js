@@ -2,22 +2,25 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
+const cors = require('cors');
 
 // Import route modules
 const musicTheoryRoutes = require('./routes/musicTheoryRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
-// Import other routes as needed
+const patternRoutes = require('./routes/patternRoutes');
 
 // Create Express app
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // API routes
 app.use('/api/music-theory', musicTheoryRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/patterns', patternRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
@@ -37,8 +40,21 @@ if (process.env.NODE_ENV === 'production') {
       message: 'MIDI Song Creation Tool API',
       routes: [
         '/api/sessions',
-        '/api/music-theory'
+        '/api/music-theory',
+        '/api/patterns'
       ]
+    });
+  });
+  
+  // Special debug route
+  app.get('/api/debug', (req, res) => {
+    res.json({
+      message: 'Debug information',
+      environment: process.env.NODE_ENV || 'development',
+      versions: {
+        node: process.version,
+        app: '0.2.0'
+      }
     });
   });
 }
