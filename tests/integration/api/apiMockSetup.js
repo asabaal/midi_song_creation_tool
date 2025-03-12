@@ -290,7 +290,19 @@ function createMockApiServer() {
   
   // POST /api/sessions/:id/patterns
   app.post('/api/sessions/:id/patterns', (req, res) => {
+    // Check if session exists
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
     const { type, patternType, bars, rootNote } = req.body;
+    
+    // Validate pattern type
+    if (patternType === 'invalid-pattern') {
+      return res.status(400).json({ error: 'Invalid pattern type' });
+    }
     
     // Generate sample notes based on pattern type
     const notes = [];
@@ -310,6 +322,13 @@ function createMockApiServer() {
   
   // Export MIDI
   app.get('/api/sessions/:id/export/midi', (req, res) => {
+    // Check if session exists
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
     // For testing, just return a simple buffer
     const buffer = Buffer.from('MIDI content');
     
@@ -320,6 +339,14 @@ function createMockApiServer() {
   
   // Import MIDI
   app.post('/api/sessions/:id/import/midi', (req, res) => {
+    // Check if session exists
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.setHeader('Content-Type', 'application/json');
     res.json({
       tracks: [
         {
@@ -402,6 +429,12 @@ function createMockApiServer() {
   
   // POST /api/sessions/:id/notes - Add a note
   app.post('/api/sessions/:id/notes', (req, res) => {
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
     const { pitch, start, duration, velocity, trackId } = req.body;
     
     if (!pitch || start === undefined || !duration) {
@@ -416,11 +449,18 @@ function createMockApiServer() {
       velocity: velocity || 100
     };
     
+    res.setHeader('Content-Type', 'application/json');
     res.status(201).json(newNote);
   });
   
   // PUT /api/sessions/:id/notes/:noteId - Update a note
   app.put('/api/sessions/:id/notes/:noteId', (req, res) => {
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
     const { pitch, start, duration, velocity } = req.body;
     
     const updatedNote = {
@@ -431,18 +471,43 @@ function createMockApiServer() {
       velocity: velocity || 100
     };
     
+    res.setHeader('Content-Type', 'application/json');
     res.json(updatedNote);
   });
   
   // DELETE /api/sessions/:id/notes/:noteId - Delete a note
   app.delete('/api/sessions/:id/notes/:noteId', (req, res) => {
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.status(204).end();
+  });
+  
+  // DELETE /api/sessions/:id/notes - Clear all notes
+  app.delete('/api/sessions/:id/notes', (req, res) => {
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
     res.status(204).end();
   });
   
   // PUT /api/sessions/:id/transport - Update transport settings
   app.put('/api/sessions/:id/transport', (req, res) => {
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
     const { bpm, timeSignature, loop } = req.body;
     
+    res.setHeader('Content-Type', 'application/json');
     res.json({
       bpm: bpm || 120,
       timeSignature: timeSignature || '4/4',
