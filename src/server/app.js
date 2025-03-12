@@ -5,6 +5,7 @@ const path = require('path');
 
 // Import route modules
 const musicTheoryRoutes = require('./routes/musicTheoryRoutes');
+const sessionRoutes = require('./routes/sessionRoutes');
 // Import other routes as needed
 
 // Create Express app
@@ -16,6 +17,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // API routes
 app.use('/api/music-theory', musicTheoryRoutes);
+app.use('/api/sessions', sessionRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
@@ -24,6 +26,20 @@ if (process.env.NODE_ENV === 'production') {
   // Handle client-side routing
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../../public/index.html'));
+  });
+} else {
+  // In development, always serve static files
+  app.use(express.static(path.join(__dirname, '../../public')));
+  
+  // Simple route for development API testing
+  app.get('/api', (req, res) => {
+    res.json({ 
+      message: 'MIDI Song Creation Tool API',
+      routes: [
+        '/api/sessions',
+        '/api/music-theory'
+      ]
+    });
   });
 }
 
