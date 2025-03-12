@@ -8,6 +8,7 @@ const cors = require('cors');
 const musicTheoryRoutes = require('./routes/musicTheoryRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const patternRoutes = require('./routes/patternRoutes');
+const exportRoutes = require('./routes/exportRoutes');
 
 // Create Express app
 const app = express();
@@ -21,6 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/music-theory', musicTheoryRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/patterns', patternRoutes);
+app.use('/api/export', exportRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
@@ -41,7 +43,8 @@ if (process.env.NODE_ENV === 'production') {
       routes: [
         '/api/sessions',
         '/api/music-theory',
-        '/api/patterns'
+        '/api/patterns',
+        '/api/export'
       ]
     });
   });
