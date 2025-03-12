@@ -1,2 +1,2 @@
-// Use the root fileMock.js instead
-module.exports = require('../../__mocks__/fileMock.js');
+// tests/__mocks__/fileMock.js
+module.exports = 'file-mock';
