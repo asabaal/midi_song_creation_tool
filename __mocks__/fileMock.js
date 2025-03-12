@@ -1,2 +1,2 @@
-// This file mocks file imports for Jest
-module.exports = 'mock-file';
+// __mocks__/fileMock.js
+module.exports = 'file-mock';
