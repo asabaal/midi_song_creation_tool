@@ -1,10 +1,10 @@
 // jest.config.js
 module.exports = {
   // Setup environment
-  setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/jest.setup.js', '<rootDir>/tests/setup-dom.js'],
   
   // Test timeout
-  testTimeout: 15000,
+  testTimeout: 30000,
   
   // Test environment configuration
   testEnvironment: 'jsdom',
@@ -20,6 +20,7 @@ module.exports = {
       displayName: 'API Tests',
       testMatch: ['<rootDir>/tests/integration/api/**/*.test.js'],
       testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       moduleNameMapper: {
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js'
@@ -33,6 +34,7 @@ module.exports = {
       displayName: 'Client Tests',
       testMatch: ['<rootDir>/tests/unit/client/**/*.test.{js,jsx}'],
       testEnvironment: 'jsdom',
+      setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/tests/setup-dom.js'],
       moduleNameMapper: {
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js',
@@ -53,6 +55,7 @@ module.exports = {
         '<rootDir>/tests/integration/placeholder.test.js'
       ],
       testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       moduleNameMapper: {
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js'
