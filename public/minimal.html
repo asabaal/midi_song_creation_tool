@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIDI Tool - Minimal</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    h1, h2 { color: #333; }
+    button { background: #2196F3; color: white; border: none; padding: 10px 15px; 
+             border-radius: 4px; cursor: pointer; margin: 5px; }
+    button.red { background: #F44336; }
+    button.green { background: #4CAF50; }
+    button:disabled { background: #cccccc; cursor: not-allowed; }
+    .container { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
+    .status { padding: 10px; background: #f1f1f1; margin-top: 20px; border-radius: 4px; }
+    .note-container { height: 300px; overflow: auto; background: #f5f5f5; padding: 10px; margin-top: 10px; }
+    .note { margin-bottom: 5px; padding: 5px; background: #e0e0e0; border-radius: 3px; }
+    .note.chord { background: #bbdefb; }
+    .note.bass { background: #c8e6c9; }
+    .note.drum { background: #ffcdd2; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>MIDI Tool - Minimal UI</h1>
+  
+  <div class="container">
+    <h2>1. Create a Session</h2>
+    <button id="createBtn" class="green">Create Session</button>
+    <div id="sessionInfo"></div>
+  </div>
+  
+  <div class="container">
+    <h2>2. Generate Music</h2>
+    <button id="chordBtn" disabled>Add Chord Progression</button>
+    <button id="bassBtn" disabled>Add Bassline</button>
+    <button id="drumBtn" disabled>Add Drums</button>
+    <button id="clearBtn" class="red" disabled>Clear All</button>
+  </div>
+  
+  <div class="container">
+    <h2>3. Export</h2>
+    <button id="exportBtn" disabled>Export MIDI</button>
+    <button id="viewBtn" disabled>View Data</button>
+    <div id="exportData" style="display: none;">
+      <pre id="dataDisplay"></pre>
+    </div>
+  </div>
+  
+  <div class="container">
+    <h2>Notes</h2>
+    <div class="note-container" id="noteContainer"></div>
+  </div>
+  
+  <div class="status" id="status">Ready to create a session</div>
+  
+  <script>
+    // DOM elements
+    const sessionInfo = document.getElementById('sessionInfo');
+    const noteContainer = document.getElementById('noteContainer');
+    const status = document.getElementById('status');
+    const dataDisplay = document.getElementById('dataDisplay');
+    const exportData = document.getElementById('exportData');
+    
+    // Buttons
+    const createBtn = document.getElementById('createBtn');
+    const chordBtn = document.getElementById('chordBtn');
+    const bassBtn = document.getElementById('bassBtn');
+    const drumBtn = document.getElementById('drumBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const viewBtn = document.getElementById('viewBtn');
+    
+    // State
+    let sessionId = null;
+    
+    // Update status
+    function updateStatus(message) {
+      status.textContent = message;
+      console.log(message);
+    }
+    
+    // API helper
+    async function callApi(endpoint, method = 'GET', body = null) {
+      try {
+        const options = {
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        };
+
+        if (body) {
+          options.body = JSON.stringify(body);
+        }
+
+        console.log(`API Call: ${method} ${endpoint}`);
+        const response = await fetch(`/api${endpoint}`, options);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`API error (${response.status}): ${errorText}`);
+          updateStatus(`Error: ${response.status} - ${errorText}`);
+          return null;
+        }
+        
+        // For binary responses (like MIDI files), return the Response object
+        if (response.headers.get('Content-Type') === 'audio/midi') {
+          return response;
+        }
+        
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error(error);
+        updateStatus(`Error: ${error.message}`);
+        return null;
+      }
+    }
+    
+    // Create a session
+    async function createSession() {
+      updateStatus('Creating session...');
+      
+      const data = await callApi('/sessions', 'POST', {
+        name: 'Minimal Session',
+        bpm: 120,
+        timeSignature: [4, 4]
+      });
+      
+      if (!data) {
+        return;
+      }
+      
+      sessionId = data._id || data.id;
+      sessionInfo.innerHTML = `
+        <p><strong>Session created!</strong></p>
+        <p>ID: ${sessionId}</p>
+        <p>BPM: ${data.bpm}</p>
+        <p>Time Signature: ${data.timeSignature}</p>
+      `;
+      
+      // Enable buttons
+      chordBtn.disabled = false;
+      bassBtn.disabled = false;
+      drumBtn.disabled = false;
+      clearBtn.disabled = false;
+      
+      updateStatus('Session created. Add some music!');
+    }
+    
+    // Generate chord progression
+    async function generateChords() {
+      updateStatus('Generating chord progression...');
+      
+      const data = await callApi(`/patterns/chord-progression`, 'POST', {
+        sessionId,
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 4
+      });
+      
+      if (!data) {
+        return;
+      }
+      
+      // Create note display
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note chord';
+      noteElement.innerHTML = `
+        <strong>Chord Progression:</strong> C major, 1-4-5 progression
+        <br>Added ${data.noteCount} notes
+      `;
+      noteContainer.appendChild(noteElement);
+      
+      // Enable export
+      exportBtn.disabled = false;
+      viewBtn.disabled = false;
+      
+      updateStatus('Chord progression added');
+    }
+    
+    // Generate bassline
+    async function generateBassline() {
+      updateStatus('Generating bassline...');
+      
+      const data = await callApi(`/patterns/bassline`, 'POST', {
+        sessionId,
+        key: 'C',
+        progressionName: '1-4-5',
+        scaleType: 'major',
+        octave: 3
+      });
+      
+      if (!data) {
+        return;
+      }
+      
+      // Create note display
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note bass';
+      noteElement.innerHTML = `
+        <strong>Bassline:</strong> C major, 1-4-5 progression
+        <br>Added ${data.noteCount} notes
+      `;
+      noteContainer.appendChild(noteElement);
+      
+      // Enable export
+      exportBtn.disabled = false;
+      viewBtn.disabled = false;
+      
+      updateStatus('Bassline added');
+    }
+    
+    // Generate drums
+    async function generateDrums() {
+      updateStatus('Generating drum pattern...');
+      
+      const data = await callApi(`/patterns/drums`, 'POST', {
+        sessionId,
+        patternType: 'basic',
+        measures: 2
+      });
+      
+      if (!data) {
+        return;
+      }
+      
+      // Create note display
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note drum';
+      noteElement.innerHTML = `
+        <strong>Drum Pattern:</strong> Basic pattern, 2 measures
+        <br>Added ${data.noteCount} notes
+      `;
+      noteContainer.appendChild(noteElement);
+      
+      // Enable export
+      exportBtn.disabled = false;
+      viewBtn.disabled = false;
+      
+      updateStatus('Drum pattern added');
+    }
+    
+    // Clear all notes
+    async function clearAllNotes() {
+      updateStatus('Clearing notes...');
+      
+      // Get session info
+      const sessionData = await callApi(`/sessions/${sessionId}`, 'GET');
+      if (!sessionData) {
+        return;
+      }
+      
+      // Clear each track
+      if (sessionData.tracks && sessionData.tracks.length > 0) {
+        for (const track of sessionData.tracks) {
+          await callApi(`/patterns/notes/${sessionId}/${track.id}`, 'DELETE');
+        }
+      }
+      
+      // Clear display
+      noteContainer.innerHTML = '';
+      
+      // Disable export
+      exportBtn.disabled = true;
+      viewBtn.disabled = true;
+      
+      updateStatus('All notes cleared');
+    }
+    
+    // Export MIDI
+    async function exportMidi() {
+      updateStatus('Exporting MIDI file...');
+      
+      try {
+        // Trigger file download using the export endpoint
+        const response = await callApi(`/export/midi/${sessionId}`);
+        
+        if (!response) {
+          throw new Error('Failed to get MIDI file from server');
+        }
+        
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Extract filename from the Content-Disposition header if possible
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = 'minimal_song.mid';
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+          const filenameRegex = /filename[^;=\\n]*=((['\"]).*?\\2|[^;\\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) { 
+            filename = matches[1].replace(/['\"]/g, '');
+          }
+        }
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        updateStatus(`MIDI file exported: ${filename}`);
+      } catch (error) {
+        console.error(error);
+        updateStatus(`Export error: ${error.message}`);
+      }
+    }
+    
+    // View session data
+    async function viewSessionData() {
+      updateStatus('Loading session data...');
+      
+      const data = await callApi(`/export/json/${sessionId}`, 'GET');
+      
+      if (!data) {
+        return;
+      }
+      
+      // Display data
+      dataDisplay.textContent = JSON.stringify(data.data, null, 2);
+      exportData.style.display = 'block';
+      
+      updateStatus('Session data loaded');
+    }
+    
+    // Event listeners
+    createBtn.addEventListener('click', createSession);
+    chordBtn.addEventListener('click', generateChords);
+    bassBtn.addEventListener('click', generateBassline);
+    drumBtn.addEventListener('click', generateDrums);
+    clearBtn.addEventListener('click', clearAllNotes);
+    exportBtn.addEventListener('click', exportMidi);
+    viewBtn.addEventListener('click', viewSessionData);
+    
+    // Initial status
+    updateStatus('Ready to create a session');
+  </script>
+</body>
+</html>
