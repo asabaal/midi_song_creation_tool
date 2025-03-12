@@ -2,44 +2,19 @@
 import React from 'react';
 import { render as rtlRender } from '@testing-library/react';
 
-// Import the context provider
-import { SessionProvider } from '../src/client/context/SessionContext';
-
-// Create a mockSessionContext
-const mockSessionContext = {
-  currentSession: {
-    id: 'test-session-id',
-    name: 'Test Session',
-    author: 'Test User',
-    bpm: 120,
-    timeSignature: [4, 4],
-    tracks: [
-      { id: 0, name: 'Piano', type: 'instrument' },
-      { id: 1, name: 'Bass', type: 'instrument' },
-      { id: 2, name: 'Drums', type: 'drums' }
-    ],
-    sequences: {},
-    notes: []
-  },
-  selectedTrackId: 0,
-  setSelectedTrackId: jest.fn(),
-  addNote: jest.fn(),
-  updateNote: jest.fn(),
-  deleteNote: jest.fn(),
-  addNotesToTrack: jest.fn(),
-  clearNotes: jest.fn(),
-  createNewSession: jest.fn(),
-  loadSession: jest.fn(),
-  saveSession: jest.fn(),
-  exportSession: jest.fn(),
-  importSession: jest.fn()
-};
+// We'll now import from the mocked SessionContext
+import { SessionProvider, useSessionContext } from '../src/client/context/SessionContext';
 
 // Create a custom render function
-function render(ui, { sessionContext = mockSessionContext, ...options } = {}) {
+function render(ui, { sessionContext, ...options } = {}) {
+  // If a custom context is provided, override the mock temporarily
+  if (sessionContext) {
+    useSessionContext.mockReturnValue(sessionContext);
+  }
+  
   function Wrapper({ children }) {
     return (
-      <SessionProvider value={sessionContext}>
+      <SessionProvider>
         {children}
       </SessionProvider>
     );
