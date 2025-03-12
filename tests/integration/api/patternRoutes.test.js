@@ -1,6 +1,9 @@
 // tests/integration/api/patternRoutes.test.js
 const request = require('supertest');
-const { app } = require('../testSetup');
+const apiMockSetup = require('../api/apiMockSetup');
+
+// Use the mock API directly
+const app = apiMockSetup();
 
 describe('Pattern Generation API Integration Tests', () => {
   let sessionId;
