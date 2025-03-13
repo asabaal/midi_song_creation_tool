@@ -1,36 +1,42 @@
 // tests/unit/client/components/PianoRollState.test.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-// Mock PianoRoll component
-jest.mock('../../../../src/client/components/PianoRoll', () => {
-  return function MockPianoRoll() {
-    const [zoom, setZoom] = React.useState(1);
-    
-    const handleZoomIn = () => {
-      setZoom(zoom + 0.5);
-    };
-    
-    const handleZoomOut = () => {
-      setZoom(Math.max(0.5, zoom - 0.5));
-    };
-    
-    return (
-      <div data-testid="piano-roll">
-        <div data-testid="piano-roll-grid" style={{ backgroundSize: `${20 * zoom}px ${20 * zoom}px` }}>
-          {/* Canvas would be here in a real component */}
-          <canvas data-testid="piano-roll-canvas" width="800" height="400"></canvas>
-        </div>
-        <button data-testid="zoom-in" onClick={handleZoomIn}>Zoom In</button>
-        <button data-testid="zoom-out" onClick={handleZoomOut}>Zoom Out</button>
-        <select data-testid="grid-snap-select" defaultValue="0.25">
-          <option value="0.25">1/16</option>
-          <option value="0.5">1/8</option>
-          <option value="1">1/4</option>
-        </select>
+// Move the React code outside the mock factory
+const MockPianoRoll = () => {
+  const [zoom, setZoom] = useState(1);
+  
+  const handleZoomIn = () => {
+    setZoom(zoom + 0.5);
+  };
+  
+  const handleZoomOut = () => {
+    setZoom(Math.max(0.5, zoom - 0.5));
+  };
+  
+  return (
+    <div data-testid="piano-roll">
+      <div data-testid="piano-roll-grid" style={{ backgroundSize: `${20 * zoom}px ${20 * zoom}px` }}>
+        {/* Canvas would be here in a real component */}
+        <canvas data-testid="piano-roll-canvas" width="800" height="400"></canvas>
       </div>
-    );
+      <button data-testid="zoom-in" onClick={handleZoomIn}>Zoom In</button>
+      <button data-testid="zoom-out" onClick={handleZoomOut}>Zoom Out</button>
+      <select data-testid="grid-snap-select" defaultValue="0.25">
+        <option value="0.25">1/16</option>
+        <option value="0.5">1/8</option>
+        <option value="1">1/4</option>
+      </select>
+    </div>
+  );
+};
+
+// Mock PianoRoll component - simply return the MockPianoRoll
+jest.mock('../../../../src/client/components/PianoRoll', () => {
+  return () => {
+    // Return the mock without any React in the factory itself
+    return MockPianoRoll();
   };
 });
 
