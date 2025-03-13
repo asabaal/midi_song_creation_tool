@@ -1,0 +1,13 @@
+=== DUPLICATE MOCK WARNINGS ===
+
+=== FAILING TESTS ===
+FAIL API Tests tests/integration/api/exportRoutes.test.js
+  ● Export/Import API Integration Tests › JSON Export/Import › POST /api/export/import should handle importing a string JSON representation
+
+    expected 201 "Created", got 400 "Bad Request"
+
+=== TEST SUMMARY ===
+Test Suites: 1 failed, 16 passed, 17 total
+Tests:       1 failed, 136 passed, 137 total
+Snapshots:   0 total
+Time:        2.177 s

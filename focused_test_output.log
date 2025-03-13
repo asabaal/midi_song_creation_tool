@@ -1,0 +1,22 @@
+(node:9683) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASS API Tests tests/integration/api/sessionApi.test.js
+  Session API
+    POST /api/sessions
+      ✓ should create a new session (17 ms)
+      ✓ should validate required fields (3 ms)
+    GET /api/sessions
+      ✓ should retrieve all sessions (4 ms)
+    GET /api/sessions/:id
+      ✓ should retrieve a session by ID (3 ms)
+      ✓ should return 404 for non-existent session (3 ms)
+    PUT /api/sessions/:id
+      ✓ should update a session (3 ms)
+    DELETE /api/sessions/:id
+      ✓ should delete a session (4 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.86 s, estimated 3 s
+Ran all test suites matching /tests\/integration\/api\/sessionApi.test.js/i.
