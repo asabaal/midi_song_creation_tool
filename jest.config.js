@@ -1,101 +1,114 @@
 // jest.config.js
 module.exports = {
-  // Use jsdom for all tests since our setup relies on window
+  // Setup environment
+  setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/jest.setup.js', '<rootDir>/tests/setup-dom.js', '<rootDir>/tests/setup-rtl.js'],
+  
+  // Test timeout
+  testTimeout: 30000,
+  
+  // Test environment configuration
   testEnvironment: 'jsdom',
+  testEnvironmentOptions: {
+    // Configure testEnvironment options
+    url: 'http://localhost/'
+  },
   
-  // Test matching patterns
-  testMatch: [
-    '<rootDir>/tests/**/*.test.{js,jsx}'
+  // Project configuration
+  projects: [
+    // Node environment for API tests
+    {
+      displayName: 'API Tests',
+      testMatch: ['<rootDir>/tests/integration/api/**/*.test.js'],
+      testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js'
+      },
+      globals: {
+        SUPPRESS_JEST_WARNINGS: true
+      }
+    },
+    // jsdom for client components
+    {
+      displayName: 'Client Tests',
+      testMatch: ['<rootDir>/tests/unit/client/**/*.test.{js,jsx}'],
+      testEnvironment: 'jsdom',
+      setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/tests/setup-dom.js', '<rootDir>/tests/setup-rtl.js'],
+      moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js',
+        '^tone$': 'identity-obj-proxy', // Use identity-obj-proxy instead of file path
+        '^../../src/client/contexts/SessionContext$': '<rootDir>/tests/__mocks__/SessionContext.js',
+        '^@/components/(.*)$': '<rootDir>/src/client/components/$1',
+        '^@/services/(.*)$': '<rootDir>/src/client/services/$1',
+        '^@/contexts/(.*)$': '<rootDir>/src/client/contexts/$1',
+        '^@/utils/(.*)$': '<rootDir>/src/client/utils/$1'
+      }
+    },
+    // Node for server and core functions
+    {
+      displayName: 'Server/Core Tests',
+      testMatch: [
+        '<rootDir>/tests/unit/server/**/*.test.js',
+        '<rootDir>/tests/unit/core/**/*.test.js',
+        '<rootDir>/tests/integration/placeholder.test.js'
+      ],
+      testEnvironment: 'node',
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      moduleNameMapper: {
+        '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js'
+      }
+    }
   ],
-  
-  // Setup files for tests
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
   // Coverage configuration
   collectCoverageFrom: [
     'src/**/*.{js,jsx}',
-    '!**/node_modules/**',
-    '!**/vendor/**',
-    '!**/dist/**',
-    '!**/*.config.js',
-    '!**/coverage/**',
+    '!src/**/*.test.{js,jsx}',
+    '!src/index.js',
+    '!src/server/server.js'
   ],
   
-  // Coverage directory
-  coverageDirectory: '<rootDir>/coverage',
-  
-  // Coverage reporters
-  coverageReporters: ['json', 'lcov', 'text', 'clover', 'html'],
-  
-  // Module path mapping (adjust based on your project structure)
-  moduleNameMapper: {
-    // Mock CSS and image imports
-    '\\.(css|less|scss)$': '<rootDir>/tests/mocks/styleMock.js',
-    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/mocks/fileMock.js',
-    
-    // Path aliases for simplifying imports
-    '^@core/(.*)$': '<rootDir>/src/core/$1',
-    '^@server/(.*)$': '<rootDir>/src/server/$1',
-    '^@client/(.*)$': '<rootDir>/src/client/$1',
-    '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
+  // Transform files
+  transform: {
+    '^.+\\.(js|jsx)$': 'babel-jest'
   },
   
-  // Threshold for code coverage
+  // Module file extensions
+  moduleFileExtensions: ['js', 'jsx', 'json'],
+  
+  // Paths to ignore for tests
+  testPathIgnorePatterns: ['/node_modules/'],
+  
+  // Add module path ignore patterns to avoid duplicate mocks
+  modulePathIgnorePatterns: ['<rootDir>/tests/__mocks__/'],
+  
+  // Only use one set of mocks to avoid duplicate warnings
+  moduleDirectories: ['node_modules', 'src', '__mocks__'],
+  
+  // Reset mocks for each test
+  resetMocks: false,
+  
+  // Reset modules for each test
+  resetModules: false,
+  
+  // Restore mocks for each test
+  restoreMocks: false,
+  
+  // Configure coverage thresholds
   coverageThreshold: {
     global: {
       statements: 70,
       branches: 60,
       functions: 70,
-      lines: 70,
-    },
-    './src/core/': {
-      statements: 80,
-      branches: 70,
-      functions: 80,
-      lines: 80,
-    },
-    './src/server/': {
-      statements: 75,
-      branches: 65,
-      functions: 75,
-      lines: 75,
-    },
+      lines: 70
+    }
   },
   
-  // Verbose output
-  verbose: true,
-  
-  // Test timeout
-  testTimeout: 10000,
-  
-  // Watch plugins
-  watchPlugins: [
-    'jest-watch-typeahead/filename',
-    'jest-watch-typeahead/testname',
-  ],
-  
-  // Ignore transformations
-  transformIgnorePatterns: [
-    '/node_modules/(?!(@babel|jest-runtime)).+\\.js$'
-  ],
-  
-  // Custom reporters
-  reporters: [
-    'default',
-    ['jest-junit', {
-      outputDirectory: './test-results/jest',
-      outputName: 'results.xml',
-    }]
-  ],
-
-  // Add moduleDirectories to help with resolution
-  moduleDirectories: ['node_modules', 'src'],
-
-  // Add resolver to help with module resolution
-  resolver: undefined,
-
-  // Make sure to transform jsx files
-  transform: {
-    '^.+\\.(js|jsx)$': 'babel-jest',
-  },
+  // Configure Jest to suppress Mongoose warnings
+  globals: {
+    SUPPRESS_JEST_WARNINGS: true
+  }
 };

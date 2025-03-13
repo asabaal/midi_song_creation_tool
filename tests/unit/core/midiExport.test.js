@@ -1,134 +1,203 @@
 // tests/unit/core/midiExport.test.js
-const { MidiExporter } = require('../../../src/core/midiExport');
-const MidiSequence = require('../../../src/core/midiSequence');
-const fs = require('fs');
-const path = require('path');
+const { sessionToMidiFile, sequenceToMidiFile } = require('../../../src/core/midiExport');
 
-// Mock fs.writeFileSync to prevent actual file writing during tests
-jest.mock('fs', () => ({
-  writeFileSync: jest.fn(),
-  promises: {
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    stat: jest.fn().mockResolvedValue({ isDirectory: () => true })
-  }
-}));
+// Mock the MidiWriter module
+jest.mock('midi-writer-js', () => {
+  const mockEventInstance = {
+    addEvent: jest.fn(),
+  };
 
-describe('MidiExporter', () => {
-  let exporter;
-  let sequence;
-  
-  beforeEach(() => {
-    // Reset mocks
-    jest.clearAllMocks();
-    
-    // Create a test sequence
-    sequence = new MidiSequence({
-      tempo: 120,
-      timeSignature: { numerator: 4, denominator: 4 }
+  const mockWriterInstance = {
+    setTempo: jest.fn(),
+    setTimeSignature: jest.fn(),
+    buildFile: jest.fn().mockReturnValue('mockMidiData'),
+  };
+
+  return {
+    Track: jest.fn().mockImplementation(() => mockEventInstance),
+    Writer: jest.fn().mockImplementation(() => mockWriterInstance),
+    NoteEvent: jest.fn().mockImplementation(options => options),
+    ProgramChangeEvent: jest.fn().mockImplementation(options => options),
+  };
+});
+
+describe('MIDI Export Functionality', () => {
+  describe('sessionToMidiFile', () => {
+    it('should export a session to MIDI format', async () => {
+      // Mock session with tracks and notes
+      const mockSession = {
+        bpm: 120,
+        timeSignature: [4, 4],
+        tracks: [
+          {
+            id: 1,
+            name: 'Chord Track',
+            instrument: 0,
+            notes: [
+              { pitch: 60, startTime: 0, duration: 1, velocity: 100 },
+              { pitch: 64, startTime: 0, duration: 1, velocity: 100 },
+              { pitch: 67, startTime: 0, duration: 1, velocity: 100 },
+            ],
+          },
+          {
+            id: 2,
+            name: 'Bass Track',
+            instrument: 32,
+            notes: [
+              { pitch: 36, startTime: 0, duration: 0.5, velocity: 100 },
+              { pitch: 48, startTime: 0.5, duration: 0.5, velocity: 100 },
+            ],
+          },
+        ],
+      };
+
+      const midiBuffer = await sessionToMidiFile(mockSession);
+      
+      // Check if we got a buffer
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
     });
-    
-    // Add some notes to the sequence
-    const trackIndex = 0;
-    sequence.addNote(trackIndex, {
-      pitch: 60,
-      startTime: 0,
-      duration: 1,
-      velocity: 100
+
+    it('should handle sessions with no tracks', async () => {
+      const mockSession = {
+        bpm: 120,
+        timeSignature: [4, 4],
+        tracks: [],
+      };
+
+      const midiBuffer = await sessionToMidiFile(mockSession);
+      
+      // Even with no tracks, we should get a valid (empty) MIDI file
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
     });
-    
-    sequence.addNote(trackIndex, {
-      pitch: 64,
-      startTime: 1,
-      duration: 1,
-      velocity: 100
+
+    it('should handle sessions with no notes', async () => {
+      const mockSession = {
+        bpm: 120,
+        timeSignature: [4, 4],
+        tracks: [
+          {
+            id: 1,
+            name: 'Empty Track',
+            instrument: 0,
+            notes: [],
+          },
+        ],
+      };
+
+      const midiBuffer = await sessionToMidiFile(mockSession);
+      
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
     });
-    
-    exporter = new MidiExporter();
+
+    it('should handle errors gracefully', async () => {
+      // Passing null should reject the promise
+      await expect(sessionToMidiFile(null)).rejects.toThrow();
+    });
   });
-  
-  test('should convert sequence to MIDI format', () => {
-    const midiData = exporter.sequenceToMidi(sequence);
-    
-    // Check that MIDI data is created
-    expect(midiData).toBeDefined();
-    expect(midiData.header).toBeDefined();
-    expect(midiData.tracks).toBeDefined();
-    
-    // Check header properties
-    expect(midiData.header.format).toBe(1);
-    expect(midiData.header.numTracks).toBe(sequence.tracks.length + 1); // +1 for tempo track
-    expect(midiData.header.ticksPerBeat).toBeGreaterThan(0);
-    
-    // Check if tempo track exists
-    expect(midiData.tracks[0].length).toBeGreaterThan(0);
-    
-    // Check if notes are included in the MIDI data
-    expect(midiData.tracks[1].length).toBeGreaterThan(0);
-  });
-  
-  test('should save MIDI file', async () => {
-    const filePath = path.join('tests', 'fixtures', 'output', 'test.mid');
-    
-    await exporter.saveToFile(sequence, filePath);
-    
-    // Check if file was "saved" (mock called)
-    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
-    expect(fs.promises.writeFile.mock.calls[0][0]).toBe(filePath);
-    expect(fs.promises.writeFile.mock.calls[0][1]).toBeInstanceOf(Buffer);
-  });
-  
-  test('should handle empty sequence', () => {
-    const emptySequence = new MidiSequence({
-      tempo: 120,
-      timeSignature: { numerator: 4, denominator: 4 }
+
+  describe('sequenceToMidiFile', () => {
+    it('should export a sequence to MIDI format', async () => {
+      // Mock a sequence object (old format)
+      const mockSequence = {
+        id: 'seq123',
+        name: 'Test Sequence',
+        timeSignature: { numerator: 4, denominator: 4 },
+        tempo: 120,
+        key: 'C major',
+        notes: [
+          { pitch: 60, startTime: 0, duration: 1, velocity: 80, channel: 0 },
+          { pitch: 64, startTime: 0, duration: 1, velocity: 80, channel: 0 },
+          { pitch: 67, startTime: 0, duration: 1, velocity: 80, channel: 0 },
+          { pitch: 36, startTime: 0, duration: 0.5, velocity: 100, channel: 1 },
+        ],
+      };
+
+      const midiBuffer = await sequenceToMidiFile(mockSequence);
+      
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
     });
-    
-    // Remove the default track to make it truly empty
-    emptySequence.tracks = [];
-    
-    const midiData = exporter.sequenceToMidi(emptySequence);
-    
-    // Should still create a valid MIDI file with just the tempo track
-    expect(midiData).toBeDefined();
-    expect(midiData.header).toBeDefined();
-    expect(midiData.tracks).toBeDefined();
-    expect(midiData.tracks.length).toBe(1); // Just the tempo track
+
+    it('should handle sequences with no notes', async () => {
+      const mockSequence = {
+        id: 'seq123',
+        name: 'Empty Sequence',
+        timeSignature: { numerator: 4, denominator: 4 },
+        tempo: 120,
+        key: 'C major',
+        notes: [],
+      };
+
+      const midiBuffer = await sequenceToMidiFile(mockSequence);
+      
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
+    });
+
+    it('should handle alternative timeSignature formats', async () => {
+      // Test with array format for timeSignature
+      const mockSequence = {
+        id: 'seq123',
+        name: 'Test Sequence',
+        timeSignature: [3, 4], // 3/4 time as array
+        tempo: 120,
+        key: 'C major',
+        notes: [
+          { pitch: 60, startTime: 0, duration: 1, velocity: 80, channel: 0 },
+        ],
+      };
+
+      const midiBuffer = await sequenceToMidiFile(mockSequence);
+      
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
+    });
+
+    it('should use default values when properties are missing', async () => {
+      // Test with minimal sequence data
+      const mockSequence = {
+        notes: [
+          { pitch: 60, startTime: 0, duration: 1 },
+        ],
+      };
+
+      const midiBuffer = await sequenceToMidiFile(mockSequence);
+      
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
+    });
   });
-  
-  test('should preserve track-specific properties', () => {
-    // Add a track with specific name and instrument
-    const trackIndex = sequence.addTrack({
-      name: 'Piano',
-      instrument: 0
+
+  describe('Duration conversion', () => {
+    it('should convert duration to appropriate MIDI format', async () => {
+      // Test with different note durations
+      const mockSession = {
+        bpm: 120,
+        timeSignature: [4, 4],
+        tracks: [
+          {
+            id: 1,
+            name: 'Duration Test',
+            instrument: 0,
+            notes: [
+              { pitch: 60, startTime: 0, duration: 4 },    // Whole note
+              { pitch: 62, startTime: 4, duration: 2 },    // Half note
+              { pitch: 64, startTime: 6, duration: 1 },    // Quarter note
+              { pitch: 65, startTime: 7, duration: 0.5 },  // Eighth note
+              { pitch: 67, startTime: 7.5, duration: 0.25 }, // Sixteenth note
+              { pitch: 69, startTime: 7.75, duration: 0.123 }, // Custom duration
+            ],
+          },
+        ],
+      };
+
+      const midiBuffer = await sessionToMidiFile(mockSession);
+      
+      expect(midiBuffer).toBeTruthy();
+      expect(Buffer.isBuffer(midiBuffer)).toBe(true);
     });
-    
-    // Add a note to this new track
-    sequence.addNote(trackIndex, {
-      pitch: 60,
-      startTime: 0,
-      duration: 1,
-      velocity: 100
-    });
-    
-    const midiData = exporter.sequenceToMidi(sequence);
-    
-    // There should be at least 3 tracks (tempo + original + new)
-    expect(midiData.tracks.length).toBeGreaterThan(2);
-    
-    // Get the track we added (track 0 is tempo, track 1 is default track, track 2 is our new one)
-    const trackEvents = midiData.tracks[2];
-    
-    // Find track name meta event
-    const trackNameEvent = trackEvents.find(event => 
-      event.type === 'trackName' && event.text === 'Piano'
-    );
-    
-    // Find program change event for instrument
-    const programChangeEvent = trackEvents.find(event => 
-      event.type === 'programChange' && event.programNumber === 0
-    );
-    
-    expect(trackNameEvent).toBeDefined();
-    expect(programChangeEvent).toBeDefined();
   });
 });

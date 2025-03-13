@@ -19,6 +19,7 @@ const SCALES = {
   melodicMinor: [0, 2, 3, 5, 7, 9, 11],
   pentatonicMajor: [0, 2, 4, 7, 9],
   pentatonicMinor: [0, 3, 5, 7, 10],
+  pentatonic: [0, 2, 4, 7, 9], // Alias for pentatonicMajor
   blues: [0, 3, 5, 6, 7, 10],
   dorian: [0, 2, 3, 5, 7, 9, 10],
   phrygian: [0, 1, 3, 5, 7, 8, 10],
@@ -37,6 +38,7 @@ const CHORD_TYPES = {
   major7: [0, 4, 7, 11],
   minor7: [0, 3, 7, 10],
   dominant7: [0, 4, 7, 10],
+  seventh: [0, 4, 7, 10], // Alias for dominant7
   diminished7: [0, 3, 6, 9],
   halfDiminished7: [0, 3, 6, 10],
   augmented7: [0, 4, 8, 10],
@@ -94,35 +96,67 @@ const KEY_SIGNATURES = {
   'Ab minor': { keySignature: 7, accidental: 'flat' },
 };
 /**
+ * Extracts the note name and octave from a string
+ * @param {string} noteStr - Note string (e.g. 'C4', 'F#5', 'C#')
+ * @returns {Object} Object with note and octave properties
+ */
+function parseNoteString(noteStr) {
+  let note, octave;
+  
+  // Check if the note contains an octave number
+  if (/[0-9]$/.test(noteStr)) {
+    octave = parseInt(noteStr.match(/[0-9]+$/)[0]);
+    note = noteStr.replace(/[0-9]+$/, '');
+  } else {
+    // Throw error if octave is required but not provided
+    throw new Error(`Missing octave in note: ${noteStr}`);
+  }
+  
+  return { note, octave };
+}
+
+/**
  * Converts a note name to MIDI note number
  * @param {string} noteName - Note name (e.g. 'C4', 'F#5')
  * @returns {number} MIDI note number
  */
 function noteToMidi(noteName) {
+  // Parse the note string into note and octave
+  const { note, octave } = parseNoteString(noteName);
+  
   // Handle flat notes (convert to sharp equivalent)
+  let normalizedNote = note;
   Object.keys(NOTE_ALIASES).forEach(flat => {
-    noteName = noteName.replace(flat, NOTE_ALIASES[flat]);
+    if (normalizedNote === flat) {
+      normalizedNote = NOTE_ALIASES[flat];
+    }
   });
-  // Extract note and octave
-  const note = noteName.slice(0, -1);
-  const octave = parseInt(noteName.slice(-1));
+  
   // Calculate MIDI note number
-  const noteIndex = NOTE_NAMES.indexOf(note);
+  const noteIndex = NOTE_NAMES.indexOf(normalizedNote);
   if (noteIndex === -1) {
     throw new Error(`Invalid note name: ${note}`);
   }
+  
   return noteIndex + (octave + 1) * 12;
 }
+
 /**
  * Converts a MIDI note number to note name
  * @param {number} midiNote - MIDI note number
  * @returns {string} Note name (e.g. 'C4', 'F#5')
  */
 function midiToNote(midiNote) {
+  // Ensure MIDI note is within valid range
+  if (midiNote < 0 || midiNote > 127) {
+    throw new Error(`MIDI note out of range (0-127): ${midiNote}`);
+  }
+  
   const octave = Math.floor(midiNote / 12) - 1;
   const noteIndex = midiNote % 12;
   return NOTE_NAMES[noteIndex] + octave;
 }
+
 /**
  * Generates a scale from a root note and scale type
  * @param {string} root - Root note name (e.g. 'C', 'F#')
@@ -134,9 +168,48 @@ function generateScale(root, scaleType, octave = 4) {
   if (!SCALES[scaleType]) {
     throw new Error(`Unknown scale type: ${scaleType}`);
   }
-  const rootNote = noteToMidi(`${root}${octave}`);
-  return SCALES[scaleType].map(interval => rootNote + interval);
+  
+  try {
+    // Try to parse the root note - it might include octave info
+    const { note, octave: specifiedOctave } = parseNoteString(root);
+    const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
+    
+    // Handle flat notes in the root (convert to sharp equivalent)
+    let normalizedNote = note;
+    Object.keys(NOTE_ALIASES).forEach(flat => {
+      if (normalizedNote === flat) {
+        normalizedNote = NOTE_ALIASES[flat];
+      }
+    });
+    
+    // Generate the root MIDI note
+    const rootNote = noteToMidi(`${normalizedNote}${useOctave}`);
+    
+    // Generate the scale
+    const scale = SCALES[scaleType].map(interval => rootNote + interval);
+    
+    // Validate that all MIDI notes are within valid range (0-127)
+    return scale.filter(note => note >= 0 && note <= 127);
+  } catch (error) {
+    // Special case for API routes that don't include octave
+    // Assume octave 4 if root doesn't have an octave
+    if (!root.match(/[0-9]/)) {
+      const normalizedRoot = root;
+      Object.keys(NOTE_ALIASES).forEach(flat => {
+        if (normalizedRoot === flat) {
+          normalizedRoot = NOTE_ALIASES[flat];
+        }
+      });
+      
+      const rootNote = noteToMidi(`${normalizedRoot}${octave}`);
+      const scale = SCALES[scaleType].map(interval => rootNote + interval);
+      return scale.filter(note => note >= 0 && note <= 127);
+    }
+    
+    throw error;
+  }
 }
+
 /**
  * Generates a chord from a root note and chord type
  * @param {string} root - Root note name (e.g. 'C', 'F#')
@@ -148,9 +221,47 @@ function generateChord(root, chordType, octave = 4) {
   if (!CHORD_TYPES[chordType]) {
     throw new Error(`Unknown chord type: ${chordType}`);
   }
-  const rootNote = noteToMidi(`${root}${octave}`);
-  return CHORD_TYPES[chordType].map(interval => rootNote + interval);
+  
+  try {
+    // Parse the root note
+    const { note, octave: specifiedOctave } = parseNoteString(root);
+    const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
+    
+    // Handle flat notes in the root (convert to sharp equivalent)
+    let normalizedNote = note;
+    Object.keys(NOTE_ALIASES).forEach(flat => {
+      if (normalizedNote === flat) {
+        normalizedNote = NOTE_ALIASES[flat];
+      }
+    });
+    
+    // Generate the root MIDI note
+    const rootNote = noteToMidi(`${normalizedNote}${useOctave}`);
+    
+    // Generate the chord
+    const chord = CHORD_TYPES[chordType].map(interval => rootNote + interval);
+    
+    // Validate that all MIDI notes are within valid range (0-127)
+    return chord.filter(note => note >= 0 && note <= 127);
+  } catch (error) {
+    // Special case for API routes that don't include octave
+    if (!root.match(/[0-9]/)) {
+      let normalizedRoot = root;
+      Object.keys(NOTE_ALIASES).forEach(flat => {
+        if (normalizedRoot === flat) {
+          normalizedRoot = NOTE_ALIASES[flat];
+        }
+      });
+      
+      const rootNote = noteToMidi(`${normalizedRoot}${octave}`);
+      const chord = CHORD_TYPES[chordType].map(interval => rootNote + interval);
+      return chord.filter(note => note >= 0 && note <= 127);
+    }
+    
+    throw error;
+  }
 }
+
 /**
  * Determines the key signature (number of sharps/flats) for a given key
  * @param {string} key - Key name (e.g. 'C major', 'F# minor')
@@ -190,6 +301,7 @@ function getKeySignature(key) {
   // Use the predefined key signature mapping
   return KEY_SIGNATURES[key];
 }
+
 /**
  * Generates a chord progression from Roman numeral notation
  * @param {string[]} progression - Array of Roman numerals (e.g. ['I', 'IV', 'V', 'I'])
@@ -200,6 +312,7 @@ function getKeySignature(key) {
  */
 function generateChordProgression(progression, key, mode, octave = 4) {
   const scale = generateScale(key, mode, octave);
+  
   // Make sure we have a complete scale with at least 7 notes for diatonic chords
   const fullScale = [...scale];
   if (fullScale.length < 7) {
@@ -209,20 +322,21 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       fullScale.push(nextOctaveScale[i - fullScale.length]);
     }
   }
-  // For minor key, D is at position 5 from A (A, B, C, D, E) or index 3 in the scale
+  
   const result = progression.map(numeral => {
     // Get scale degree from roman numeral
     let scaleDegree = ROMAN_NUMERALS[numeral];
     if (scaleDegree === undefined) {
       throw new Error(`Invalid Roman numeral: ${numeral}`);
     }
+    
     // Get root note of chord from scale degree
     const rootNote = fullScale[scaleDegree];
     const rootName = midiToNote(rootNote).replace(/\d/, ''); // Remove octave number
     const chordOctave = Math.floor(rootNote / 12) - 1;
+    
     // Determine chord type based on scale position and mode
     let chordType;
-    // Adjust for major/minor chord types based on mode and position in the scale
     if (mode === 'major') {
       // In major keys: I, IV, V are major; ii, iii, vi are minor; vii° is diminished
       if ([0, 3, 4].includes(scaleDegree)) {
@@ -234,7 +348,6 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       }
     } else if (mode === 'minor') {
       // In minor keys: i, iv, v are minor; III, VI, VII are major; ii° is diminished
-      // Note: v could be minor or major (harmonic minor would make it major)
       if ([2, 5, 6].includes(scaleDegree)) {
         chordType = 'major';
       } else if ([0, 3, 4].includes(scaleDegree)) {
@@ -246,11 +359,14 @@ function generateChordProgression(progression, key, mode, octave = 4) {
       // Default based on numeral case if mode is not recognized
       chordType = numeral === numeral.toUpperCase() ? 'major' : 'minor';
     }
+    
     // Generate the chord
     return generateChord(rootName, chordType, chordOctave);
   });
+  
   return result;
 }
+
 module.exports = {
   noteToMidi,
   midiToNote,

@@ -1,62 +1,120 @@
-# MIDI Song Creation Tool Testing Suite
+# MIDI Song Creation Tool - Testing Suite
 
-This directory contains all tests for the MIDI Song Creation Tool project.
+This directory contains the comprehensive test suite for the MIDI Song Creation Tool. The test organization follows industry best practices with a clear separation of unit, integration, and end-to-end tests.
 
-## Directory Structure
+## Test Structure
 
-- `e2e/`: End-to-end tests using Playwright
-- `integration/`: Integration tests that test multiple components together
-- `unit/`: Unit tests for individual components and functions
-- `fixtures/`: Test fixtures and sample data
-- `mocks/`: Mock implementations for testing
-
-## Recent Updates
-
-We've addressed several issues in the testing suite:
-
-1. Fixed the TransportControls test that was creating duplicate elements
-2. Improved module resolution with better Jest configuration
-3. Added proper mocks for SessionContext, API services, and other dependencies
-4. Created convenient testing scripts for specific components
+```
+tests/
+├── unit/                  # Unit tests for isolated components
+│   ├── core/              # Tests for core MIDI processing functionality
+│   ├── client/            # Tests for React components
+│   │   └── components/    # Tests for individual UI components
+│   └── server/            # Tests for server-side code
+├── integration/           # Integration tests between components
+│   └── api/               # Tests for API endpoints
+├── e2e/                   # End-to-end tests with Cypress
+│   └── cypress/
+│       ├── fixtures/      # Test data for E2E tests
+│       ├── plugins/       # Cypress plugins
+│       ├── support/       # Support files and commands
+│       └── specs/         # E2E test specifications
+├── mocks/                 # Mock objects and functions
+├── fixtures/              # Test fixtures (sample MIDI files, etc.)
+└── README.md              # This file
+```
 
 ## Running Tests
 
-Use the following scripts to run tests:
+The project includes several npm scripts to run different types of tests:
 
-- `npm run test:unit`: Run all unit tests
-- `npm run test:integration`: Run all integration tests
-- `npm run test:e2e`: Run all end-to-end tests
-- `npm run test:coverage`: Run tests with coverage reports
+```bash
+# Run all tests
+npm test
 
-For debugging specific components:
+# Run tests in watch mode (automatically re-run on file changes)
+npm run test:watch
 
-- `./scripts/test-pianoroll.sh`: Test just the PianoRoll component
-- `./scripts/run-all-tests.sh`: Run all component tests
+# Run tests with coverage report
+npm run test:coverage
 
-## Adding New Tests
+# Run only unit tests
+npm run test:unit
 
-When adding new tests, follow these conventions:
+# Run only integration tests
+npm run test:integration
 
-1. Use Jest and Testing Library for component testing
-2. Follow the naming convention `ComponentName.test.jsx` for component tests
-3. Use mocks from the `tests/mocks` directory for consistency
-4. Test both happy paths and error cases
-5. Clean up after each test to avoid state leakage
+# Run end-to-end tests with Cypress
+npm run test:e2e
 
-## Mocks
+# Open Cypress test runner in interactive mode
+npm run test:e2e:open
 
-We use the following mocks for testing:
+# Run tests in CI environment with coverage
+npm run test:ci
 
-- `SessionContextMock.js`: Mock implementation of the SessionContext
-- `apiService.js`: Mock implementation of the API service
-- `transportService.js`: Mock implementation of the transport service
-- `styleMock.js`: Mock for CSS imports
-- `fileMock.js`: Mock for file imports
+# View coverage report in browser
+npm run test:coverage:view
+```
 
-## Test Coverage
+## Testing Tools
 
-We aim for the following coverage targets:
+- **Jest**: Primary testing framework for unit and integration tests
+- **React Testing Library**: Testing React components
+- **Cypress**: End-to-end testing
+- **Supertest**: API testing
 
-- Core modules: 80% statements, 70% branches, 80% functions, 80% lines
-- Server modules: 75% statements, 65% branches, 75% functions, 75% lines
-- Overall project: 70% statements, 60% branches, 70% functions, 70% lines
+## Best Practices
+
+1. **Unit Tests**
+   - Focus on testing individual functions, methods, or components in isolation
+   - Mock dependencies
+   - Keep assertions focused on behavior, not implementation details
+   - Aim for high coverage of core business logic
+
+2. **Integration Tests**
+   - Test interactions between modules
+   - Focus on API endpoints and data flow
+   - Verify correct error handling
+
+3. **End-to-End Tests**
+   - Test full user workflows from UI to backend
+   - Focus on critical paths that users will take
+   - Use data attributes like `data-cy` as selectors
+
+## Writing New Tests
+
+When adding new functionality, follow this process:
+
+1. Add unit tests for the core logic
+2. Add integration tests if the functionality spans multiple modules
+3. Add E2E tests for critical user flows
+
+All tests should be clear, focused, and maintainable. Use descriptive test names that explain the expected behavior.
+
+## Mocking
+
+The `mocks/` directory contains shared mock implementations. Use these to ensure consistent mocking across tests.
+
+When creating new mocks:
+- Keep them focused on what you need to test
+- Document any assumptions made
+- Make them reusable when appropriate
+
+## Coverage Requirements
+
+The project aims for the following coverage targets:
+- Core functionality: 90%+ line coverage
+- Server API endpoints: 80%+ line coverage
+- UI components: 70%+ line coverage
+
+## Test Fixtures
+
+Test fixtures are stored in the `fixtures/` directory. These include:
+- Sample MIDI files
+- Test data for API responses
+- Other static assets needed for testing
+
+## Migration Guide
+
+When moving from the `develop` branch structure to the new structure in the `feature/project-structure` branch, refer to the [TEST_MIGRATION.md](../TEST_MIGRATION.md) file for guidance on how to adapt tests.

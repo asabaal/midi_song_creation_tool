@@ -9,7 +9,10 @@ const musicTheory = require('../../core/musicTheory');
  */
 router.get('/scales/:root/:type', (req, res) => {
   try {
-    const { root, type } = req.params;
+    // Decode URL parameters to handle sharp signs properly
+    let { root, type } = req.params;
+    root = decodeURIComponent(root); // This will convert %23 to #
+    
     const octave = parseInt(req.query.octave || 4);
 
     // Generate the scale in MIDI notes
@@ -39,7 +42,10 @@ router.get('/scales/:root/:type', (req, res) => {
  */
 router.get('/chords/:root/:type', (req, res) => {
   try {
-    const { root, type } = req.params;
+    // Decode URL parameters to handle sharp signs properly
+    let { root, type } = req.params;
+    root = decodeURIComponent(root); // This will convert %23 to #
+    
     const octave = parseInt(req.query.octave || 4);
 
     // Generate the chord in MIDI notes
@@ -69,7 +75,10 @@ router.get('/chords/:root/:type', (req, res) => {
  */
 router.get('/progressions/:key/:mode', (req, res) => {
   try {
-    const { key, mode } = req.params;
+    // Decode URL parameters to handle sharp signs properly
+    let { key, mode } = req.params;
+    key = decodeURIComponent(key); // This will convert %23 to #
+    
     const numerals = req.query.numerals || 'I-IV-V-I';
     const octave = parseInt(req.query.octave || 4);
 
@@ -111,7 +120,9 @@ router.get('/progressions/:key/:mode', (req, res) => {
  */
 router.get('/key-signature/:key/:mode', (req, res) => {
   try {
-    const { key, mode } = req.params;
+    // Decode URL parameters to handle sharp signs properly
+    let { key, mode } = req.params;
+    key = decodeURIComponent(key); // This will convert %23 to #
 
     // Get key signature info
     const keySignatureInfo = musicTheory.getKeySignature(`${key} ${mode}`);
