@@ -2,12 +2,15 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { act } from 'react';
 import TransportControls from '../../../../src/client/components/TransportControls';
-import { useSessionContext } from '../../../../src/client/context/SessionContext';
 import * as transportService from '../../../../src/client/services/transportService';
 
 // Mock the SessionContext module
-jest.mock('../../../../src/client/context/SessionContext', () => ({
-  useSessionContext: jest.fn()
+jest.mock('../../../../src/client/contexts/SessionContext', () => ({
+  useSessionContext: jest.fn(),
+  __esModule: true,
+  default: {
+    Provider: ({ children }) => children
+  }
 }));
 
 // Mock the transportService module
@@ -20,6 +23,9 @@ jest.mock('../../../../src/client/services/transportService', () => ({
   subscribeToTick: jest.fn(),
   unsubscribeFromTick: jest.fn()
 }));
+
+// Get the useSessionContext mock from the mocked module
+const { useSessionContext } = require('../../../../src/client/contexts/SessionContext');
 
 describe('TransportControls', () => {
   beforeEach(() => {
@@ -96,31 +102,50 @@ describe('TransportControls', () => {
     
     const bpmInput = screen.getByTestId('bpm-input');
     
-    fireEvent.change(bpmInput, { target: { value: '140' } });
-    fireEvent.blur(bpmInput);
+    // Use act for React state updates
+    act(() => {
+      fireEvent.change(bpmInput, { target: { value: '140' } });
+      fireEvent.blur(bpmInput);
+    });
     
     expect(transportService.setBpm).toHaveBeenCalledWith(140);
     expect(updateTransportMock).toHaveBeenCalledWith({ bpm: 140 });
   });
 
   test('validates BPM input', () => {
+    const updateTransportMock = jest.fn();
+    useSessionContext.mockReturnValue({
+      currentSession: {
+        id: 'test-session-id',
+        bpm: 120,
+        timeSignature: [4, 4]
+      },
+      updateTransport: updateTransportMock
+    });
+    
     render(<TransportControls />);
     
     const bpmInput = screen.getByTestId('bpm-input');
     
     // Try too low
-    fireEvent.change(bpmInput, { target: { value: '10' } });
-    fireEvent.blur(bpmInput);
+    act(() => {
+      fireEvent.change(bpmInput, { target: { value: '10' } });
+      fireEvent.blur(bpmInput);
+    });
     
     // Should set to minimum allowed value
     expect(transportService.setBpm).toHaveBeenCalledWith(40);
+    expect(updateTransportMock).toHaveBeenCalledWith({ bpm: 40 });
     
     // Try too high
-    fireEvent.change(bpmInput, { target: { value: '300' } });
-    fireEvent.blur(bpmInput);
+    act(() => {
+      fireEvent.change(bpmInput, { target: { value: '300' } });
+      fireEvent.blur(bpmInput);
+    });
     
     // Should set to maximum allowed value
     expect(transportService.setBpm).toHaveBeenCalledWith(240);
+    expect(updateTransportMock).toHaveBeenCalledWith({ bpm: 240 });
   });
 
   test('changes time signature', () => {
@@ -138,7 +163,9 @@ describe('TransportControls', () => {
     
     const timeSignatureSelect = screen.getByTestId('time-signature-select');
     
-    fireEvent.change(timeSignatureSelect, { target: { value: '3/4' } });
+    act(() => {
+      fireEvent.change(timeSignatureSelect, { target: { value: '3/4' } });
+    });
     
     expect(updateTransportMock).toHaveBeenCalledWith({ timeSignature: [3, 4] });
   });
