@@ -6,8 +6,9 @@ function setupApiRoutes() {
   // Create Express app
   const app = express();
   
-  // Add middleware
+  // Add middleware for JSON and raw text
   app.use(express.json());
+  app.use(express.text());
   
   // Mock session data
   const sessions = [
