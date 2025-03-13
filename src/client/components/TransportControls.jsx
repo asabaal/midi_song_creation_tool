@@ -1,6 +1,6 @@
 // TransportControls component
 import React, { useState } from 'react';
-import { useSessionContext } from '../context/SessionContext';
+import { useSessionContext } from '../contexts/SessionContext';
 import * as transportService from '../services/transportService';
 
 const TransportControls = () => {
@@ -62,7 +62,7 @@ const TransportControls = () => {
       <label htmlFor="bpm-input">BPM:</label>
       <input 
         id="bpm-input"
-        data-testid="bpm-input" 
+        data-testid="tempo-input" 
         type="number" 
         min="40" 
         max="240" 
