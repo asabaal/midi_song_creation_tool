@@ -9,72 +9,45 @@ const mockStop = jest.fn();
 const mockPause = jest.fn();
 const mockSetLoopPoints = jest.fn();
 const mockSetBPM = jest.fn();
+const mockUpdateTransport = jest.fn();
 
-// Mock Tone.js globally in the setup file
-jest.mock('tone', () => ({
-  Transport: {
-    start: mockStart,
-    stop: mockStop,
-    pause: mockPause,
-    setLoopPoints: mockSetLoopPoints,
-    bpm: {
-      value: 120,
-      set: mockSetBPM
-    },
-    loop: false,
-    timeSignature: 4,
-    position: '0:0:0',
-    state: 'stopped',
-    on: jest.fn(),
-    off: jest.fn()
-  },
-  start: jest.fn().mockResolvedValue(undefined),
-  now: jest.fn().mockReturnValue(0)
-}), { virtual: true });
-
-// Create a minimal mock component for TransportControls
-const MockTransportControls = () => (
-  <div data-testid="transport-controls">
-    <button data-testid="play-button" onClick={() => mockStart()}>Play</button>
-    <button data-testid="stop-button" onClick={() => mockStop()}>Stop</button>
-    <input 
-      data-testid="tempo-input" 
-      type="number" 
-      defaultValue={120}
-      onChange={(e) => mockSetBPM(parseInt(e.target.value))}
-    />
-    <button data-testid="loop-toggle" onClick={() => mockSetLoopPoints()}>Loop</button>
-  </div>
-);
-
-// Mock the actual component
-jest.mock('../../../../src/client/components/TransportControls', () => {
-  return () => MockTransportControls();
-});
-
-// Mock SessionContext
-jest.mock('../../../../src/client/contexts/SessionContext', () => ({
-  useSession: () => ({
-    currentSession: {
-      id: 'test-session',
-      tempo: 120,
-      timeSignature: '4/4',
-      loopStart: 0,
-      loopEnd: 4
-    },
-    updateSession: jest.fn(),
-    transport: {
-      isPlaying: false,
-      isLooping: false,
-      currentBeat: 0,
-      play: mockStart,
-      stop: mockStop,
-      pause: mockPause
-    }
-  })
+// Mock services
+jest.mock('../../../../src/client/services/transportService', () => ({
+  play: mockStart,
+  stop: mockStop,
+  pause: mockPause,
+  setBpm: mockSetBPM,
+  setLoopPoints: mockSetLoopPoints
 }));
 
-// Import the mocked component
+// Mock the SessionContext
+jest.mock('../../../../src/client/contexts/SessionContext', () => {
+  return {
+    useSessionContext: jest.fn().mockReturnValue({
+      currentSession: {
+        id: 'test-session',
+        bpm: 120,
+        timeSignature: [4, 4], 
+        loop: { enabled: false },
+        loopStart: 0,
+        loopEnd: 4
+      },
+      updateTransport: mockUpdateTransport
+    }),
+    __esModule: true,
+    default: {
+      Provider: ({ children }) => children
+    }
+  };
+});
+
+// Now we'll use the real component instead of a mock
+jest.mock('../../../../src/client/components/TransportControls', () => {
+  // Use the real component
+  return jest.requireActual('../../../../src/client/components/TransportControls');
+});
+
+// Import the component
 const TransportControls = require('../../../../src/client/components/TransportControls').default;
 
 describe('TransportControls Component State Management', () => {
@@ -102,13 +75,13 @@ describe('TransportControls Component State Management', () => {
     // Click play
     fireEvent.click(playButton);
     
-    // Check that Tone.Transport.start was called
+    // Check that transport.play was called
     expect(mockStart).toHaveBeenCalled();
     
     // Now the pause button should be shown instead of play
-    // This would be tested in a real implementation that properly toggles the button
     await waitFor(() => {
-      expect(mockStart).toHaveBeenCalled();
+      const pauseButton = screen.queryByTestId('pause-button');
+      expect(pauseButton).toBeInTheDocument();
     });
   });
 
@@ -116,13 +89,14 @@ describe('TransportControls Component State Management', () => {
     render(<TransportControls />);
     
     // Find tempo input
-    const tempoInput = screen.getByTestId('tempo-input');
+    const tempoInput = screen.getByTestId('bpm-input');
     
     // Change tempo value
     fireEvent.change(tempoInput, { target: { value: '140' } });
     
-    // Verify Tone BPM was updated
+    // Verify BPM was updated
     expect(mockSetBPM).toHaveBeenCalledWith(140);
+    expect(mockUpdateTransport).toHaveBeenCalledWith(expect.objectContaining({ bpm: 140 }));
   });
 
   it('should toggle loop state', async () => {
@@ -134,8 +108,10 @@ describe('TransportControls Component State Management', () => {
     // Toggle loop on
     fireEvent.click(loopToggle);
     
-    // Check that loop points were set
-    expect(mockSetLoopPoints).toHaveBeenCalled();
+    // Check that loop was updated
+    expect(mockUpdateTransport).toHaveBeenCalledWith(expect.objectContaining({ 
+      loop: { enabled: true } 
+    }));
   });
 
   it('should maintain state during transport position updates', async () => {
