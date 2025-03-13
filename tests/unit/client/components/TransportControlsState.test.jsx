@@ -11,22 +11,25 @@ const mockPause = jest.fn();
 const mockSetLoopPoints = jest.fn();
 const mockSetBPM = jest.fn();
 
-jest.mock('tone', () => ({
-  Transport: {
-    start: mockStart,
-    stop: mockStop,
-    pause: mockPause,
-    setLoopPoints: mockSetLoopPoints,
-    bpm: {
-      value: 120,
-      set: mockSetBPM
-    },
-    loop: false,
-    timeSignature: 4,
-    position: '0:0:0',
-    state: 'stopped',
-  }
-}));
+// Use proper Jest mock instead of inline mock
+jest.mock('tone', () => {
+  return {
+    Transport: {
+      start: mockStart,
+      stop: mockStop,
+      pause: mockPause,
+      setLoopPoints: mockSetLoopPoints,
+      bpm: {
+        value: 120,
+        set: mockSetBPM
+      },
+      loop: false,
+      timeSignature: 4,
+      position: '0:0:0',
+      state: 'stopped',
+    }
+  };
+}, { virtual: true });
 
 // Mock SessionContext
 jest.mock('../../../../src/client/contexts/SessionContext', () => ({
