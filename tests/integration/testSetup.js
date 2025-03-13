@@ -4,6 +4,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const apiMockSetup = require('./api/apiMockSetup');
 
 let mongoServer;
 let app;
@@ -18,9 +19,6 @@ beforeAll(async () => {
   app.use(cors());
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
-  
-  // Add mock API routes
-  require('./api/apiMockSetup')(app);
   
   // Start the server on a random port
   server = app.listen();
@@ -62,5 +60,8 @@ afterEach(async () => {
   }
 });
 
+// For API tests that use the mock API directly
+const mockApp = apiMockSetup();
+
 // Export app instance for supertest to use
-module.exports = { mongoose, MongoMemoryServer, app };
+module.exports = { mongoose, MongoMemoryServer, app, mockApp };
