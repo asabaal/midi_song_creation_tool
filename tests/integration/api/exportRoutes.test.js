@@ -29,9 +29,8 @@ describe('Export/Import API Integration Tests', () => {
   });
 
   test('GET /api/export/json/:sessionId should return 404 for non-existent session', async () => {
-    const nonExistentId = new mongoose.Types.ObjectId();
     const exportResponse = await request(app)
-      .get(`/api/export/json/${nonExistentId}`);
+      .get('/api/export/json/non-existent-id');
 
     expect(exportResponse.status).toBe(404);
   });
@@ -46,9 +45,8 @@ describe('Export/Import API Integration Tests', () => {
   });
 
   test('GET /api/export/midi/:sessionId should return 404 for non-existent session', async () => {
-    const nonExistentId = new mongoose.Types.ObjectId();
     const exportResponse = await request(app)
-      .get(`/api/export/midi/${nonExistentId}`);
+      .get('/api/export/midi/non-existent-id');
 
     expect(exportResponse.status).toBe(404);
   });
