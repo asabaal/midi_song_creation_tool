@@ -1,2 +1,2 @@
 // __mocks__/fileMock.js
-module.exports = 'file-mock';
+module.exports = 'test-file-stub';
