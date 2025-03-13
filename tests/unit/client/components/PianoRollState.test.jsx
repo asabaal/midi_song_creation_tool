@@ -34,7 +34,7 @@ const MockPianoRoll = () => {
 };
 
 // Mock SessionContext with both useSessionContext and default export
-jest.mock('../../../../src/client/contexts/SessionContext', () => {
+jest.mock('../../../../src/client/context/SessionContext', () => {
   return {
     useSessionContext: jest.fn().mockReturnValue({
       currentSession: {
