@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import PianoRoll from '../../../../src/client/components/PianoRoll';
 
 // Mock the SessionContext module
-jest.mock('../../../../src/client/context/SessionContext', () => ({
+jest.mock('../../../../src/client/contexts/SessionContext', () => ({
   useSessionContext: jest.fn(),
   __esModule: true,
   default: {
@@ -12,7 +12,7 @@ jest.mock('../../../../src/client/context/SessionContext', () => ({
 }));
 
 // Get the useSessionContext mock from the mocked module
-const { useSessionContext } = require('../../../../src/client/context/SessionContext');
+const { useSessionContext } = require('../../../../src/client/contexts/SessionContext');
 
 describe('PianoRoll', () => {
   // Mock session context data
