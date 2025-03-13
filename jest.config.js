@@ -1,7 +1,7 @@
 // jest.config.js
 module.exports = {
   // Setup environment
-  setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/jest.setup.js', '<rootDir>/tests/setup-dom.js'],
+  setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/jest.setup.js', '<rootDir>/tests/setup-dom.js', '<rootDir>/tests/setup-rtl.js'],
   
   // Test timeout
   testTimeout: 30000,
@@ -34,7 +34,7 @@ module.exports = {
       displayName: 'Client Tests',
       testMatch: ['<rootDir>/tests/unit/client/**/*.test.{js,jsx}'],
       testEnvironment: 'jsdom',
-      setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/tests/setup-dom.js'],
+      setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/tests/setup-dom.js', '<rootDir>/tests/setup-rtl.js'],
       moduleNameMapper: {
         '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
         '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js',
