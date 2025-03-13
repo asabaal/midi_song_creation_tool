@@ -43,6 +43,27 @@ function setupApiRoutes() {
       return res.status(400).json({ error: 'Session name is required' });
     }
     
+    // Validate tempo if provided
+    if (tempo !== undefined) {
+      if (tempo <= 0) {
+        return res.status(400).json({ error: 'Tempo must be positive' });
+      }
+      if (tempo > 500) { // Arbitrary upper limit for testing
+        return res.status(400).json({ error: 'Tempo is too high' });
+      }
+    }
+    
+    // Validate time signature if provided
+    if (timeSignature !== undefined) {
+      if (!/^\d+\/\d+$/.test(timeSignature)) {
+        return res.status(400).json({ error: 'Invalid time signature format' });
+      }
+      const parts = timeSignature.split('/');
+      if (parseInt(parts[1]) === 0) {
+        return res.status(400).json({ error: 'Denominator cannot be zero' });
+      }
+    }
+    
     const newSession = {
       id: `session-${Date.now()}`,
       _id: `session-${Date.now()}`,
@@ -307,11 +328,31 @@ function setupApiRoutes() {
       return res.status(404).json({ error: 'Session not found' });
     }
     
-    const { type, patternType, bars, rootNote } = req.body;
+    const { type, patternType, key, scaleType, octave, bars, rootNote } = req.body;
     
     // Validate pattern type
     if (patternType === 'invalid-pattern') {
       return res.status(400).json({ error: 'Invalid pattern type' });
+    }
+    
+    // Validate key if provided
+    if (key && !isValidNote(key)) {
+      return res.status(400).json({ error: 'Invalid key' });
+    }
+    
+    // Validate scale type if provided
+    if (scaleType && !isValidScaleType(scaleType)) {
+      return res.status(400).json({ error: 'Invalid scale type' });
+    }
+    
+    // Validate octave if provided
+    if (octave !== undefined) {
+      if (octave < 0) {
+        return res.status(400).json({ error: 'Octave must be non-negative' });
+      }
+      if (octave > 9) { // MIDI limit for highest octave to keep notes under 127
+        return res.status(400).json({ error: 'Octave too high for MIDI range' });
+      }
     }
     
     // Generate sample notes based on pattern type
@@ -436,6 +477,21 @@ function setupApiRoutes() {
     });
   });
   
+  // GET /api/sessions/:id/transport
+  app.get('/api/sessions/:id/transport', (req, res) => {
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id || s._id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.json({
+      bpm: sessions[sessionIndex].tempo,
+      timeSignature: sessions[sessionIndex].timeSignature,
+      loop: false
+    });
+  });
+  
   // POST /api/sessions/:id/tracks - Add a track
   app.post('/api/sessions/:id/tracks', (req, res) => {
     const sessionIndex = sessions.findIndex(s => s.id === req.params.id || s._id === req.params.id);
@@ -459,6 +515,36 @@ function setupApiRoutes() {
     
     sessions[sessionIndex].tracks.push(newTrack);
     res.status(201).json(newTrack);
+  });
+  
+  // GET /api/sessions/:id/notes
+  app.get('/api/sessions/:id/notes', (req, res) => {
+    const sessionIndex = sessions.findIndex(s => s.id === req.params.id || s._id === req.params.id);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    // If trackId is specified, filter notes by track
+    if (req.query.trackId) {
+      const trackIndex = sessions[sessionIndex].tracks.findIndex(t => t.id === req.query.trackId);
+      
+      if (trackIndex === -1) {
+        return res.status(404).json({ error: 'Track not found' });
+      }
+      
+      return res.json(sessions[sessionIndex].tracks[trackIndex].notes || []);
+    }
+    
+    // Otherwise return all notes across all tracks
+    const allNotes = [];
+    sessions[sessionIndex].tracks.forEach(track => {
+      if (track.notes && track.notes.length > 0) {
+        allNotes.push(...track.notes);
+      }
+    });
+    
+    res.json(allNotes);
   });
   
   // PUT /api/sessions/:id/tracks/:trackId - Update a track
@@ -515,10 +601,36 @@ function setupApiRoutes() {
     
     const { pitch, start, duration, velocity, trackId } = req.body;
     
-    if (!pitch || start === undefined || !duration) {
-      return res.status(400).json({ errors: ['Missing required note properties'] });
+    // Basic validation
+    const errors = [];
+    
+    if (pitch === undefined) {
+      errors.push('Pitch is required');
+    } else if (pitch < 0 || pitch > 127) {
+      errors.push('Pitch must be between 0 and 127');
     }
     
+    if (start === undefined) {
+      errors.push('Start time is required');
+    } else if (start < 0) {
+      errors.push('Start time cannot be negative');
+    }
+    
+    if (duration === undefined) {
+      errors.push('Duration is required');
+    } else if (duration <= 0) {
+      errors.push('Duration must be positive');
+    }
+    
+    if (velocity !== undefined && (velocity < 0 || velocity > 127)) {
+      errors.push('Velocity must be between 0 and 127');
+    }
+    
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
+    }
+    
+    // Create the new note
     const newNote = {
       id: `note-${Date.now()}`,
       _id: `note-${Date.now()}`,
@@ -527,6 +639,22 @@ function setupApiRoutes() {
       duration,
       velocity: velocity || 100
     };
+    
+    // Add note to the specified track if trackId is provided
+    if (trackId) {
+      const trackIndex = sessions[sessionIndex].tracks.findIndex(t => t.id === trackId);
+      
+      if (trackIndex === -1) {
+        return res.status(404).json({ error: 'Track not found' });
+      }
+      
+      // Initialize notes array if it doesn't exist
+      if (!sessions[sessionIndex].tracks[trackIndex].notes) {
+        sessions[sessionIndex].tracks[trackIndex].notes = [];
+      }
+      
+      sessions[sessionIndex].tracks[trackIndex].notes.push(newNote);
+    }
     
     res.status(201).json(newNote);
   });
@@ -540,6 +668,29 @@ function setupApiRoutes() {
     }
     
     const { pitch, start, duration, velocity } = req.body;
+    
+    // Basic validation for update
+    const errors = [];
+    
+    if (pitch !== undefined && (pitch < 0 || pitch > 127)) {
+      errors.push('Pitch must be between 0 and 127');
+    }
+    
+    if (start !== undefined && start < 0) {
+      errors.push('Start time cannot be negative');
+    }
+    
+    if (duration !== undefined && duration <= 0) {
+      errors.push('Duration must be positive');
+    }
+    
+    if (velocity !== undefined && (velocity < 0 || velocity > 127)) {
+      errors.push('Velocity must be between 0 and 127');
+    }
+    
+    if (errors.length > 0) {
+      return res.status(400).json({ errors });
+    }
     
     const updatedNote = {
       id: req.params.noteId,
@@ -585,9 +736,19 @@ function setupApiRoutes() {
     
     const { bpm, timeSignature, loop } = req.body;
     
+    // Update session tempo if bpm is provided
+    if (bpm !== undefined) {
+      sessions[sessionIndex].tempo = bpm;
+    }
+    
+    // Update session time signature if provided
+    if (timeSignature !== undefined) {
+      sessions[sessionIndex].timeSignature = timeSignature;
+    }
+    
     res.json({
-      bpm: bpm || 120,
-      timeSignature: timeSignature || '4/4',
+      bpm: sessions[sessionIndex].tempo,
+      timeSignature: sessions[sessionIndex].timeSignature,
       loop: loop || false
     });
   });
