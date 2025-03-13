@@ -56,9 +56,14 @@ const getScaleNotes = (key, scaleType) => {
   return { notes, midiNotes, key, scaleType };
 };
 
-// Get scale
+// Get scale - handle URL-encoded parameters
 router.get('/scales/:key/:scaleType', (req, res) => {
-  const { key, scaleType } = req.params;
+  let { key, scaleType } = req.params;
+  
+  // Decode URL-encoded parameters
+  key = decodeURIComponent(key);
+  scaleType = decodeURIComponent(scaleType);
+  
   try {
     const result = getScaleNotes(key, scaleType);
     res.json(result);
@@ -67,9 +72,14 @@ router.get('/scales/:key/:scaleType', (req, res) => {
   }
 });
 
-// Get chord
+// Get chord - handle URL-encoded parameters
 router.get('/chords/:key/:chordType', (req, res) => {
-  const { key, chordType } = req.params;
+  let { key, chordType } = req.params;
+  
+  // Decode URL-encoded parameters
+  key = decodeURIComponent(key);
+  chordType = decodeURIComponent(chordType);
+  
   try {
     // Basic implementation for testing
     const chordMap = {
