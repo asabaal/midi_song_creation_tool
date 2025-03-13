@@ -125,7 +125,9 @@ function setupApiRoutes() {
   
   // GET /api/music-theory/scales/:root/:type
   app.get('/api/music-theory/scales/:root/:type', (req, res) => {
-    const { root, type } = req.params;
+    // Decode URL components
+    let { root, type } = req.params;
+    root = decodeURIComponent(root); // Handle F%23 -> F#
     
     // Validate root and type
     if (!isValidNote(root)) {
@@ -138,7 +140,7 @@ function setupApiRoutes() {
     
     // Extract octave if present (e.g., C4)
     let octave = 4; // Default octave
-    const rootWithoutOctave = root.replace(/([A-G][#b]?)(\d+)?/, (match, noteName, octaveNum) => {
+    const rootWithoutOctave = root.replace(/([A-G][#b]?)(\\d+)?/, (match, noteName, octaveNum) => {
       if (octaveNum) {
         octave = parseInt(octaveNum);
       }
@@ -187,7 +189,6 @@ function setupApiRoutes() {
     // Calculate MIDI notes using the octave information
     const midiNotes = transposedNotes.map((note, index) => {
       // For testing purposes, just use a simple offset based on octave
-      // In a real implementation, you'd need proper note to MIDI conversion
       return (octave * 12) + 60 + index; // Simple mapping for testing
     });
     
@@ -196,7 +197,9 @@ function setupApiRoutes() {
   
   // GET /api/music-theory/chords/:root/:type
   app.get('/api/music-theory/chords/:root/:type', (req, res) => {
-    const { root, type } = req.params;
+    // Decode URL components 
+    let { root, type } = req.params;
+    root = decodeURIComponent(root); // Handle F%23 -> F#
     
     // Validate root and type
     if (!isValidNote(root)) {
@@ -209,7 +212,7 @@ function setupApiRoutes() {
     
     // Extract octave if present (e.g., G4)
     let octave = 4; // Default octave
-    const rootWithoutOctave = root.replace(/([A-G][#b]?)(\d+)?/, (match, noteName, octaveNum) => {
+    const rootWithoutOctave = root.replace(/([A-G][#b]?)(\\d+)?/, (match, noteName, octaveNum) => {
       if (octaveNum) {
         octave = parseInt(octaveNum);
       }
@@ -258,7 +261,9 @@ function setupApiRoutes() {
   
   // GET /api/music-theory/progressions/:key/:mode
   app.get('/api/music-theory/progressions/:key/:mode', (req, res) => {
-    const { key, mode } = req.params;
+    // Decode URL components
+    let { key, mode } = req.params;
+    key = decodeURIComponent(key); // Handle F%23 -> F#
     
     // Validate key and mode
     if (!isValidNote(key) || !isValidMode(mode)) {
@@ -307,7 +312,9 @@ function setupApiRoutes() {
   
   // GET /api/music-theory/key-signature/:key/:mode
   app.get('/api/music-theory/key-signature/:key/:mode', (req, res) => {
-    const { key, mode } = req.params;
+    // Decode URL components
+    let { key, mode } = req.params;
+    key = decodeURIComponent(key); // Handle F%23 -> F#
     
     // Validate key and mode
     if (!isValidNote(key) || !isValidMode(mode)) {
@@ -447,7 +454,7 @@ function setupApiRoutes() {
     const buffer = Buffer.from('MIDI content');
     
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'attachment; filename="export.mid"');
+    res.setHeader('Content-Disposition', 'attachment; filename=\"export.mid\"');
     res.send(buffer);
   });
   
@@ -502,7 +509,7 @@ function setupApiRoutes() {
     
     // Fix content type to match test expectations
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'attachment; filename="export.mid"');
+    res.setHeader('Content-Disposition', 'attachment; filename=\"export.mid\"');
     res.send(buffer);
   });
   
