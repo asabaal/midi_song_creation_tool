@@ -121,9 +121,8 @@ function parseNoteString(noteStr) {
     octave = parseInt(noteStr.match(/[0-9]+$/)[0]);
     note = noteStr.replace(/[0-9]+$/, '');
   } else {
-    // Default to octave 4 if not provided
-    octave = 4;
-    note = noteStr;
+    // Throw error if octave is not provided
+    throw new Error(`Missing octave in note: ${noteStr}`);
   }
   
   return { note, octave };
@@ -148,18 +147,29 @@ function normalizeNoteName(noteName) {
  * @returns {number} MIDI note number
  */
 function noteToMidi(noteName) {
+  // Validate input is a string
+  if (typeof noteName !== 'string') {
+    throw new Error(`Invalid note: ${noteName}. Note must be a string.`);
+  }
+  
+  // Validate that the note includes an octave
+  if (!noteName.match(/\d/)) {
+    throw new Error(`Missing octave in note: ${noteName}`);
+  }
+  
   // Parse the note string into note and octave
   const { note, octave } = parseNoteString(noteName);
   
   // Handle flat notes (convert to sharp equivalent)
   let normalizedNote = normalizeNoteName(note);
   
-  // Calculate MIDI note number
+  // Validate that the note name is valid
   const noteIndex = NOTE_NAMES.indexOf(normalizedNote);
   if (noteIndex === -1) {
     throw new Error(`Invalid note name: ${note}`);
   }
   
+  // Calculate and return MIDI note number
   return noteIndex + (octave + 1) * 12;
 }
 
@@ -307,7 +317,7 @@ function getKeySignature(key) {
       if (position === undefined) {
         // If not in sharp keys, find its enharmonic equivalent
         const normalizedEnharmonic = normalizeNoteName(root);
-        position = -sharpKeys[normalizedEnharmonic];
+        position = -sharpKeys[normalizedEnharmonic] || 0;
       }
     } else if (mode === 'minor') {
       // Relative major is 3 semitones above, or 9 semitones below
@@ -322,7 +332,7 @@ function getKeySignature(key) {
       if (position === undefined) {
         // If not in sharp keys, find its enharmonic equivalent
         const normalizedEnharmonic = normalizeNoteName(relativeMajor);
-        position = -sharpKeys[normalizedEnharmonic];
+        position = -sharpKeys[normalizedEnharmonic] || 0;
       }
     } else {
       throw new Error(`Invalid mode: ${mode}`);
@@ -415,6 +425,7 @@ module.exports = {
   getKeySignature,
   generateChordProgression,
   normalizeNoteName,
+  parseNoteString,
   NOTE_NAMES,
   SCALES,
   CHORD_TYPES,
