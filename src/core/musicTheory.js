@@ -5,11 +5,24 @@
 // Note mapping for conversions
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const NOTE_ALIASES = {
-  Db: 'C#',
-  Eb: 'D#',
-  Gb: 'F#',
-  Ab: 'G#',
-  Bb: 'A#',
+  'Db': 'C#',
+  'Eb': 'D#',
+  'Gb': 'F#',
+  'Ab': 'G#',
+  'Bb': 'A#',
+  // Add more specific aliases with octaves for proper handling
+  'Db4': 'C#4',
+  'Eb4': 'D#4',
+  'Gb4': 'F#4',
+  'Ab4': 'G#4',
+  'Bb4': 'A#4',
+  'Db5': 'C#5',
+  'Eb5': 'D#5',
+  'Gb5': 'F#5',
+  'Ab5': 'G#5',
+  'Bb5': 'A#5',
+  'F#': 'F#',
+  'C#': 'C#'
 };
 // Scale definitions (semitone intervals)
 const SCALES = {
@@ -108,11 +121,25 @@ function parseNoteString(noteStr) {
     octave = parseInt(noteStr.match(/[0-9]+$/)[0]);
     note = noteStr.replace(/[0-9]+$/, '');
   } else {
-    // Throw error if octave is required but not provided
-    throw new Error(`Missing octave in note: ${noteStr}`);
+    // Default to octave 4 if not provided
+    octave = 4;
+    note = noteStr;
   }
   
   return { note, octave };
+}
+
+/**
+ * Normalizes a note name by converting flat notation to sharp
+ * @param {string} noteName - Note name potentially with flat (e.g. 'Db', 'Bb')
+ * @returns {string} Normalized note name using sharp notation
+ */
+function normalizeNoteName(noteName) {
+  // Check if the note exists in our aliases
+  if (NOTE_ALIASES[noteName]) {
+    return NOTE_ALIASES[noteName];
+  }
+  return noteName;
 }
 
 /**
@@ -125,12 +152,7 @@ function noteToMidi(noteName) {
   const { note, octave } = parseNoteString(noteName);
   
   // Handle flat notes (convert to sharp equivalent)
-  let normalizedNote = note;
-  Object.keys(NOTE_ALIASES).forEach(flat => {
-    if (normalizedNote === flat) {
-      normalizedNote = NOTE_ALIASES[flat];
-    }
-  });
+  let normalizedNote = normalizeNoteName(note);
   
   // Calculate MIDI note number
   const noteIndex = NOTE_NAMES.indexOf(normalizedNote);
@@ -170,20 +192,30 @@ function generateScale(root, scaleType, octave = 4) {
   }
   
   try {
-    // Try to parse the root note - it might include octave info
-    const { note, octave: specifiedOctave } = parseNoteString(root);
-    const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
+    // Parse the root note and handle the octave
+    let parsedRoot, useOctave;
+    
+    // Check if the root includes an octave
+    if (/\d/.test(root)) {
+      const { note, octave: specifiedOctave } = parseNoteString(root);
+      parsedRoot = note;
+      useOctave = specifiedOctave;
+    } else {
+      parsedRoot = root;
+      useOctave = octave;
+    }
     
     // Handle flat notes in the root (convert to sharp equivalent)
-    let normalizedNote = note;
-    Object.keys(NOTE_ALIASES).forEach(flat => {
-      if (normalizedNote === flat) {
-        normalizedNote = NOTE_ALIASES[flat];
-      }
-    });
+    const normalizedRoot = normalizeNoteName(parsedRoot);
+    
+    // Check if the note is valid
+    const noteIndex = NOTE_NAMES.indexOf(normalizedRoot);
+    if (noteIndex === -1) {
+      throw new Error(`Invalid note name: ${parsedRoot}`);
+    }
     
     // Generate the root MIDI note
-    const rootNote = noteToMidi(`${normalizedNote}${useOctave}`);
+    const rootNote = noteToMidi(`${normalizedRoot}${useOctave}`);
     
     // Generate the scale
     const scale = SCALES[scaleType].map(interval => rootNote + interval);
@@ -191,21 +223,7 @@ function generateScale(root, scaleType, octave = 4) {
     // Validate that all MIDI notes are within valid range (0-127)
     return scale.filter(note => note >= 0 && note <= 127);
   } catch (error) {
-    // Special case for API routes that don't include octave
-    // Assume octave 4 if root doesn't have an octave
-    if (!root.match(/[0-9]/)) {
-      const normalizedRoot = root;
-      Object.keys(NOTE_ALIASES).forEach(flat => {
-        if (normalizedRoot === flat) {
-          normalizedRoot = NOTE_ALIASES[flat];
-        }
-      });
-      
-      const rootNote = noteToMidi(`${normalizedRoot}${octave}`);
-      const scale = SCALES[scaleType].map(interval => rootNote + interval);
-      return scale.filter(note => note >= 0 && note <= 127);
-    }
-    
+    console.error(`Error generating scale: ${error.message}`);
     throw error;
   }
 }
@@ -223,20 +241,30 @@ function generateChord(root, chordType, octave = 4) {
   }
   
   try {
-    // Parse the root note
-    const { note, octave: specifiedOctave } = parseNoteString(root);
-    const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
+    // Parse the root note and handle the octave
+    let parsedRoot, useOctave;
+    
+    // Check if the root includes an octave
+    if (/\d/.test(root)) {
+      const { note, octave: specifiedOctave } = parseNoteString(root);
+      parsedRoot = note;
+      useOctave = specifiedOctave;
+    } else {
+      parsedRoot = root;
+      useOctave = octave;
+    }
     
     // Handle flat notes in the root (convert to sharp equivalent)
-    let normalizedNote = note;
-    Object.keys(NOTE_ALIASES).forEach(flat => {
-      if (normalizedNote === flat) {
-        normalizedNote = NOTE_ALIASES[flat];
-      }
-    });
+    const normalizedRoot = normalizeNoteName(parsedRoot);
+    
+    // Check if the note is valid
+    const noteIndex = NOTE_NAMES.indexOf(normalizedRoot);
+    if (noteIndex === -1) {
+      throw new Error(`Invalid note name: ${parsedRoot}`);
+    }
     
     // Generate the root MIDI note
-    const rootNote = noteToMidi(`${normalizedNote}${useOctave}`);
+    const rootNote = noteToMidi(`${normalizedRoot}${useOctave}`);
     
     // Generate the chord
     const chord = CHORD_TYPES[chordType].map(interval => rootNote + interval);
@@ -244,20 +272,7 @@ function generateChord(root, chordType, octave = 4) {
     // Validate that all MIDI notes are within valid range (0-127)
     return chord.filter(note => note >= 0 && note <= 127);
   } catch (error) {
-    // Special case for API routes that don't include octave
-    if (!root.match(/[0-9]/)) {
-      let normalizedRoot = root;
-      Object.keys(NOTE_ALIASES).forEach(flat => {
-        if (normalizedRoot === flat) {
-          normalizedRoot = NOTE_ALIASES[flat];
-        }
-      });
-      
-      const rootNote = noteToMidi(`${normalizedRoot}${octave}`);
-      const chord = CHORD_TYPES[chordType].map(interval => rootNote + interval);
-      return chord.filter(note => note >= 0 && note <= 127);
-    }
-    
+    console.error(`Error generating chord: ${error.message}`);
     throw error;
   }
 }
@@ -271,33 +286,55 @@ function getKeySignature(key) {
   if (!KEY_SIGNATURES[key]) {
     // Circle of fifths positions (C major = 0, moving clockwise adds sharps)
     const sharpKeys = {
-      C: 0,
-      G: 1,
-      D: 2,
-      A: 3,
-      E: 4,
-      B: 5,
+      'C': 0,
+      'G': 1,
+      'D': 2,
+      'A': 3,
+      'E': 4,
+      'B': 5,
       'F#': 6,
       'C#': 7,
     };
     const [root, mode] = key.split(' ');
+    
+    // Normalize the root note
+    const normalizedRoot = normalizeNoteName(root);
+    
     // Adjust for minor keys (relative minor is 3 semitones below major)
     let position;
     if (mode === 'major') {
-      position = sharpKeys[root] || -sharpKeys[NOTE_ALIASES[root]];
+      position = sharpKeys[normalizedRoot];
+      if (position === undefined) {
+        // If not in sharp keys, find its enharmonic equivalent
+        const normalizedEnharmonic = normalizeNoteName(root);
+        position = -sharpKeys[normalizedEnharmonic];
+      }
     } else if (mode === 'minor') {
       // Relative major is 3 semitones above, or 9 semitones below
-      const relativeMajor = NOTE_NAMES[(NOTE_NAMES.indexOf(root) + 3) % 12];
-      position = sharpKeys[relativeMajor] || -sharpKeys[NOTE_ALIASES[relativeMajor]];
+      const rootIndex = NOTE_NAMES.indexOf(normalizedRoot);
+      if (rootIndex === -1) {
+        throw new Error(`Invalid note name: ${root}`);
+      }
+      
+      const relativeMajorIndex = (rootIndex + 3) % 12;
+      const relativeMajor = NOTE_NAMES[relativeMajorIndex];
+      position = sharpKeys[relativeMajor];
+      if (position === undefined) {
+        // If not in sharp keys, find its enharmonic equivalent
+        const normalizedEnharmonic = normalizeNoteName(relativeMajor);
+        position = -sharpKeys[normalizedEnharmonic];
+      }
     } else {
       throw new Error(`Invalid mode: ${mode}`);
     }
+    
     // Negative positions are flat keys
     return {
-      keySignature: Math.abs(position),
+      keySignature: Math.abs(position || 0),
       accidental: position >= 0 ? 'sharp' : 'flat',
     };
   }
+  
   // Use the predefined key signature mapping
   return KEY_SIGNATURES[key];
 }
@@ -311,13 +348,16 @@ function getKeySignature(key) {
  * @returns {Array<Array<number>>} Array of chord arrays, each containing MIDI note numbers
  */
 function generateChordProgression(progression, key, mode, octave = 4) {
-  const scale = generateScale(key, mode, octave);
+  // Normalize key
+  const normalizedKey = normalizeNoteName(key);
+  
+  const scale = generateScale(normalizedKey, mode, octave);
   
   // Make sure we have a complete scale with at least 7 notes for diatonic chords
   const fullScale = [...scale];
   if (fullScale.length < 7) {
     // Add next octave if needed
-    const nextOctaveScale = generateScale(key, mode, octave + 1);
+    const nextOctaveScale = generateScale(normalizedKey, mode, octave + 1);
     for (let i = fullScale.length; i < 7; i++) {
       fullScale.push(nextOctaveScale[i - fullScale.length]);
     }
@@ -374,6 +414,7 @@ module.exports = {
   generateChord,
   getKeySignature,
   generateChordProgression,
+  normalizeNoteName,
   NOTE_NAMES,
   SCALES,
   CHORD_TYPES,
