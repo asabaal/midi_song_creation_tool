@@ -1,22 +1,25 @@
-// tests/setup-rtl.js
+// tests/setup-rtl.js - Setup file for React Testing Library
 import '@testing-library/jest-dom';
-import { configure } from '@testing-library/react';
 
-// Configure React Testing Library
-configure({
-  // Configures the timeout time in milliseconds for async utilities
-  asyncUtilTimeout: 5000,
-  
-  // By default, React Testing Library will only log the DOM when a
-  // test fails. Set this to true to always log to console.
-  testIdAttribute: 'data-testid',
-  
-  // The retry function will try to find the element again if it's not found
-  // on the first try
-  retry: {
-    // How many times to retry
-    count: 3,
-    // How long to wait between retries
-    delay: 100,
+// This file can contain custom matchers and utilities for React Testing Library
+// that should be available for all tests.
+
+// For example, extending jest-dom with custom matchers:
+expect.extend({
+  toHaveBackgroundSize(element, expected) {
+    const computedStyle = window.getComputedStyle(element);
+    const actualValue = computedStyle.backgroundSize;
+    
+    const pass = actualValue === expected;
+    
+    return {
+      pass,
+      message: () => 
+        pass
+          ? `Expected element not to have background-size: ${expected}, but it did.`
+          : `Expected element to have background-size: ${expected}, but it had ${actualValue}.`
+    };
   },
 });
+
+// Extend RTL's screen object with custom queries if needed
