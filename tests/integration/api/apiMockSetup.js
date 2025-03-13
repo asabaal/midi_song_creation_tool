@@ -136,8 +136,14 @@ function setupApiRoutes() {
       return res.status(400).json({ error: 'Invalid scale type' });
     }
     
-    // Handle root with octave (e.g., C4)
-    const rootOnly = root.replace(/\d+$/, '');
+    // Extract octave if present (e.g., C4)
+    let octave = 4; // Default octave
+    const rootWithoutOctave = root.replace(/([A-G][#b]?)(\d+)?/, (match, noteName, octaveNum) => {
+      if (octaveNum) {
+        octave = parseInt(octaveNum);
+      }
+      return noteName;
+    });
     
     // Get scale based on type
     let notes;
@@ -148,16 +154,41 @@ function setupApiRoutes() {
       case 'minor':
         notes = ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb'];
         break;
+      case 'pentatonic':
+        // Pentatonic scale has 5 notes
+        notes = ['C', 'D', 'E', 'G', 'A'];
+        break;
+      case 'blues':
+        // Blues scale has 6 notes
+        notes = ['C', 'Eb', 'F', 'F#', 'G', 'Bb'];
+        break;
+      case 'dorian':
+        notes = ['C', 'D', 'Eb', 'F', 'G', 'A', 'Bb'];
+        break;
+      case 'phrygian':
+        notes = ['C', 'Db', 'Eb', 'F', 'G', 'Ab', 'Bb'];
+        break;
+      case 'lydian':
+        notes = ['C', 'D', 'E', 'F#', 'G', 'A', 'B'];
+        break;
+      case 'mixolydian':
+        notes = ['C', 'D', 'E', 'F', 'G', 'A', 'Bb'];
+        break;
+      case 'locrian':
+        notes = ['C', 'Db', 'Eb', 'F', 'Gb', 'Ab', 'Bb'];
+        break;
       default:
         notes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
     }
     
     // Transpose to the requested root
-    const transposedNotes = transposeScale(notes, 'C', rootOnly);
+    const transposedNotes = transposeScale(notes, 'C', rootWithoutOctave);
     
-    // Calculate MIDI notes
+    // Calculate MIDI notes using the octave information
     const midiNotes = transposedNotes.map((note, index) => {
-      return 60 + index; // Simple mapping for testing
+      // For testing purposes, just use a simple offset based on octave
+      // In a real implementation, you'd need proper note to MIDI conversion
+      return (octave * 12) + 60 + index; // Simple mapping for testing
     });
     
     res.json({ notes: transposedNotes, midiNotes });
@@ -176,8 +207,14 @@ function setupApiRoutes() {
       return res.status(400).json({ error: 'Invalid chord type' });
     }
     
-    // Handle root with octave (e.g., G4)
-    const rootOnly = root.replace(/\d+$/, '');
+    // Extract octave if present (e.g., G4)
+    let octave = 4; // Default octave
+    const rootWithoutOctave = root.replace(/([A-G][#b]?)(\d+)?/, (match, noteName, octaveNum) => {
+      if (octaveNum) {
+        octave = parseInt(octaveNum);
+      }
+      return noteName;
+    });
     
     // Get chord based on type
     let notes;
@@ -191,16 +228,29 @@ function setupApiRoutes() {
       case 'seventh':
         notes = ['C', 'E', 'G', 'Bb'];
         break;
+      case 'diminished':
+        notes = ['C', 'Eb', 'Gb'];
+        break;
+      case 'augmented':
+        notes = ['C', 'E', 'G#'];
+        break;
+      case 'sus2':
+        notes = ['C', 'D', 'G'];
+        break;
+      case 'sus4':
+        notes = ['C', 'F', 'G'];
+        break;
       default:
         notes = ['C', 'E', 'G'];
     }
     
     // Transpose to the requested root
-    const transposedNotes = transposeChord(notes, 'C', rootOnly);
+    const transposedNotes = transposeChord(notes, 'C', rootWithoutOctave);
     
-    // Calculate MIDI notes
+    // Calculate MIDI notes using the octave information
     const midiNotes = transposedNotes.map((note, index) => {
-      return 60 + index * 3; // Simple mapping for testing
+      // For testing purposes, just use a simple offset based on octave
+      return (octave * 12) + 60 + index * 3; // Simple mapping for testing
     });
     
     res.json({ notes: transposedNotes, midiNotes });
@@ -755,9 +805,12 @@ function setupApiRoutes() {
   
   // Helper functions
   function isValidNote(note) {
-    // Modified regex to handle notes with octaves like C4
     if (!note) return false;
+    
+    // Strip octave number if present
     const baseNote = note.replace(/\d+$/, '');
+    
+    // Support for sharps and flats
     return /^[A-G][#b]?$/.test(baseNote);
   }
   
@@ -774,12 +827,14 @@ function setupApiRoutes() {
   }
   
   function transposeScale(notes, fromRoot, toRoot) {
-    // Simple transpose for testing
+    // In a real implementation, you'd need proper transposition logic
+    // For testing, just return the notes as is
     return notes;
   }
   
   function transposeChord(notes, fromRoot, toRoot) {
-    // Simple transpose for testing
+    // In a real implementation, you'd need proper transposition logic
+    // For testing, just return the notes as is
     return notes;
   }
   
