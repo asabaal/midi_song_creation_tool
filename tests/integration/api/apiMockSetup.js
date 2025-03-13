@@ -1,7 +1,14 @@
 // tests/integration/api/apiMockSetup.js
+const express = require('express');
 
 // Create a mock API server for testing
-function setupApiRoutes(app) {
+function setupApiRoutes() {
+  // Create Express app
+  const app = express();
+  
+  // Add middleware
+  app.use(express.json());
+  
   // Mock session data
   const sessions = [
     {
@@ -613,6 +620,9 @@ function setupApiRoutes(app) {
     // Simple transpose for testing
     return notes;
   }
+  
+  // Return the configured Express app
+  return app;
 }
 
 module.exports = setupApiRoutes;
