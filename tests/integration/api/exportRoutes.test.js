@@ -60,6 +60,7 @@ describe('Export/Import API Integration Tests', () => {
       // Then import it as a new session
       const importResponse = await request(mockApp)
         .post('/api/export/import')
+        .set('Content-Type', 'text/plain') // Set content type explicitly
         .send(jsonString)
         .expect(201);
 
@@ -69,6 +70,7 @@ describe('Export/Import API Integration Tests', () => {
     it('POST /api/export/import should reject invalid JSON data', async () => {
       await request(mockApp)
         .post('/api/export/import')
+        .set('Content-Type', 'text/plain')
         .send('this is not valid JSON')
         .expect(400);
     });
