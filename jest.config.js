@@ -38,7 +38,7 @@ module.exports = {
       moduleNameMapper: {
         '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
         '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js',
-        '^tone$': '<rootDir>/tests/__mocks__/tone.js',
+        '^tone$': 'identity-obj-proxy', // Use identity-obj-proxy instead of file path
         '^../../src/client/contexts/SessionContext$': '<rootDir>/tests/__mocks__/SessionContext.js',
         '^@/components/(.*)$': '<rootDir>/src/client/components/$1',
         '^@/services/(.*)$': '<rootDir>/src/client/services/$1',
