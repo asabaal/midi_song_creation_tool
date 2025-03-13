@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const sessionRoutes = require('./routes/sessionRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const patternRoutes = require('./routes/patternRoutes');
+const musicTheoryRoutes = require('./routes/musicTheoryRoutes');
 
 // Create Express app
 const app = express();
@@ -20,6 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/patterns', patternRoutes);
+app.use('/api/music-theory', musicTheoryRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
