@@ -14,6 +14,10 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Enable URL-encoded paths with special characters
+app.set('strict routing', false);
+app.enable('case sensitive routing');
+
 // API routes
 app.use('/api/music-theory', musicTheoryRoutes);
 
