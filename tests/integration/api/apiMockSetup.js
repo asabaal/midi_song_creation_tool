@@ -110,12 +110,16 @@ function createMockApiServer() {
     const { root, type } = req.params;
     
     // Validate root and type
-    if (!isValidNote(root) || !isValidScaleType(type)) {
-      return res.status(400).json({ error: 'Invalid root note or scale type' });
+    if (!isValidNote(root)) {
+      return res.status(400).json({ error: 'Invalid root note' });
+    }
+    
+    if (!isValidScaleType(type)) {
+      return res.status(400).json({ error: 'Invalid scale type' });
     }
     
     // Handle root with octave (e.g., C4)
-    const rootOnly = root.replace(/\\d+$/, '');
+    const rootOnly = root.replace(/\d+$/, '');
     
     // Get scale based on type
     let notes;
@@ -146,12 +150,16 @@ function createMockApiServer() {
     const { root, type } = req.params;
     
     // Validate root and type
-    if (!isValidNote(root) || !isValidChordType(type)) {
-      return res.status(400).json({ error: 'Invalid root note or chord type' });
+    if (!isValidNote(root)) {
+      return res.status(400).json({ error: 'Invalid root note' });
+    }
+    
+    if (!isValidChordType(type)) {
+      return res.status(400).json({ error: 'Invalid chord type' });
     }
     
     // Handle root with octave (e.g., G4)
-    const rootOnly = root.replace(/\\d+$/, '');
+    const rootOnly = root.replace(/\d+$/, '');
     
     // Get chord based on type
     let notes;
@@ -336,12 +344,7 @@ function createMockApiServer() {
     }
     
     res.setHeader('Content-Type', 'application/json');
-    // Respond with the session data directly instead of nesting it
-    const exportData = {
-      ...session,
-      exportDate: new Date().toISOString()
-    };
-    res.json(exportData);
+    res.json(session);
   });
   
   // GET /api/export/midi/:sessionId
@@ -362,7 +365,16 @@ function createMockApiServer() {
   
   // POST /api/export/import
   app.post('/api/export/import', (req, res) => {
-    const sessionData = req.body;
+    let sessionData = req.body;
+    
+    // Handle string JSON
+    if (typeof sessionData === 'string') {
+      try {
+        sessionData = JSON.parse(sessionData);
+      } catch (error) {
+        return res.status(400).json({ error: 'Invalid JSON format' });
+      }
+    }
     
     if (!sessionData || Object.keys(sessionData).length === 0) {
       return res.status(400).json({ error: 'No data provided for import' });
@@ -586,7 +598,8 @@ function createMockApiServer() {
   // Helper functions
   function isValidNote(note) {
     // Modified regex to handle notes with octaves like C4
-    const baseNote = note.replace(/\\d+$/, '');
+    if (!note) return false;
+    const baseNote = note.replace(/\d+$/, '');
     return /^[A-G][#b]?$/.test(baseNote);
   }
   

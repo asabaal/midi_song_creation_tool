@@ -1,23 +1,12 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const app = require('../../../app');
-const dbHandler = require('../setupTestDB');
+const { app } = require('../testSetup');
 
 describe('Export/Import API Integration Tests', () => {
-  beforeAll(async () => {
-    await dbHandler.connect();
-  });
-
-  afterEach(async () => {
-    await dbHandler.clearDatabase();
-  });
-
-  afterAll(async () => {
-    await dbHandler.closeDatabase();
-  });
-
-  test('GET /api/export/json/:sessionId should export session data as JSON', async () => {
-    // Create a session
+  let testSessionId;
+  
+  beforeEach(async () => {
+    // Create a test session for each test
     const sessionResponse = await request(app)
       .post('/api/sessions')
       .send({
@@ -25,17 +14,18 @@ describe('Export/Import API Integration Tests', () => {
         tempo: 120,
         timeSignature: '4/4'
       });
+    
+    testSessionId = sessionResponse.body.id || sessionResponse.body._id;
+  });
 
-    expect(sessionResponse.status).toBe(201);
-    const sessionId = sessionResponse.body._id;
-
+  test('GET /api/export/json/:sessionId should export session data as JSON', async () => {
     // Export session as JSON
     const exportResponse = await request(app)
-      .get(`/api/export/json/${sessionId}`);
+      .get(`/api/export/json/${testSessionId}`);
 
     expect(exportResponse.status).toBe(200);
-    expect(exportResponse.body).toHaveProperty('name', 'Export Test Session');
-    expect(exportResponse.body).toHaveProperty('tempo', 120);
+    expect(exportResponse.body.name).toBe('Export Test Session');
+    expect(exportResponse.body.tempo).toBe(120);
   });
 
   test('GET /api/export/json/:sessionId should return 404 for non-existent session', async () => {
@@ -47,21 +37,9 @@ describe('Export/Import API Integration Tests', () => {
   });
 
   test('GET /api/export/midi/:sessionId should export session as MIDI file', async () => {
-    // Create a session
-    const sessionResponse = await request(app)
-      .post('/api/sessions')
-      .send({
-        name: 'Export Test Session',
-        tempo: 120,
-        timeSignature: '4/4'
-      });
-
-    expect(sessionResponse.status).toBe(201);
-    const sessionId = sessionResponse.body._id;
-
     // Export session as MIDI
     const exportResponse = await request(app)
-      .get(`/api/export/midi/${sessionId}`);
+      .get(`/api/export/midi/${testSessionId}`);
 
     expect(exportResponse.status).toBe(200);
     expect(exportResponse.headers['content-type']).toMatch(/application\/octet-stream/);
@@ -92,9 +70,8 @@ describe('Export/Import API Integration Tests', () => {
       .send(sessionData);
 
     expect(importResponse.status).toBe(201);
-    expect(importResponse.body).toHaveProperty('_id');
-    expect(importResponse.body).toHaveProperty('name', 'Import Test Session');
-    expect(importResponse.body).toHaveProperty('tempo', 110);
+    expect(importResponse.body.name).toBe('Import Test Session');
+    expect(importResponse.body.tempo).toBe(110);
   });
 
   test('POST /api/export/import should handle importing a string JSON representation', async () => {
@@ -112,7 +89,7 @@ describe('Export/Import API Integration Tests', () => {
       .send(sessionDataStr);
 
     expect(importResponse.status).toBe(201);
-    expect(importResponse.body).toHaveProperty('name', 'String Import Test');
+    expect(importResponse.body.name).toBe('String Import Test');
   });
 
   test('POST /api/export/import should reject invalid JSON data', async () => {

@@ -1,2 +1,3 @@
-// This file has been intentionally removed to fix duplicate mock errors.
-// Please use the mock in the root __mocks__ directory instead.
+// tests/__mocks__/styleMock.js
+// This is a placeholder file to avoid deleting the directory structure.
+// The actual mock is in the root __mocks__ directory.

@@ -14,19 +14,14 @@ beforeAll(async () => {
   app = createMockApiServer();
   
   // Start the server explicitly for SuperTest
-  server = http.createServer(app);
-  server.listen(0); // Use random port
-  
-  // Add the server to the app for cleanup
-  app.server = server;
+  server = app.listen(0); // Use random port
   
   // Setup MongoDB in memory server for tests that need it
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
   
   const mongooseOpts = {
-    // Remove deprecated options
-    // useNewUrlParser and useUnifiedTopology are default in Mongoose 6+
+    // Remove deprecated options as these are default in Mongoose 6+
   };
 
   await mongoose.connect(uri, mongooseOpts);
@@ -37,8 +32,8 @@ beforeAll(async () => {
 // Clean up after all tests
 afterAll(async () => {
   // Close Express server if it's running
-  if (app && app.server) {
-    await new Promise(resolve => app.server.close(resolve));
+  if (server) {
+    await new Promise(resolve => server.close(resolve));
   }
   
   // Disconnect from mongoose
