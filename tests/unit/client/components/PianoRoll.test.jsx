@@ -1,12 +1,18 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PianoRoll from '../../../../src/client/components/PianoRoll';
-import { useSessionContext } from '../../../../src/client/context/SessionContext';
 
 // Mock the SessionContext module
-jest.mock('../../../../src/client/context/SessionContext', () => ({
-  useSessionContext: jest.fn()
+jest.mock('../../../../src/client/contexts/SessionContext', () => ({
+  useSessionContext: jest.fn(),
+  __esModule: true,
+  default: {
+    Provider: ({ children }) => children
+  }
 }));
+
+// Get the useSessionContext mock from the mocked module
+const { useSessionContext } = require('../../../../src/client/contexts/SessionContext');
 
 describe('PianoRoll', () => {
   // Mock session context data
@@ -25,13 +31,10 @@ describe('PianoRoll', () => {
         }
       ],
       tempo: 120,
-      timeSignature: '4/4'
+      timeSignature: '4/4',
+      selectedTrackId: 'track1'
     },
-    selectedTrackId: 'track1',
-    setSelectedTrackId: jest.fn(),
-    addNoteToTrack: jest.fn(),
-    removeNoteFromTrack: jest.fn(),
-    updateNoteInTrack: jest.fn()
+    addNoteToTrack: jest.fn()
   };
 
   beforeEach(() => {
@@ -82,6 +85,7 @@ describe('PianoRoll', () => {
     const { container } = render(<PianoRoll />);
     // Just check if the component rendered without errors
     expect(container.firstChild).toBeTruthy();
+    expect(screen.getByTestId('piano-roll')).toBeInTheDocument();
   });
   
   // Simple test for adding a note
