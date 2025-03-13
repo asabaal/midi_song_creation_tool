@@ -1,16 +1,13 @@
 // tests/integration/api/patternRoutes.test.js
 const request = require('supertest');
-const apiMockSetup = require('../api/apiMockSetup');
-
-// Use the mock API directly
-const app = apiMockSetup();
+const { mockApp } = require('../testSetup');
 
 describe('Pattern Generation API Integration Tests', () => {
   let sessionId;
 
   // Create a session before tests
   beforeAll(async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .post('/api/sessions')
       .send({
         name: 'Pattern Test Session',
@@ -34,7 +31,7 @@ describe('Pattern Generation API Integration Tests', () => {
         return console.log('Skipping test as session ID is not available');
       }
 
-      const response = await request(app)
+      const response = await request(mockApp)
         .post(`/api/sessions/${sessionId}/patterns`)
         .send({
           type: 'chord',
@@ -53,7 +50,7 @@ describe('Pattern Generation API Integration Tests', () => {
     });
 
     it('should return 404 for non-existent session', async () => {
-      await request(app)
+      await request(mockApp)
         .post('/api/sessions/nonexistentsession/patterns')
         .send({
           type: 'chord',
@@ -73,7 +70,7 @@ describe('Pattern Generation API Integration Tests', () => {
 
       // This test assumes your API validates input parameters
       // If your actual API doesn't validate, you might need to adjust this test
-      await request(app)
+      await request(mockApp)
         .post(`/api/sessions/${sessionId}/patterns`)
         .send({
           type: 'chord',
@@ -90,7 +87,7 @@ describe('Pattern Generation API Integration Tests', () => {
         return console.log('Skipping test as session ID is not available');
       }
 
-      const response = await request(app)
+      const response = await request(mockApp)
         .post(`/api/sessions/${sessionId}/patterns`)
         .send({
           type: 'bassline',
@@ -108,7 +105,7 @@ describe('Pattern Generation API Integration Tests', () => {
     });
 
     it('should return 404 for non-existent session', async () => {
-      await request(app)
+      await request(mockApp)
         .post('/api/sessions/nonexistentsession/patterns')
         .send({
           type: 'bassline',
@@ -128,7 +125,7 @@ describe('Pattern Generation API Integration Tests', () => {
         return console.log('Skipping test as session ID is not available');
       }
 
-      const response = await request(app)
+      const response = await request(mockApp)
         .post(`/api/sessions/${sessionId}/patterns`)
         .send({
           type: 'drums',
@@ -142,7 +139,7 @@ describe('Pattern Generation API Integration Tests', () => {
     });
 
     it('should return 404 for non-existent session', async () => {
-      await request(app)
+      await request(mockApp)
         .post('/api/sessions/nonexistentsession/patterns')
         .send({
           type: 'drums',
@@ -158,7 +155,7 @@ describe('Pattern Generation API Integration Tests', () => {
         return console.log('Skipping test as session ID is not available');
       }
 
-      const response = await request(app)
+      const response = await request(mockApp)
         .post(`/api/sessions/${sessionId}/patterns`)
         .send({
           type: 'drums',
@@ -180,7 +177,7 @@ describe('Pattern Generation API Integration Tests', () => {
       }
 
       // First add some notes to clear
-      await request(app)
+      await request(mockApp)
         .post(`/api/sessions/${sessionId}/patterns`)
         .send({
           type: 'chord',
@@ -190,13 +187,13 @@ describe('Pattern Generation API Integration Tests', () => {
         .expect(201);
 
       // Now clear the notes
-      await request(app)
+      await request(mockApp)
         .delete(`/api/sessions/${sessionId}/notes`)
         .expect(204);
     });
 
     it('should return 404 for non-existent session', async () => {
-      await request(app)
+      await request(mockApp)
         .delete('/api/sessions/nonexistentsession/notes')
         .expect(404);
     });

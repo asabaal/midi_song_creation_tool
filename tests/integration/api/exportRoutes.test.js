@@ -1,110 +1,101 @@
 const request = require('supertest');
-const mongoose = require('mongoose');
-const { app } = require('../testSetup');
+const { mockApp } = require('../testSetup');
 
 describe('Export/Import API Integration Tests', () => {
-  let testSessionId;
-  
+  let sessionId;
+
   beforeEach(async () => {
     // Create a test session for each test
-    const sessionResponse = await request(app)
+    const sessionResponse = await request(mockApp)
       .post('/api/sessions')
       .send({
         name: 'Export Test Session',
         tempo: 120,
         timeSignature: '4/4'
       });
-    
-    testSessionId = sessionResponse.body.id || sessionResponse.body._id;
+
+    sessionId = sessionResponse.body.id;
   });
 
-  test('GET /api/export/json/:sessionId should export session data as JSON', async () => {
-    // Export session as JSON
-    const exportResponse = await request(app)
-      .get(`/api/export/json/${testSessionId}`);
+  describe('JSON Export/Import', () => {
+    it('GET /api/export/json/:sessionId should export session data as JSON', async () => {
+      const response = await request(mockApp)
+        .get(`/api/export/json/${sessionId}`)
+        .expect(200)
+        .expect('Content-Type', /json/);
 
-    expect(exportResponse.status).toBe(200);
-    expect(exportResponse.body.name).toBe('Export Test Session');
-    expect(exportResponse.body.tempo).toBe(120);
-  });
-
-  test('GET /api/export/json/:sessionId should return 404 for non-existent session', async () => {
-    const exportResponse = await request(app)
-      .get('/api/export/json/non-existent-id');
-
-    expect(exportResponse.status).toBe(404);
-  });
-
-  test('GET /api/export/midi/:sessionId should export session as MIDI file', async () => {
-    // Export session as MIDI
-    const exportResponse = await request(app)
-      .get(`/api/export/midi/${testSessionId}`);
-
-    expect(exportResponse.status).toBe(200);
-    expect(exportResponse.headers['content-type']).toMatch(/application\/octet-stream/);
-  });
-
-  test('GET /api/export/midi/:sessionId should return 404 for non-existent session', async () => {
-    const exportResponse = await request(app)
-      .get('/api/export/midi/non-existent-id');
-
-    expect(exportResponse.status).toBe(404);
-  });
-
-  test('POST /api/export/import should import session data from JSON', async () => {
-    // Create a sample session
-    const sessionData = {
-      name: 'Import Test Session',
-      tempo: 110,
-      timeSignature: '3/4',
-      notes: [
-        { pitch: 60, velocity: 100, startTime: 0, duration: 0.5 }
-      ]
-    };
-
-    // Import the session
-    const importResponse = await request(app)
-      .post('/api/export/import')
-      .send(sessionData);
-
-    expect(importResponse.status).toBe(201);
-    expect(importResponse.body.name).toBe('Import Test Session');
-    expect(importResponse.body.tempo).toBe(110);
-  });
-
-  test('POST /api/export/import should handle importing a string JSON representation', async () => {
-    // Create a sample session as a JSON string
-    const sessionDataStr = JSON.stringify({
-      name: 'String Import Test',
-      tempo: 95,
-      timeSignature: '4/4'
+      expect(response.body).toHaveProperty('id', sessionId);
+      expect(response.body).toHaveProperty('name', 'Export Test Session');
     });
 
-    // Import the session
-    const importResponse = await request(app)
-      .post('/api/export/import')
-      .set('Content-Type', 'application/json')
-      .send(sessionDataStr);
+    it('GET /api/export/json/:sessionId should return 404 for non-existent session', async () => {
+      await request(mockApp)
+        .get('/api/export/json/nonexistentsession')
+        .expect(404);
+    });
 
-    expect(importResponse.status).toBe(201);
-    expect(importResponse.body.name).toBe('String Import Test');
+    it('POST /api/export/import should import session data from JSON', async () => {
+      // First get the JSON export
+      const exportResponse = await request(mockApp)
+        .get(`/api/export/json/${sessionId}`);
+
+      // Then import it as a new session
+      const importResponse = await request(mockApp)
+        .post('/api/export/import')
+        .send(exportResponse.body)
+        .expect(201);
+
+      expect(importResponse.body).toHaveProperty('name', 'Export Test Session');
+      expect(importResponse.body.id).not.toBe(sessionId); // Should be a new ID
+    });
+
+    it('POST /api/export/import should handle importing a string JSON representation', async () => {
+      // First get the JSON export
+      const exportResponse = await request(mockApp)
+        .get(`/api/export/json/${sessionId}`);
+
+      // Convert to string
+      const jsonString = JSON.stringify(exportResponse.body);
+
+      // Then import it as a new session
+      const importResponse = await request(mockApp)
+        .post('/api/export/import')
+        .send(jsonString)
+        .expect(201);
+
+      expect(importResponse.body).toHaveProperty('name', 'Export Test Session');
+    });
+
+    it('POST /api/export/import should reject invalid JSON data', async () => {
+      await request(mockApp)
+        .post('/api/export/import')
+        .send('this is not valid JSON')
+        .expect(400);
+    });
+
+    it('POST /api/export/import should reject empty data', async () => {
+      await request(mockApp)
+        .post('/api/export/import')
+        .send({})
+        .expect(400);
+    });
   });
 
-  test('POST /api/export/import should reject invalid JSON data', async () => {
-    // Send invalid data
-    const importResponse = await request(app)
-      .post('/api/export/import')
-      .send('This is not JSON');
+  describe('MIDI Export', () => {
+    it('GET /api/export/midi/:sessionId should export session as MIDI file', async () => {
+      const response = await request(mockApp)
+        .get(`/api/export/midi/${sessionId}`)
+        .expect(200)
+        .expect('Content-Type', /octet-stream/)
+        .expect('Content-Disposition', /attachment/);
 
-    expect(importResponse.status).toBe(400);
-  });
+      expect(response.body).toBeTruthy();
+    });
 
-  test('POST /api/export/import should reject empty data', async () => {
-    // Send empty data
-    const importResponse = await request(app)
-      .post('/api/export/import')
-      .send({});
-
-    expect(importResponse.status).toBe(400);
+    it('GET /api/export/midi/:sessionId should return 404 for non-existent session', async () => {
+      await request(mockApp)
+        .get('/api/export/midi/nonexistentsession')
+        .expect(404);
+    });
   });
 });

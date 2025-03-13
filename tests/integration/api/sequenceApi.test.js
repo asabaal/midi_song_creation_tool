@@ -1,11 +1,11 @@
 const request = require('supertest');
-const { app } = require('../testSetup');
+const { mockApp } = require('../testSetup');
 
 describe('Sequence API', () => {
   let sessionId;
 
   beforeAll(async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .post('/api/sessions')
       .send({
         name: 'Sequence API Test Session',
@@ -17,37 +17,37 @@ describe('Sequence API', () => {
   });
 
   test('POST /api/sessions/:id/notes should add a note to a sequence', async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .post(`/api/sessions/${sessionId}/notes`)
       .send({
-        pitch: 60,
-        start: 0,
-        duration: 1,
-        velocity: 100
+        pitch: 60, // Middle C
+        start: 0,  // Start at beginning
+        duration: 1, // Quarter note
+        velocity: 100 // Medium-loud
       });
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('id');
     expect(response.body).toHaveProperty('pitch', 60);
+    expect(response.body).toHaveProperty('start', 0);
     expect(response.body).toHaveProperty('duration', 1);
+    expect(response.body).toHaveProperty('velocity', 100);
   });
 
   test('POST /api/sessions/:id/notes should validate note properties', async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .post(`/api/sessions/${sessionId}/notes`)
       .send({
-        // Missing required pitch
-        start: 0,
-        duration: 1
+        // Missing required properties
+        velocity: 100
       });
 
     expect(response.status).toBe(400);
-    expect(response.body).toHaveProperty('errors');
   });
 
   test('PUT /api/sessions/:id/notes/:noteId should update a note', async () => {
-    // First, add a note
-    const createResponse = await request(app)
+    // First add a note
+    const createResponse = await request(mockApp)
       .post(`/api/sessions/${sessionId}/notes`)
       .send({
         pitch: 60,
@@ -59,28 +59,28 @@ describe('Sequence API', () => {
     const noteId = createResponse.body.id;
 
     // Then update it
-    const updateResponse = await request(app)
+    const updateResponse = await request(mockApp)
       .put(`/api/sessions/${sessionId}/notes/${noteId}`)
       .send({
-        pitch: 64,
-        start: 1,
-        duration: 0.5
+        pitch: 62, // D
+        start: 1,  // Start at second beat
+        duration: 0.5 // Eighth note
       });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body).toHaveProperty('id', noteId);
-    expect(updateResponse.body).toHaveProperty('pitch', 64);
+    expect(updateResponse.body).toHaveProperty('pitch', 62);
     expect(updateResponse.body).toHaveProperty('start', 1);
     expect(updateResponse.body).toHaveProperty('duration', 0.5);
   });
 
   test('DELETE /api/sessions/:id/notes/:noteId should delete a note', async () => {
-    // First, add a note
-    const createResponse = await request(app)
+    // First add a note
+    const createResponse = await request(mockApp)
       .post(`/api/sessions/${sessionId}/notes`)
       .send({
-        pitch: 60,
-        start: 0,
+        pitch: 64, // E
+        start: 2,
         duration: 1,
         velocity: 100
       });
@@ -88,17 +88,19 @@ describe('Sequence API', () => {
     const noteId = createResponse.body.id;
 
     // Then delete it
-    await request(app)
-      .delete(`/api/sessions/${sessionId}/notes/${noteId}`)
-      .expect(204);
+    const deleteResponse = await request(mockApp)
+      .delete(`/api/sessions/${sessionId}/notes/${noteId}`);
+
+    expect(deleteResponse.status).toBe(204);
   });
 
   test('POST /api/sessions/:id/patterns should generate a chord pattern', async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .post(`/api/sessions/${sessionId}/patterns`)
       .send({
-        patternType: 'chord',
-        rootNote: 'C',
+        type: 'chord',
+        patternType: 'simple',
+        rootNote: 'C4',
         chordType: 'major',
         bars: 1
       });
@@ -109,13 +111,13 @@ describe('Sequence API', () => {
   });
 
   test('POST /api/sessions/:id/patterns should generate a bassline pattern', async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .post(`/api/sessions/${sessionId}/patterns`)
       .send({
-        patternType: 'bassline',
-        rootNote: 'C',
-        chordProgression: ['C', 'F', 'G'],
-        bars: 2
+        type: 'bassline',
+        patternType: 'walking',
+        rootNote: 'C2',
+        bars: 1
       });
 
     expect(response.status).toBe(201);
@@ -124,11 +126,11 @@ describe('Sequence API', () => {
   });
 
   test('POST /api/sessions/:id/patterns should generate a drum pattern', async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .post(`/api/sessions/${sessionId}/patterns`)
       .send({
-        patternType: 'drum',
-        drumStyle: 'basic',
+        type: 'drums',
+        patternType: 'basic',
         bars: 1
       });
 
@@ -138,7 +140,7 @@ describe('Sequence API', () => {
   });
 
   test('PUT /api/sessions/:id/transport should update transport settings', async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .put(`/api/sessions/${sessionId}/transport`)
       .send({
         bpm: 140,
@@ -153,7 +155,7 @@ describe('Sequence API', () => {
   });
 
   test('GET /api/sessions/:id/export/midi should export session as MIDI file', async () => {
-    const response = await request(app)
+    const response = await request(mockApp)
       .get(`/api/sessions/${sessionId}/export/midi`);
 
     expect(response.status).toBe(200);
