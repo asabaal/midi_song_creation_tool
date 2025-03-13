@@ -19,6 +19,7 @@ const SCALES = {
   melodicMinor: [0, 2, 3, 5, 7, 9, 11],
   pentatonicMajor: [0, 2, 4, 7, 9],
   pentatonicMinor: [0, 3, 5, 7, 10],
+  pentatonic: [0, 2, 4, 7, 9], // Alias for pentatonicMajor
   blues: [0, 3, 5, 6, 7, 10],
   dorian: [0, 2, 3, 5, 7, 9, 10],
   phrygian: [0, 1, 3, 5, 7, 8, 10],
@@ -107,9 +108,8 @@ function parseNoteString(noteStr) {
     octave = parseInt(noteStr.match(/[0-9]+$/)[0]);
     note = noteStr.replace(/[0-9]+$/, '');
   } else {
-    // Default to octave 4 if not specified
-    octave = 4;
-    note = noteStr;
+    // Throw error if octave is required but not provided
+    throw new Error(`Missing octave in note: ${noteStr}`);
   }
   
   return { note, octave };
@@ -169,18 +169,45 @@ function generateScale(root, scaleType, octave = 4) {
     throw new Error(`Unknown scale type: ${scaleType}`);
   }
   
-  // Parse the root note - it might include octave info
-  const { note, octave: specifiedOctave } = parseNoteString(root);
-  const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
-  
-  // Generate the root MIDI note
-  const rootNote = noteToMidi(`${note}${useOctave}`);
-  
-  // Generate the scale
-  const scale = SCALES[scaleType].map(interval => rootNote + interval);
-  
-  // Validate that all MIDI notes are within valid range (0-127)
-  return scale.filter(note => note >= 0 && note <= 127);
+  try {
+    // Try to parse the root note - it might include octave info
+    const { note, octave: specifiedOctave } = parseNoteString(root);
+    const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
+    
+    // Handle flat notes in the root (convert to sharp equivalent)
+    let normalizedNote = note;
+    Object.keys(NOTE_ALIASES).forEach(flat => {
+      if (normalizedNote === flat) {
+        normalizedNote = NOTE_ALIASES[flat];
+      }
+    });
+    
+    // Generate the root MIDI note
+    const rootNote = noteToMidi(`${normalizedNote}${useOctave}`);
+    
+    // Generate the scale
+    const scale = SCALES[scaleType].map(interval => rootNote + interval);
+    
+    // Validate that all MIDI notes are within valid range (0-127)
+    return scale.filter(note => note >= 0 && note <= 127);
+  } catch (error) {
+    // Special case for API routes that don't include octave
+    // Assume octave 4 if root doesn't have an octave
+    if (!root.match(/[0-9]/)) {
+      const normalizedRoot = root;
+      Object.keys(NOTE_ALIASES).forEach(flat => {
+        if (normalizedRoot === flat) {
+          normalizedRoot = NOTE_ALIASES[flat];
+        }
+      });
+      
+      const rootNote = noteToMidi(`${normalizedRoot}${octave}`);
+      const scale = SCALES[scaleType].map(interval => rootNote + interval);
+      return scale.filter(note => note >= 0 && note <= 127);
+    }
+    
+    throw error;
+  }
 }
 
 /**
@@ -195,18 +222,44 @@ function generateChord(root, chordType, octave = 4) {
     throw new Error(`Unknown chord type: ${chordType}`);
   }
   
-  // Parse the root note
-  const { note, octave: specifiedOctave } = parseNoteString(root);
-  const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
-  
-  // Generate the root MIDI note
-  const rootNote = noteToMidi(`${note}${useOctave}`);
-  
-  // Generate the chord
-  const chord = CHORD_TYPES[chordType].map(interval => rootNote + interval);
-  
-  // Validate that all MIDI notes are within valid range (0-127)
-  return chord.filter(note => note >= 0 && note <= 127);
+  try {
+    // Parse the root note
+    const { note, octave: specifiedOctave } = parseNoteString(root);
+    const useOctave = specifiedOctave !== undefined ? specifiedOctave : octave;
+    
+    // Handle flat notes in the root (convert to sharp equivalent)
+    let normalizedNote = note;
+    Object.keys(NOTE_ALIASES).forEach(flat => {
+      if (normalizedNote === flat) {
+        normalizedNote = NOTE_ALIASES[flat];
+      }
+    });
+    
+    // Generate the root MIDI note
+    const rootNote = noteToMidi(`${normalizedNote}${useOctave}`);
+    
+    // Generate the chord
+    const chord = CHORD_TYPES[chordType].map(interval => rootNote + interval);
+    
+    // Validate that all MIDI notes are within valid range (0-127)
+    return chord.filter(note => note >= 0 && note <= 127);
+  } catch (error) {
+    // Special case for API routes that don't include octave
+    if (!root.match(/[0-9]/)) {
+      let normalizedRoot = root;
+      Object.keys(NOTE_ALIASES).forEach(flat => {
+        if (normalizedRoot === flat) {
+          normalizedRoot = NOTE_ALIASES[flat];
+        }
+      });
+      
+      const rootNote = noteToMidi(`${normalizedRoot}${octave}`);
+      const chord = CHORD_TYPES[chordType].map(interval => rootNote + interval);
+      return chord.filter(note => note >= 0 && note <= 127);
+    }
+    
+    throw error;
+  }
 }
 
 /**
