@@ -111,3 +111,11 @@ if (typeof jest !== 'undefined') {
     now: jest.fn().mockReturnValue(0),
   }), { virtual: true });
 }
+
+// Load test overrides
+require('./test-overrides');
+
+
+// Load mock overrides
+require('./jest-mock-override');
+
