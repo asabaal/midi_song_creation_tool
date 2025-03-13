@@ -32,34 +32,41 @@ const MockPianoRoll = () => {
   );
 };
 
-// Mock PianoRoll component - simply return the MockPianoRoll
-jest.mock('../../../../src/client/components/PianoRoll', () => {
-  return () => {
-    // Return the mock without any React in the factory itself
-    return MockPianoRoll();
+// Mock SessionContext with both useSessionContext and default export
+jest.mock('../../../../src/client/contexts/SessionContext', () => {
+  return {
+    useSessionContext: jest.fn().mockReturnValue({
+      currentSession: {
+        id: 'test-session',
+        notes: [
+          { id: 'note1', pitch: 60, start: 0, duration: 1, velocity: 100 },
+          { id: 'note2', pitch: 62, start: 1, duration: 1, velocity: 100 }
+        ],
+        tempo: 120,
+        timeSignature: '4/4',
+        tracks: [],
+        selectedTrackId: 'track-1'
+      },
+      addNote: jest.fn(),
+      updateNote: jest.fn(),
+      deleteNote: jest.fn(),
+      setCurrentNoteSelection: jest.fn(),
+      addNoteToTrack: jest.fn()
+    }),
+    __esModule: true,
+    default: {
+      Provider: ({ children }) => children
+    }
   };
 });
 
-// Mock the SessionContext
-jest.mock('../../../../src/client/contexts/SessionContext', () => ({
-  useSession: () => ({
-    currentSession: {
-      id: 'test-session',
-      notes: [
-        { id: 'note1', pitch: 60, start: 0, duration: 1, velocity: 100 },
-        { id: 'note2', pitch: 62, start: 1, duration: 1, velocity: 100 }
-      ],
-      tempo: 120,
-      timeSignature: '4/4'
-    },
-    addNote: jest.fn(),
-    updateNote: jest.fn(),
-    deleteNote: jest.fn(),
-    setCurrentNoteSelection: jest.fn()
-  })
-}));
+// Now we'll use the real component instead of a mock
+jest.mock('../../../../src/client/components/PianoRoll', () => {
+  // Return the module directly
+  return jest.requireActual('../../../../src/client/components/PianoRoll');
+});
 
-// Get the mocked component
+// Get the component
 const PianoRoll = require('../../../../src/client/components/PianoRoll').default;
 
 describe('PianoRoll Component State Management', () => {
