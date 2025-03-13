@@ -5,7 +5,7 @@ import TransportControls from '../../../../src/client/components/TransportContro
 import * as transportService from '../../../../src/client/services/transportService';
 
 // Mock the SessionContext module
-jest.mock('../../../../src/client/contexts/SessionContext', () => ({
+jest.mock('../../../../src/client/context/SessionContext', () => ({
   useSessionContext: jest.fn(),
   __esModule: true,
   default: {
@@ -25,7 +25,7 @@ jest.mock('../../../../src/client/services/transportService', () => ({
 }));
 
 // Get the useSessionContext mock from the mocked module
-const { useSessionContext } = require('../../../../src/client/contexts/SessionContext');
+const { useSessionContext } = require('../../../../src/client/context/SessionContext');
 
 describe('TransportControls', () => {
   beforeEach(() => {
