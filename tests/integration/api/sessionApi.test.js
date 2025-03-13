@@ -1,11 +1,11 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const { app } = require('../testSetup');
+const { mockApp } = require('../testSetup');
 
 describe('Session API', () => {
   describe('POST /api/sessions', () => {
     test('should create a new session', async () => {
-      const response = await request(app)
+      const response = await request(mockApp)
         .post('/api/sessions')
         .send({
           name: 'Test Session',
@@ -22,7 +22,7 @@ describe('Session API', () => {
 
     test('should validate required fields', async () => {
       // Configure the mock to require name field
-      const response = await request(app)
+      const response = await request(mockApp)
         .post('/api/sessions')
         .send({
           requireName: true,
@@ -36,7 +36,7 @@ describe('Session API', () => {
 
   describe('GET /api/sessions', () => {
     beforeEach(async () => {
-      await request(app)
+      await request(mockApp)
         .post('/api/sessions')
         .send({
           name: 'Session 1',
@@ -44,7 +44,7 @@ describe('Session API', () => {
           timeSignature: '4/4'
         });
 
-      await request(app)
+      await request(mockApp)
         .post('/api/sessions')
         .send({
           name: 'Session 2',
@@ -54,7 +54,7 @@ describe('Session API', () => {
     });
 
     test('should retrieve all sessions', async () => {
-      const response = await request(app).get('/api/sessions');
+      const response = await request(mockApp).get('/api/sessions');
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
@@ -70,7 +70,7 @@ describe('Session API', () => {
     let sessionId;
 
     beforeEach(async () => {
-      const response = await request(app)
+      const response = await request(mockApp)
         .post('/api/sessions')
         .send({
           name: 'Retrieve Test Session',
@@ -82,7 +82,7 @@ describe('Session API', () => {
     });
 
     test('should retrieve a session by ID', async () => {
-      const response = await request(app).get(`/api/sessions/${sessionId}`);
+      const response = await request(mockApp).get(`/api/sessions/${sessionId}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('id', sessionId);
@@ -91,7 +91,7 @@ describe('Session API', () => {
     });
 
     test('should return 404 for non-existent session', async () => {
-      const response = await request(app).get('/api/sessions/non-existent-id');
+      const response = await request(mockApp).get('/api/sessions/non-existent-id');
       expect(response.status).toBe(404);
     });
   });
@@ -100,7 +100,7 @@ describe('Session API', () => {
     let sessionId;
 
     beforeEach(async () => {
-      const response = await request(app)
+      const response = await request(mockApp)
         .post('/api/sessions')
         .send({
           name: 'Update Test Session',
@@ -112,7 +112,7 @@ describe('Session API', () => {
     });
 
     test('should update a session', async () => {
-      const response = await request(app)
+      const response = await request(mockApp)
         .put(`/api/sessions/${sessionId}`)
         .send({
           name: 'Updated Session Name',
@@ -132,7 +132,7 @@ describe('Session API', () => {
     let sessionId;
 
     beforeEach(async () => {
-      const response = await request(app)
+      const response = await request(mockApp)
         .post('/api/sessions')
         .send({
           name: 'Delete Test Session',
@@ -145,11 +145,11 @@ describe('Session API', () => {
 
     test('should delete a session', async () => {
       // First, delete the session
-      const deleteResponse = await request(app).delete(`/api/sessions/${sessionId}`);
+      const deleteResponse = await request(mockApp).delete(`/api/sessions/${sessionId}`);
       expect(deleteResponse.status).toBe(204);
 
       // Then, verify it's gone
-      const getResponse = await request(app).get(`/api/sessions/${sessionId}`);
+      const getResponse = await request(mockApp).get(`/api/sessions/${sessionId}`);
       expect(getResponse.status).toBe(404);
     });
   });
