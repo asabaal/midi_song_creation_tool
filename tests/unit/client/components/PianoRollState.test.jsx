@@ -20,7 +20,7 @@ jest.mock('../../../../src/client/contexts/SessionContext', () => ({
   })
 }));
 
-// Mock the Tone.js library
+// Mock the Tone.js library with virtual: true
 jest.mock('tone', () => ({
   Transport: {
     bpm: { value: 120 },
@@ -30,7 +30,7 @@ jest.mock('tone', () => ({
   context: {
     currentTime: 0
   }
-}));
+}), { virtual: true });
 
 describe('PianoRoll Component State Management', () => {
   beforeEach(() => {
