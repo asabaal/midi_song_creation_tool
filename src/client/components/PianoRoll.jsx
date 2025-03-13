@@ -1,6 +1,6 @@
 // PianoRoll component
 import React, { useRef, useEffect, useState } from 'react';
-import { useSessionContext } from '../context/SessionContext';
+import { useSessionContext } from '../contexts/SessionContext';
 
 const PianoRoll = () => {
   const canvasRef = useRef(null);
