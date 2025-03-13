@@ -1,8 +1,9 @@
 // tests/integration/testSetup.js
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const createMockApiServer = require('./api/apiMockSetup');
-const http = require('http');
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
 let mongoServer;
 let app;
@@ -10,21 +11,25 @@ let server;
 
 // Setup MongoDB Memory Server and API server before all tests
 beforeAll(async () => {
-  // Create mock API server - this must be initialized before any tests run
-  app = createMockApiServer();
+  // Create Express app for testing
+  app = express();
   
-  // Start the server explicitly for SuperTest
-  server = app.listen(0); // Use random port
+  // Configure middleware
+  app.use(cors());
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
+  
+  // Add mock API routes
+  require('./api/apiMockSetup')(app);
+  
+  // Start the server on a random port
+  server = app.listen();
   
   // Setup MongoDB in memory server for tests that need it
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
   
-  const mongooseOpts = {
-    // Remove deprecated options as these are default in Mongoose 6+
-  };
-
-  await mongoose.connect(uri, mongooseOpts);
+  await mongoose.connect(uri);
   
   return app;
 });

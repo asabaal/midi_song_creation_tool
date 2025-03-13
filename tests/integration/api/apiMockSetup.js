@@ -1,18 +1,7 @@
 // tests/integration/api/apiMockSetup.js
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
 
 // Create a mock API server for testing
-function createMockApiServer() {
-  // Create Express app
-  const app = express();
-  
-  // Configure middleware
-  app.use(cors());
-  app.use(bodyParser.json());
-  app.use(bodyParser.urlencoded({ extended: true }));
-  
+function setupApiRoutes(app) {
   // Mock session data
   const sessions = [
     {
@@ -624,8 +613,6 @@ function createMockApiServer() {
     // Simple transpose for testing
     return notes;
   }
-  
-  return app;
 }
 
-module.exports = createMockApiServer;
+module.exports = setupApiRoutes;
