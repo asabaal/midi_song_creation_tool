@@ -62,7 +62,7 @@ const TransportControls = () => {
       <label htmlFor="bpm-input">BPM:</label>
       <input 
         id="bpm-input"
-        data-testid="tempo-input" 
+        data-testid="bpm-input" 
         type="number" 
         min="40" 
         max="240" 
