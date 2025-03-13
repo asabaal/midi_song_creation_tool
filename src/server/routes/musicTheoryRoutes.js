@@ -13,10 +13,24 @@ router.get('/scales/:root/:type', (req, res) => {
     let { root, type } = req.params;
     root = decodeURIComponent(root); // This will convert %23 to #
     
-    const octave = parseInt(req.query.octave || 4);
+    // Extract octave if present in the note, or use query parameter
+    let octave = parseInt(req.query.octave || 4);
+    
+    // If root contains a digit, it specifies an octave
+    if (/\d/.test(root)) {
+      const match = root.match(/(\D+)(\d+)/);
+      if (match) {
+        const [_, noteName, noteOctave] = match;
+        root = noteName;
+        octave = parseInt(noteOctave, 10);
+      }
+    }
+    
+    // Normalize the root note (convert flats to sharps)
+    const normalizedRoot = musicTheory.normalizeNoteName(root);
 
     // Generate the scale in MIDI notes
-    const midiNotes = musicTheory.generateScale(root, type, octave);
+    const midiNotes = musicTheory.generateScale(normalizedRoot, type, octave);
 
     // Convert MIDI notes to note names
     const notes = midiNotes.map(midiNote => {
@@ -25,13 +39,14 @@ router.get('/scales/:root/:type', (req, res) => {
     });
 
     res.json({
-      root,
+      root: normalizedRoot,
       type,
       octave,
       notes,
       midiNotes,
     });
   } catch (error) {
+    console.error(`Error in scales route: ${error.message}`);
     res.status(400).json({ error: error.message });
   }
 });
@@ -46,10 +61,24 @@ router.get('/chords/:root/:type', (req, res) => {
     let { root, type } = req.params;
     root = decodeURIComponent(root); // This will convert %23 to #
     
-    const octave = parseInt(req.query.octave || 4);
+    // Extract octave if present in the note, or use query parameter
+    let octave = parseInt(req.query.octave || 4);
+    
+    // If root contains a digit, it specifies an octave
+    if (/\d/.test(root)) {
+      const match = root.match(/(\D+)(\d+)/);
+      if (match) {
+        const [_, noteName, noteOctave] = match;
+        root = noteName;
+        octave = parseInt(noteOctave, 10);
+      }
+    }
+    
+    // Normalize the root note (convert flats to sharps)
+    const normalizedRoot = musicTheory.normalizeNoteName(root);
 
     // Generate the chord in MIDI notes
-    const midiNotes = musicTheory.generateChord(root, type, octave);
+    const midiNotes = musicTheory.generateChord(normalizedRoot, type, octave);
 
     // Convert MIDI notes to note names
     const notes = midiNotes.map(midiNote => {
@@ -58,13 +87,14 @@ router.get('/chords/:root/:type', (req, res) => {
     });
 
     res.json({
-      root,
+      root: normalizedRoot,
       type,
       octave,
       notes,
       midiNotes,
     });
   } catch (error) {
+    console.error(`Error in chords route: ${error.message}`);
     res.status(400).json({ error: error.message });
   }
 });
@@ -81,12 +111,15 @@ router.get('/progressions/:key/:mode', (req, res) => {
     
     const numerals = req.query.numerals || 'I-IV-V-I';
     const octave = parseInt(req.query.octave || 4);
+    
+    // Normalize the key (convert flats to sharps)
+    const normalizedKey = musicTheory.normalizeNoteName(key);
 
     // Split numerals string into array
     const numeralArray = numerals.split('-');
 
     // Generate the progression
-    const chordArrays = musicTheory.generateChordProgression(numeralArray, key, mode, octave);
+    const chordArrays = musicTheory.generateChordProgression(numeralArray, normalizedKey, mode, octave);
 
     // Format the response
     const chords = chordArrays.map((chordMidiNotes, index) => {
@@ -103,13 +136,14 @@ router.get('/progressions/:key/:mode', (req, res) => {
     });
 
     res.json({
-      key,
+      key: normalizedKey,
       mode,
       numerals,
       octave,
       chords,
     });
   } catch (error) {
+    console.error(`Error in progressions route: ${error.message}`);
     res.status(400).json({ error: error.message });
   }
 });
@@ -123,12 +157,16 @@ router.get('/key-signature/:key/:mode', (req, res) => {
     // Decode URL parameters to handle sharp signs properly
     let { key, mode } = req.params;
     key = decodeURIComponent(key); // This will convert %23 to #
+    
+    // Normalize the key (convert flats to sharps)
+    const normalizedKey = musicTheory.normalizeNoteName(key);
 
     // Get key signature info
-    const keySignatureInfo = musicTheory.getKeySignature(`${key} ${mode}`);
+    const keySignatureInfo = musicTheory.getKeySignature(`${normalizedKey} ${mode}`);
 
     res.json(keySignatureInfo);
   } catch (error) {
+    console.error(`Error in key-signature route: ${error.message}`);
     res.status(400).json({ error: error.message });
   }
 });
@@ -233,6 +271,7 @@ router.post('/analyze-chord', (req, res) => {
       midiNotes: sortedNotes,
     });
   } catch (error) {
+    console.error(`Error in analyze-chord route: ${error.message}`);
     res.status(400).json({ error: error.message });
   }
 });
