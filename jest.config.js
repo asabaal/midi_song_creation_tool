@@ -22,8 +22,8 @@ module.exports = {
       testEnvironment: 'node',
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       moduleNameMapper: {
-        '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
-        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js'
+        '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js'
       },
       globals: {
         SUPPRESS_JEST_WARNINGS: true
@@ -36,8 +36,8 @@ module.exports = {
       testEnvironment: 'jsdom',
       setupFilesAfterEnv: ['<rootDir>/setupTests.js', '<rootDir>/tests/setup-dom.js'],
       moduleNameMapper: {
-        '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
-        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js',
+        '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js',
         '^tone$': '<rootDir>/tests/__mocks__/tone.js',
         '^../../src/client/contexts/SessionContext$': '<rootDir>/tests/__mocks__/SessionContext.js',
         '^@/components/(.*)$': '<rootDir>/src/client/components/$1',
@@ -57,8 +57,8 @@ module.exports = {
       testEnvironment: 'node',
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       moduleNameMapper: {
-        '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
-        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/tests/__mocks__/fileMock.js'
+        '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
+        '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js'
       }
     }
   ],
@@ -82,8 +82,11 @@ module.exports = {
   // Paths to ignore for tests
   testPathIgnorePatterns: ['/node_modules/'],
   
+  // Add module path ignore patterns to avoid duplicate mocks
+  modulePathIgnorePatterns: ['<rootDir>/tests/__mocks__/'],
+  
   // Only use one set of mocks to avoid duplicate warnings
-  moduleDirectories: ['node_modules', 'src'],
+  moduleDirectories: ['node_modules', 'src', '__mocks__'],
   
   // Reset mocks for each test
   resetMocks: false,
