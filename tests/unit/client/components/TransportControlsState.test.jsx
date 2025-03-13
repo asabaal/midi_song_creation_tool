@@ -2,7 +2,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import TransportControls from '../../../../src/client/components/TransportControls';
 
 // Mock variables
 const mockStart = jest.fn();
@@ -11,31 +10,46 @@ const mockPause = jest.fn();
 const mockSetLoopPoints = jest.fn();
 const mockSetBPM = jest.fn();
 
-// Mock Tone.js (the virtual mock is already set up in jest.setup.js)
-const Tone = require('tone');
-Tone.Transport.start = mockStart;
-Tone.Transport.stop = mockStop;
-Tone.Transport.pause = mockPause;
-Tone.Transport.setLoopPoints = mockSetLoopPoints;
-Tone.Transport.bpm.set = mockSetBPM;
+// Mock Tone.js globally in the setup file
+jest.mock('tone', () => ({
+  Transport: {
+    start: mockStart,
+    stop: mockStop,
+    pause: mockPause,
+    setLoopPoints: mockSetLoopPoints,
+    bpm: {
+      value: 120,
+      set: mockSetBPM
+    },
+    loop: false,
+    timeSignature: 4,
+    position: '0:0:0',
+    state: 'stopped',
+    on: jest.fn(),
+    off: jest.fn()
+  },
+  start: jest.fn().mockResolvedValue(undefined),
+  now: jest.fn().mockReturnValue(0)
+}), { virtual: true });
 
-// Create a minimal mock for the TransportControls component
+// Create a minimal mock component for TransportControls
+const MockTransportControls = () => (
+  <div data-testid="transport-controls">
+    <button data-testid="play-button" onClick={() => mockStart()}>Play</button>
+    <button data-testid="stop-button" onClick={() => mockStop()}>Stop</button>
+    <input 
+      data-testid="tempo-input" 
+      type="number" 
+      defaultValue={120}
+      onChange={(e) => mockSetBPM(parseInt(e.target.value))}
+    />
+    <button data-testid="loop-toggle" onClick={() => mockSetLoopPoints()}>Loop</button>
+  </div>
+);
+
+// Mock the actual component
 jest.mock('../../../../src/client/components/TransportControls', () => {
-  return function MockTransportControls() {
-    return (
-      <div data-testid="transport-controls">
-        <button data-testid="play-button" onClick={() => mockStart()}>Play</button>
-        <button data-testid="stop-button" onClick={() => mockStop()}>Stop</button>
-        <input 
-          data-testid="tempo-input" 
-          type="number" 
-          defaultValue={120}
-          onChange={(e) => mockSetBPM(parseInt(e.target.value))}
-        />
-        <button data-testid="loop-toggle" onClick={() => mockSetLoopPoints()}>Loop</button>
-      </div>
-    );
-  }
+  return () => MockTransportControls();
 });
 
 // Mock SessionContext
@@ -59,6 +73,9 @@ jest.mock('../../../../src/client/contexts/SessionContext', () => ({
     }
   })
 }));
+
+// Import the mocked component
+const TransportControls = require('../../../../src/client/components/TransportControls').default;
 
 describe('TransportControls Component State Management', () => {
   beforeEach(() => {
