@@ -1,17 +1,23 @@
 #!/bin/bash
 
-# Run tests and save output
-./run-tests.sh > full_test_output.log 2>&1
+# A helper script to filter test results and show only relevant information
 
-# Filter for just the important parts
-echo "=== DUPLICATE MOCK WARNINGS ===" > filtered_results.log
-grep "duplicate manual mock found" full_test_output.log >> filtered_results.log
+# Default input file is the last test run output
+input_file="${1:-test_output.log}"
 
-echo -e "\n=== FAILING TESTS ===" >> filtered_results.log
-grep -A 3 "FAIL " full_test_output.log >> filtered_results.log
+if [ ! -f "$input_file" ]; then
+  echo "Error: File $input_file not found."
+  exit 1
+fi
 
-echo -e "\n=== TEST SUMMARY ===" >> filtered_results.log
-grep -A 3 "Test Suites:" full_test_output.log | tail -4 >> filtered_results.log
+echo -e "\n=== Filtered Test Results ==="
 
-# Display the filtered results
-cat filtered_results.log
+# Extract and display failing tests with their error messages
+echo -e "\n--- Failed Tests ---"
+grep -A 15 "● " "$input_file" | grep -v "at Object\." | grep -v "node_modules" | grep -v "^$"
+
+# Extract and display the summary
+echo -e "\n--- Summary ---"
+grep -E "Test Suites:|Tests:|Time:|Ran all test" "$input_file"
+
+echo -e "\nEnd of filtered results."
