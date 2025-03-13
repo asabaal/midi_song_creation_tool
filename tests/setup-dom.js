@@ -125,3 +125,6 @@ if (typeof window !== 'undefined') {
     };
   }
 }
+
+// Add module mapper for component tests
+require('./module-mapper');

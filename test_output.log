@@ -1,3 +1,40 @@
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/integration/[22m[1mplaceholder.test.js[22m
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmidiSequence.test.js[22m
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/server/[22m[1mplaceholder.test.js[22m
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmidiExport.test.js[22m
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mpatternGenerator.test.js[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mparameterValidation.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/parameterValidation.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('API Parameter Validation Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/parameterValidation.test.js[39m[0m[2m:2:21)[22m
+
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmidiFileExport.test.js[22m
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmusicTheory.test.js[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1msessionManagement.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/sessionManagement.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('Session Management API Integration Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/sessionManagement.test.js[39m[0m[2m:2:21)[22m
+
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1msequenceApi.test.js[22m
   [1m● [22mTest suite failed to run
 
@@ -13,36 +50,35 @@
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
       [2mat Object.require ([22m[0m[36mtests/integration/api/sequenceApi.test.js[39m[0m[2m:2:21)[22m
 
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmidiFileExport.test.js[22m
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mexportRoutes.test.js[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mmusicTheoryEdgeCases.test.js[22m
   [1m● [22mTest suite failed to run
 
-    Cannot find module '../testSetup' from 'tests/integration/api/exportRoutes.test.js'
+    Cannot find module '../testSetup' from 'tests/integration/api/musicTheoryEdgeCases.test.js'
 
       1 | const request = require('supertest');
     > 2 | const { mockApp } = require('../testSetup');
         |                     ^
       3 |
-      4 | describe('Export/Import API Integration Tests', () => {
-      5 |   let sessionId;
+      4 | describe('Music Theory Edge Cases Tests', () => {
+      5 |   describe('Non-Standard Scales', () => {
 
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/exportRoutes.test.js[39m[0m[2m:2:21)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/musicTheoryEdgeCases.test.js[39m[0m[2m:2:21)[22m
 
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mdataConsistency.test.js[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1merrorRecovery.test.js[22m
   [1m● [22mTest suite failed to run
 
-    Cannot find module '../testSetup' from 'tests/integration/api/dataConsistency.test.js'
+    Cannot find module '../testSetup' from 'tests/integration/api/errorRecovery.test.js'
 
       1 | const request = require('supertest');
     > 2 | const { mockApp } = require('../testSetup');
         |                     ^
       3 |
-      4 | describe('Data Consistency Tests', () => {
+      4 | describe('Error Recovery Tests', () => {
       5 |   let sessionId;
 
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/dataConsistency.test.js[39m[0m[2m:2:21)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/errorRecovery.test.js[39m[0m[2m:2:21)[22m
 
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mpatternRoutes.test.js[22m
   [1m● [22mTest suite failed to run
@@ -60,69 +96,6 @@
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
       [2mat Object.require ([22m[0m[36mtests/integration/api/patternRoutes.test.js[39m[0m[2m:3:21)[22m
 
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmusicTheory.test.js[22m
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mparameterValidation.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/parameterValidation.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('API Parameter Validation Tests', () => {
-      5 |   let sessionId;
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/parameterValidation.test.js[39m[0m[2m:2:21)[22m
-
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mmusicTheoryEdgeCases.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/musicTheoryEdgeCases.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('Music Theory Edge Cases Tests', () => {
-      5 |   describe('Non-Standard Scales', () => {
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/musicTheoryEdgeCases.test.js[39m[0m[2m:2:21)[22m
-
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1msessionManagement.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/sessionManagement.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('Session Management API Integration Tests', () => {
-      5 |   let sessionId;
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/sessionManagement.test.js[39m[0m[2m:2:21)[22m
-
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmidiExport.test.js[22m
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1merrorRecovery.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/errorRecovery.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('Error Recovery Tests', () => {
-      5 |   let sessionId;
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/errorRecovery.test.js[39m[0m[2m:2:21)[22m
-
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mmidiSequence.test.js[22m
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mmusicTheoryApi.test.js[22m
   [1m● [22mTest suite failed to run
 
@@ -138,9 +111,36 @@
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
       [2mat Object.require ([22m[0m[36mtests/integration/api/musicTheoryApi.test.js[39m[0m[2m:2:21)[22m
 
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/integration/[22m[1mplaceholder.test.js[22m
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/server/[22m[1mplaceholder.test.js[22m
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Server/Core Tests [39m[27m[0m [2mtests/unit/core/[22m[1mpatternGenerator.test.js[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mdataConsistency.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/dataConsistency.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('Data Consistency Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/dataConsistency.test.js[39m[0m[2m:2:21)[22m
+
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1mexportRoutes.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/exportRoutes.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('Export/Import API Integration Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/exportRoutes.test.js[39m[0m[2m:2:21)[22m
+
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m API Tests [39m[27m[0m [2mtests/integration/api/[22m[1msessionApi.test.js[22m
   [1m● [22mTest suite failed to run
 
@@ -157,18 +157,12 @@
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
       [2mat Object.require ([22m[0m[36mtests/integration/api/sessionApi.test.js[39m[0m[2m:3:21)[22m
 
-(node:16597) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(node:18745) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-(node:16599) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mPianoRoll.test.jsx[22m
+(node:18751) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mTransportControlsState.test.jsx[22m
-(node:16605) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mTransportControls.test.jsx[22m
-(node:16594) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mVirtualKeyboard.test.jsx[22m
-(node:16564) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(node:18725) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mPianoRollState.test.jsx[22m
   [1m● [22mConsole
@@ -1106,12 +1100,51 @@
 [2m      [2mat _next ([22m[2m[0m[36mtests/unit/client/components/PianoRollState.test.jsx[39m[0m[2m:2:1)[22m[2m[22m
 [2m      [2mat Object.<anonymous> ([22m[2m[0m[36mtests/unit/client/components/PianoRollState.test.jsx[39m[0m[2m:2:1)[22m[2m[22m
 
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mPatternGenerator.test.jsx[22m
-(node:16613) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mTransportControlsState.test.jsx[22m
+(node:18727) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mPianoRoll.test.jsx[22m
+(node:18735) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mTransportControls.test.jsx[22m
+(node:18733) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mVirtualKeyboard.test.jsx[22m
+(node:18726) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/PianoRollStateManagement/[22m[1mindex.test.jsx[22m
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [0m[7m[37m Client Tests [39m[27m[0m [2mtests/unit/client/components/[22m[1mPatternGenerator.test.jsx[22m
 
 [1mSummary of all failing tests[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mparameterValidation.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/parameterValidation.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('API Parameter Validation Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/parameterValidation.test.js[39m[0m[2m:2:21)[22m
+
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1msessionManagement.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/sessionManagement.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('Session Management API Integration Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/sessionManagement.test.js[39m[0m[2m:2:21)[22m
+
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1msequenceApi.test.js[22m
   [1m● [22mTest suite failed to run
 
@@ -1127,35 +1160,35 @@
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
       [2mat Object.require ([22m[0m[36mtests/integration/api/sequenceApi.test.js[39m[0m[2m:2:21)[22m
 
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mexportRoutes.test.js[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mmusicTheoryEdgeCases.test.js[22m
   [1m● [22mTest suite failed to run
 
-    Cannot find module '../testSetup' from 'tests/integration/api/exportRoutes.test.js'
+    Cannot find module '../testSetup' from 'tests/integration/api/musicTheoryEdgeCases.test.js'
 
       1 | const request = require('supertest');
     > 2 | const { mockApp } = require('../testSetup');
         |                     ^
       3 |
-      4 | describe('Export/Import API Integration Tests', () => {
-      5 |   let sessionId;
+      4 | describe('Music Theory Edge Cases Tests', () => {
+      5 |   describe('Non-Standard Scales', () => {
 
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/exportRoutes.test.js[39m[0m[2m:2:21)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/musicTheoryEdgeCases.test.js[39m[0m[2m:2:21)[22m
 
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mdataConsistency.test.js[22m
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1merrorRecovery.test.js[22m
   [1m● [22mTest suite failed to run
 
-    Cannot find module '../testSetup' from 'tests/integration/api/dataConsistency.test.js'
+    Cannot find module '../testSetup' from 'tests/integration/api/errorRecovery.test.js'
 
       1 | const request = require('supertest');
     > 2 | const { mockApp } = require('../testSetup');
         |                     ^
       3 |
-      4 | describe('Data Consistency Tests', () => {
+      4 | describe('Error Recovery Tests', () => {
       5 |   let sessionId;
 
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/dataConsistency.test.js[39m[0m[2m:2:21)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/errorRecovery.test.js[39m[0m[2m:2:21)[22m
 
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mpatternRoutes.test.js[22m
   [1m● [22mTest suite failed to run
@@ -1173,66 +1206,6 @@
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
       [2mat Object.require ([22m[0m[36mtests/integration/api/patternRoutes.test.js[39m[0m[2m:3:21)[22m
 
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mparameterValidation.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/parameterValidation.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('API Parameter Validation Tests', () => {
-      5 |   let sessionId;
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/parameterValidation.test.js[39m[0m[2m:2:21)[22m
-
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mmusicTheoryEdgeCases.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/musicTheoryEdgeCases.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('Music Theory Edge Cases Tests', () => {
-      5 |   describe('Non-Standard Scales', () => {
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/musicTheoryEdgeCases.test.js[39m[0m[2m:2:21)[22m
-
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1msessionManagement.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/sessionManagement.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('Session Management API Integration Tests', () => {
-      5 |   let sessionId;
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/sessionManagement.test.js[39m[0m[2m:2:21)[22m
-
-[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1merrorRecovery.test.js[22m
-  [1m● [22mTest suite failed to run
-
-    Cannot find module '../testSetup' from 'tests/integration/api/errorRecovery.test.js'
-
-      1 | const request = require('supertest');
-    > 2 | const { mockApp } = require('../testSetup');
-        |                     ^
-      3 |
-      4 | describe('Error Recovery Tests', () => {
-      5 |   let sessionId;
-
-      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
-      [2mat Object.require ([22m[0m[36mtests/integration/api/errorRecovery.test.js[39m[0m[2m:2:21)[22m
-
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mmusicTheoryApi.test.js[22m
   [1m● [22mTest suite failed to run
 
@@ -1247,6 +1220,36 @@
 
       [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
       [2mat Object.require ([22m[0m[36mtests/integration/api/musicTheoryApi.test.js[39m[0m[2m:2:21)[22m
+
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mdataConsistency.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/dataConsistency.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('Data Consistency Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/dataConsistency.test.js[39m[0m[2m:2:21)[22m
+
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1mexportRoutes.test.js[22m
+  [1m● [22mTest suite failed to run
+
+    Cannot find module '../testSetup' from 'tests/integration/api/exportRoutes.test.js'
+
+      1 | const request = require('supertest');
+    > 2 | const { mockApp } = require('../testSetup');
+        |                     ^
+      3 |
+      4 | describe('Export/Import API Integration Tests', () => {
+      5 |   let sessionId;
+
+      [2mat Resolver._throwModNotFoundError ([22mnode_modules/jest-resolve/build/resolver.js[2m:427:11)[22m
+      [2mat Object.require ([22m[0m[36mtests/integration/api/exportRoutes.test.js[39m[0m[2m:2:21)[22m
 
 [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/integration/api/[22m[1msessionApi.test.js[22m
   [1m● [22mTest suite failed to run
@@ -1449,8 +1452,8 @@
 [2m      [2mat Object.<anonymous> ([22m[2m[0m[36mtests/unit/client/components/PianoRollState.test.jsx[39m[0m[2m:2:1)[22m[2m[22m
 
 
-[1mTest Suites: [22m[1m[31m11 failed[39m[22m, [1m[32m12 passed[39m[22m, 23 total
-[1mTests:       [22m[1m[31m5 failed[39m[22m, [1m[32m91 passed[39m[22m, 96 total
+[1mTest Suites: [22m[1m[31m11 failed[39m[22m, [1m[32m13 passed[39m[22m, 24 total
+[1mTests:       [22m[1m[31m5 failed[39m[22m, [1m[33m5 skipped[39m[22m, [1m[32m92 passed[39m[22m, 102 total
 [1mSnapshots:   [22m0 total
-[1mTime:[22m        1.504 s, estimated 2 s
+[1mTime:[22m        1.609 s
 [2mRan all test suites[22m[2m matching [22m/./i[2m in [22m3[2m projects[22m[2m.[22m
