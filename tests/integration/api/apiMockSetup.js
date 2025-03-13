@@ -141,12 +141,13 @@ function setupApiRoutes() {
       
       // Extract octave if present (e.g., C4)
       let octave = 4; // Default octave
-      const rootWithoutOctave = root.replace(/([A-G][#b]?)(\\d+)?/, (match, noteName, octaveNum) => {
-        if (octaveNum) {
-          octave = parseInt(octaveNum);
-        }
-        return noteName;
-      });
+      let rootWithoutOctave = root;
+      
+      const octaveMatch = root.match(/([A-G][#b]?)(\d+)?/);
+      if (octaveMatch && octaveMatch[2]) {
+        rootWithoutOctave = octaveMatch[1];
+        octave = parseInt(octaveMatch[2], 10);
+      }
       
       // Get scale based on type
       let notes;
@@ -184,21 +185,18 @@ function setupApiRoutes() {
           notes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
       }
       
-      // Transpose to the requested root 
-      const transposedNotes = transposeScale(notes, 'C', rootWithoutOctave);
-      
       // Calculate MIDI notes using the octave information - PROPER OCTAVE HANDLING
-      const midiNotes = transposedNotes.map((note, index) => {
-        // Use proper octave-based MIDI calculation
-        const baseNote = 60; // C4 = 60 in MIDI
-        return baseNote + index + ((octave - 4) * 12); // Adjust by octave difference
+      const baseMidiNote = getMidiNoteNumber('C', octave);
+      const midiNotes = notes.map((note, index) => {
+        // Use octave-based MIDI calculation
+        return baseMidiNote + getHalfSteps(note);
       });
       
       res.json({ 
         root: rootWithoutOctave, 
         type, 
         octave, 
-        notes: transposedNotes, 
+        notes: notes, 
         midiNotes 
       });
     } catch (error) {
@@ -225,12 +223,13 @@ function setupApiRoutes() {
       
       // Extract octave if present (e.g., G4)
       let octave = 4; // Default octave
-      const rootWithoutOctave = root.replace(/([A-G][#b]?)(\\d+)?/, (match, noteName, octaveNum) => {
-        if (octaveNum) {
-          octave = parseInt(octaveNum);
-        }
-        return noteName;
-      });
+      let rootWithoutOctave = root;
+      
+      const octaveMatch = root.match(/([A-G][#b]?)(\d+)?/);
+      if (octaveMatch && octaveMatch[2]) {
+        rootWithoutOctave = octaveMatch[1];
+        octave = parseInt(octaveMatch[2], 10);
+      }
       
       // Get chord based on type
       let notes;
@@ -260,21 +259,17 @@ function setupApiRoutes() {
           notes = ['C', 'E', 'G'];
       }
       
-      // Transpose to the requested root
-      const transposedNotes = transposeChord(notes, 'C', rootWithoutOctave);
-      
-      // Calculate MIDI notes using the octave information
-      const midiNotes = transposedNotes.map((note, index) => {
-        // Use proper octave-based MIDI calculation
-        const baseNote = 60; // C4 = 60 in MIDI
-        return baseNote + index * 3 + ((octave - 4) * 12); // Adjust by octave difference
+      // Calculate MIDI notes using the octave information 
+      const baseMidiNote = getMidiNoteNumber('C', octave);
+      const midiNotes = notes.map(note => {
+        return baseMidiNote + getHalfSteps(note);
       });
       
       res.json({ 
         root: rootWithoutOctave, 
         type, 
         octave, 
-        notes: transposedNotes, 
+        notes: notes, 
         midiNotes 
       });
     } catch (error) {
@@ -906,16 +901,36 @@ function setupApiRoutes() {
     return ['major', 'minor'].includes(mode);
   }
   
-  function transposeScale(notes, fromRoot, toRoot) {
-    // In a real implementation, you'd need proper transposition logic
-    // For testing, just return the notes as is
-    return notes;
+  // New helper functions for MIDI conversion
+  
+  function getMidiNoteNumber(note, octave) {
+    const noteValues = {
+      'C': 0, 'C#': 1, 'Db': 1,
+      'D': 2, 'D#': 3, 'Eb': 3,
+      'E': 4, 
+      'F': 5, 'F#': 6, 'Gb': 6,
+      'G': 7, 'G#': 8, 'Ab': 8,
+      'A': 9, 'A#': 10, 'Bb': 10,
+      'B': 11
+    };
+    
+    if (octave === undefined) octave = 4; // Default octave
+    
+    return (octave + 1) * 12 + noteValues[note];
   }
   
-  function transposeChord(notes, fromRoot, toRoot) {
-    // In a real implementation, you'd need proper transposition logic
-    // For testing, just return the notes as is
-    return notes;
+  function getHalfSteps(note) {
+    const noteValues = {
+      'C': 0, 'C#': 1, 'Db': 1,
+      'D': 2, 'D#': 3, 'Eb': 3,
+      'E': 4, 
+      'F': 5, 'F#': 6, 'Gb': 6,
+      'G': 7, 'G#': 8, 'Ab': 8,
+      'A': 9, 'A#': 10, 'Bb': 10,
+      'B': 11
+    };
+    
+    return noteValues[note] || 0;
   }
   
   // Return the configured Express app
