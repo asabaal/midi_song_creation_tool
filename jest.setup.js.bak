@@ -119,6 +119,3 @@ require('./test-overrides');
 // Load mock overrides
 require('./jest-mock-override');
 
-
-// Simple mock setup
-require('./tests/mockSetup');
