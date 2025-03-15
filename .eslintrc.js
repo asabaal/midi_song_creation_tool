@@ -11,7 +11,7 @@ module.exports = {
     'plugin:import/errors',
     'plugin:import/warnings',
     'plugin:jsx-a11y/recommended',
-    'prettier'
+    'prettier',
   ],
   parserOptions: {
     ecmaFeatures: {
@@ -20,12 +20,7 @@ module.exports = {
     ecmaVersion: 12,
     sourceType: 'module',
   },
-  plugins: [
-    'react',
-    'import',
-    'jsx-a11y',
-    'prettier'
-  ],
+  plugins: ['react', 'import', 'jsx-a11y', 'prettier'],
   rules: {
     'prettier/prettier': 'error',
     'no-console': ['warn', { allow: ['warn', 'error'] }],
