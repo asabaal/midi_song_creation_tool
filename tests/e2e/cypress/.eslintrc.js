@@ -1,15 +1,2 @@
-module.exports = {
-  env: {
-    cypress: true
-  },
-  plugins: [
-    'cypress'
-  ],
-  extends: [
-    'plugin:cypress/recommended'
-  ],
-  rules: {
-    'no-undef': 'off',
-    'no-unused-vars': 'warn'
-  }
-};
+// Placeholder for ESLint configuration
+// Will be populated in the feature/testing-suite-only branch
