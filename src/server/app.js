@@ -12,6 +12,7 @@ const exportRoutes = require('./routes/exportRoutes');
 
 // Make sessions accessible in routes
 const { Session, sessions } = require('./models/session');
+const { MidiSequence } = require('./models/sequence');
 const { generatePattern } = require('../core/patternGenerator');
 
 // Create Express app
@@ -502,6 +503,132 @@ app.get('/api/sessions/:sessionId/export/json', async (req, res) => {
     });
   } catch (error) {
     console.error(`Error exporting JSON: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Special handler for importing sequences
+app.post('/api/sessions/:sessionId/import', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { name, data } = req.body;
+    
+    console.log('Import data received:');
+    console.log('Body keys:', Object.keys(req.body));
+    
+    // Check if session exists
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Try to import the sequence
+    try {
+      // Safely handle various input formats
+      let jsonData;
+      
+      if (data) {
+        // If data is already parsed
+        if (typeof data === 'object') {
+          jsonData = data;
+        } 
+        // If data is a string, parse it
+        else if (typeof data === 'string') {
+          try {
+            jsonData = JSON.parse(data);
+          } catch (e) {
+            console.error('Failed to parse JSON string:', e);
+            throw new Error(`Invalid JSON format: ${e.message}`);
+          }
+        }
+        else {
+          throw new Error('Import data is neither a string nor an object');
+        }
+      } else {
+        // If data is not in the expected field, try the whole body
+        jsonData = req.body;
+      }
+      
+      console.log('Importing data with keys:', Object.keys(jsonData || {}));
+      
+      // Handle nested data structure
+      if (jsonData.data) {
+        jsonData = jsonData.data;
+      }
+      
+      // Create a new sequence format
+      const sequence = {
+        id: jsonData.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
+        name: jsonData.name || name || 'Imported Sequence',
+        tempo: jsonData.tempo || 120,
+        timeSignature: jsonData.timeSignature || { numerator: 4, denominator: 4 },
+        key: jsonData.key || 'C major',
+        notes: jsonData.notes || []
+      };
+      
+      // Store in the session as a track
+      if (!session.tracks) {
+        session.tracks = [];
+      }
+      
+      // Look for existing track with this ID or create new
+      let trackIndex = session.tracks.findIndex(t => t.id === sequence.id);
+      if (trackIndex === -1) {
+        // Add as a new track
+        session.tracks.push({
+          id: sequence.id,
+          name: sequence.name,
+          tempo: sequence.tempo,
+          timeSignature: sequence.timeSignature,
+          key: sequence.key,
+          notes: sequence.notes,
+          instrument: 0 // Default instrument
+        });
+      } else {
+        // Update existing track
+        session.tracks[trackIndex] = {
+          ...session.tracks[trackIndex],
+          name: sequence.name,
+          tempo: sequence.tempo,
+          timeSignature: sequence.timeSignature,
+          key: sequence.key,
+          notes: sequence.notes
+        };
+      }
+      
+      // Save session
+      await session.save();
+      
+      res.json({
+        success: true,
+        message: `Imported sequence ${sequence.id} with ${sequence.notes.length} notes`,
+        sequenceId: sequence.id,
+        sequence: {
+          id: sequence.id,
+          name: sequence.name,
+          tempo: sequence.tempo,
+          key: sequence.key,
+          noteCount: sequence.notes.length
+        }
+      });
+    } catch (error) {
+      console.error(`Error importing sequence: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to import sequence',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in import endpoint: ${error.message}`);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
