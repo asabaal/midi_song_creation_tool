@@ -184,9 +184,9 @@
         
         const data = await response.json();
 
-        // The new API structure might not include success property
-        if (data.error) {
-          log(`API Error: ${data.error}`, 'error');
+        // Handle both error formats for compatibility
+        if (data.error || (data.success === false)) {
+          log(`API Error: ${data.error || data.message}`, 'error');
           return null;
         }
 
@@ -223,8 +223,23 @@
         return false;
       }
       
-      state.sessionId = sessionData._id || sessionData.id;
+      state.sessionId = sessionData.sessionId || sessionData._id || sessionData.id;
       log(`Session created: ${state.sessionId}`, 'success');
+      
+      // Create sequence
+      const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences`, 'POST', {
+        name: 'My Music',
+        tempo: 120,
+        key: 'C major'
+      });
+      
+      if (!sequenceData) {
+        log('Failed to create sequence', 'error');
+        return false;
+      }
+      
+      state.sequenceId = sequenceData.sequenceId || sequenceData._id || sequenceData.id;
+      log(`Sequence created: ${state.sequenceId}`, 'success');
       
       // Update UI
       setupStatus.textContent = `Ready (Session: ${state.sessionId.substring(0, 8)}...)`;
@@ -244,15 +259,14 @@
     
     // Generate chord progression
     async function generateChords() {
-      if (!state.sessionId) {
+      if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
       
       updateStatus('Generating chord progression...');
       
-      const data = await callApi(`/patterns/chord-progression`, 'POST', {
-        sessionId: state.sessionId,
+      const data = await callApi(`/sessions/${state.sessionId}/patterns/chord-progression`, 'POST', {
         key: 'C',
         progressionName: '1-4-5',
         scaleType: 'major',
@@ -283,15 +297,14 @@
     
     // Generate bassline
     async function generateBass() {
-      if (!state.sessionId) {
+      if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
       
       updateStatus('Generating bassline...');
       
-      const data = await callApi(`/patterns/bassline`, 'POST', {
-        sessionId: state.sessionId,
+      const data = await callApi(`/sessions/${state.sessionId}/patterns/bassline`, 'POST', {
         key: 'C',
         progressionName: '1-4-5',
         scaleType: 'major',
@@ -322,15 +335,14 @@
     
     // Generate drums
     async function generateDrums() {
-      if (!state.sessionId) {
+      if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
       
       updateStatus('Generating drum pattern...');
       
-      const data = await callApi(`/patterns/drums`, 'POST', {
-        sessionId: state.sessionId,
+      const data = await callApi(`/sessions/${state.sessionId}/patterns/drums`, 'POST', {
         patternType: 'basic',
         measures: 2
       });
@@ -358,28 +370,18 @@
     
     // Clear all notes
     async function clearNotes() {
-      if (!state.sessionId) {
+      if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
       
       updateStatus('Clearing notes...');
       
-      // Find what track to clear based on the current session
-      const sessionInfo = await callApi(`/sessions/${state.sessionId}`, 'GET');
-      if (!sessionInfo) {
-        updateStatus('Failed to get session info');
-        return;
-      }
+      const data = await callApi(`/sessions/${state.sessionId}/notes`, 'DELETE');
       
-      // In the new structure, we need to delete notes from each track
-      if (sessionInfo.tracks && sessionInfo.tracks.length > 0) {
-        for (const track of sessionInfo.tracks) {
-          const data = await callApi(`/patterns/notes/${state.sessionId}/${track.id}`, 'DELETE');
-          if (!data) {
-            log(`Failed to clear notes from track ${track.id}`, 'error');
-          }
-        }
+      if (!data) {
+        updateStatus('Failed to clear notes');
+        return;
       }
       
       state.noteCount = 0;
@@ -400,7 +402,7 @@
     
     // Export MIDI file
     async function exportMidiFile() {
-      if (!state.sessionId) {
+      if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
@@ -415,7 +417,7 @@
       
       try {
         // Trigger file download using the export endpoint
-        const response = await callApi(`/export/midi/${state.sessionId}`);
+        const response = await callApi(`/sessions/${state.sessionId}/export/midi`);
         
         if (!response) {
           throw new Error('Failed to get MIDI file from server');
@@ -434,10 +436,10 @@
         const disposition = response.headers.get('Content-Disposition');
         let filename = 'my_music.mid';
         if (disposition && disposition.indexOf('attachment') !== -1) {
-          const filenameRegex = /filename[^;=\\n]*=((['\"]).*?\\2|[^;\\n]*)/;
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
           const matches = filenameRegex.exec(disposition);
           if (matches != null && matches[1]) { 
-            filename = matches[1].replace(/['\"]/g, '');
+            filename = matches[1].replace(/['"]/g, '');
           }
         }
         
@@ -461,14 +463,14 @@
     
     // Export as JSON
     async function exportJson() {
-      if (!state.sessionId) {
+      if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
       
       updateStatus('Exporting JSON data...');
       
-      const data = await callApi(`/export/json/${state.sessionId}`, 'GET');
+      const data = await callApi(`/sessions/${state.sessionId}/export/json`, 'GET');
       
       if (!data) {
         updateStatus('Failed to export JSON data');
@@ -480,8 +482,8 @@
       exportArea.classList.remove('hidden');
       importArea.classList.add('hidden');
       
-      updateStatus(`Exported session data to JSON format`);
-      log(`Exported session ${state.sessionId}`, 'success');
+      updateStatus(`Exported data to JSON format`);
+      log(`Exported session data successfully`, 'success');
     }
     
     // Copy JSON to clipboard
@@ -498,7 +500,7 @@
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = 'midi_session.json';
+      a.download = 'midi_sequence.json';
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -545,7 +547,7 @@
         return;
       }
       
-      const data = await callApi(`/export/import`, 'POST', {
+      const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', {
         data: jsonData
       });
       
@@ -554,11 +556,11 @@
         return;
       }
       
-      state.sessionId = data.sessionId;
-      state.noteCount = data.session.noteCount || 0;
+      state.sequenceId = data.sequenceId || data._id || data.id;
+      state.noteCount = data.sequence ? data.sequence.noteCount : (data.noteCount || 0);
       
-      updateStatus(`Imported session data successfully`);
-      log(`Imported session ${data.sessionId}`, 'success');
+      updateStatus(`Imported data successfully`);
+      log(`Imported sequence data`, 'success');
       
       // Hide import area
       importArea.classList.add('hidden');
@@ -567,14 +569,13 @@
       refreshPianoRoll();
       
       // Enable play button if notes were imported
-      playBtn.disabled = state.noteCount === 0;
-      stopBtn.disabled = state.noteCount === 0;
-      exportMidiBtn.disabled = state.noteCount === 0;
-      exportJsonBtn.disabled = state.noteCount === 0;
-      playStatus.textContent = state.noteCount > 0 ? 
-        `${state.noteCount} notes ready to play` : 'Nothing to play';
-      exportStatus.textContent = state.noteCount > 0 ?
-        `Ready to export` : 'Create music to export';
+      const hasNotes = state.noteCount > 0;
+      playBtn.disabled = !hasNotes;
+      stopBtn.disabled = !hasNotes;
+      exportMidiBtn.disabled = !hasNotes;
+      exportJsonBtn.disabled = !hasNotes;
+      playStatus.textContent = hasNotes ? `${state.noteCount} notes ready to play` : 'Nothing to play';
+      exportStatus.textContent = hasNotes ? `Ready to export` : 'Create music to export';
     }
     
     // Handle file upload
@@ -619,41 +620,29 @@
     
     // Refresh piano roll with notes
     async function refreshPianoRoll() {
-      // Get session data
-      const data = await callApi(`/sessions/${state.sessionId}`);
+      // Get sequence data
+      const data = await callApi(`/sessions/${state.sessionId}/sequences/${state.sequenceId}`);
       if (!data) {
-        log('Failed to get session data', 'error');
+        log('Failed to get sequence data', 'error');
         return;
       }
       
       // Clear existing notes
       document.querySelectorAll('.piano-note').forEach(note => note.remove());
       
-      // Add notes from all tracks
-      if (data.tracks && data.tracks.length > 0) {
-        let allNotes = [];
-        
-        // Collect notes from all tracks
-        data.tracks.forEach(track => {
-          if (track.notes && track.notes.length > 0) {
-            // Add track info to each note
-            const notesWithTrackInfo = track.notes.map(note => ({
-              ...note,
-              trackId: track.id,
-              instrument: track.instrument
-            }));
-            allNotes = [...allNotes, ...notesWithTrackInfo];
-          }
-        });
-        
-        // Display all notes
-        allNotes.forEach(note => {
+      // Add notes
+      const sequence = data.sequence || data;
+      const notes = sequence.notes || [];
+      
+      if (notes.length > 0) {
+        notes.forEach(note => {
           const noteElement = document.createElement('div');
           
-          // Select class based on instrument/track
-          if (note.instrument === 9) {
+          // Select class based on channel or instrument
+          const channel = note.channel || note.instrument || 0;
+          if (channel === 9) {
             noteElement.className = 'piano-note drum-note';
-          } else if (note.instrument === 32) {
+          } else if (channel === 1 || channel === 32) {
             noteElement.className = 'piano-note bassline-note';
           } else {
             noteElement.className = 'piano-note';
@@ -669,7 +658,7 @@
           noteElement.dataset.start = note.startTime;
           noteElement.dataset.duration = note.duration;
           noteElement.dataset.velocity = note.velocity || 100;
-          noteElement.dataset.instrument = note.instrument;
+          noteElement.dataset.channel = note.channel || note.instrument || 0;
           
           // Add note name for better visibility
           noteElement.textContent = note.pitch;
@@ -677,8 +666,8 @@
           pianoRoll.appendChild(noteElement);
         });
         
-        log(`Displayed ${allNotes.length} notes in piano roll`, 'success');
-        state.noteCount = allNotes.length;
+        log(`Displayed ${notes.length} notes in piano roll`, 'success');
+        state.noteCount = notes.length;
       }
     }
     
@@ -710,7 +699,7 @@
         
         notes.forEach(noteElement => {
           // Skip drum notes for now (they sound strange)
-          if (parseInt(noteElement.dataset.instrument) === 9) {
+          if (parseInt(noteElement.dataset.channel) === 9) {
             return;
           }
           
@@ -723,8 +712,9 @@
           const oscillator = state.audioContext.createOscillator();
           const gainNode = state.audioContext.createGain();
           
-          // Configure oscillator
-          oscillator.type = parseInt(noteElement.dataset.instrument) === 32 ? 'triangle' : 'sine';
+          // Configure oscillator based on channel
+          const channel = parseInt(noteElement.dataset.channel);
+          oscillator.type = (channel === 1 || channel === 32) ? 'triangle' : 'sine';
           oscillator.frequency.value = midiToFrequency(pitch);
           
           // Connect
@@ -742,9 +732,10 @@
           setTimeout(() => {
             noteElement.style.backgroundColor = 'yellow';
             setTimeout(() => {
-              if (noteElement.dataset.instrument === '9') {
+              const channel = noteElement.dataset.channel;
+              if (channel === '9') {
                 noteElement.style.backgroundColor = '#db4437';
-              } else if (noteElement.dataset.instrument === '32') {
+              } else if (channel === '1' || channel === '32') {
                 noteElement.style.backgroundColor = '#0f9d58';
               } else {
                 noteElement.style.backgroundColor = '#4285f4';
