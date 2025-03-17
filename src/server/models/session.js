@@ -5,7 +5,7 @@ const { MidiSequence, MidiNote } = require('./sequence');
 // In-memory Session implementation similar to the original code
 class Session {
   constructor(options = {}) {
-    const id = options.id || `session_${Date.now()}`;
+    const id = options.id || options._id || `session_${Date.now()}`;
     this._id = id;
     this.id = id; // For backward compatibility
     this.name = options.name || 'Untitled Session';
@@ -138,6 +138,7 @@ class Session {
 
   // Static methods for finding/querying
   static async findById(id) {
+    if (!id) return null; // Don't throw an error, just return null if ID is missing
     return sessions.get(id) || null;
   }
 
