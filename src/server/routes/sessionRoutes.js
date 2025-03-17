@@ -83,7 +83,7 @@ async function createSequence(req, res) {
     }
     session.tracks.push(newTrack);
     
-    // If using the sessions format, set up the main sequence
+    // If using the sequences format, set up the main sequence
     if (!session.sequences) {
       session.sequences = {};
     }
