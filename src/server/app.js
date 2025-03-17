@@ -74,6 +74,85 @@ app.post('/api/sessions/:sessionId/sequences', (req, res) => {
   sessionRoutes.handle(req, res);
 });
 
+// Special handler for getting sequence data
+app.get('/api/sessions/:sessionId/sequences/:sequenceId', async (req, res) => {
+  try {
+    const { sessionId, sequenceId } = req.params;
+    console.log(`Getting sequence ${sequenceId} from session ${sessionId}`);
+    
+    // Check if session exists
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // First, check if the sequence exists in the sequences object
+    if (session.sequences && session.sequences[sequenceId]) {
+      return res.json({
+        success: true,
+        sequence: session.sequences[sequenceId]
+      });
+    }
+    
+    // If not found there, look for it in the tracks
+    if (session.tracks) {
+      const track = session.tracks.find(t => t.id === sequenceId);
+      if (track) {
+        // Format as a sequence
+        const sequence = {
+          id: track.id,
+          name: track.name,
+          tempo: track.tempo,
+          timeSignature: track.timeSignature,
+          key: track.key,
+          notes: track.notes || []
+        };
+        
+        return res.json({
+          success: true,
+          sequence
+        });
+      }
+    }
+    
+    // If the sequenceId doesn't exist but we have tracks, return the first track
+    if (session.tracks && session.tracks.length > 0) {
+      const firstTrack = session.tracks[0];
+      const sequence = {
+        id: firstTrack.id,
+        name: firstTrack.name,
+        tempo: firstTrack.tempo,
+        timeSignature: firstTrack.timeSignature,
+        key: firstTrack.key,
+        notes: firstTrack.notes || []
+      };
+      
+      return res.json({
+        success: true,
+        sequence
+      });
+    }
+    
+    // No sequence found
+    return res.status(404).json({
+      success: false,
+      error: 'Sequence not found',
+      message: `No sequence with ID ${sequenceId} exists in session ${sessionId}`
+    });
+  } catch (error) {
+    console.error(`Error getting sequence: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 // Special handler for the chord progression pattern through sessions API
 app.post('/api/sessions/:sessionId/patterns/chord-progression', async (req, res) => {
   try {
