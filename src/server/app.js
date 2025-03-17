@@ -27,6 +27,14 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/patterns', patternRoutes);
 app.use('/api/export', exportRoutes);
 
+// Special compatibility route for API calls from the client
+// We need to handle the sequence creation here directly since the client
+// expects a specific response format
+app.post('/api/sessions/:sessionId/sequences', (req, res) => {
+  // Forward to the session routes handler
+  sessionRoutes.handle(req, res);
+});
+
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../../public')));
