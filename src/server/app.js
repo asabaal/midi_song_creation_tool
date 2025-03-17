@@ -11,18 +11,63 @@ const patternRoutes = require('./routes/patternRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 
 // Make sessions accessible in routes
-const { sessions } = require('./models/session');
+const { Session, sessions } = require('./models/session');
 
 // Create Express app
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+
+// Custom bodyParser setup with better error handling
+app.use((req, res, next) => {
+  bodyParser.json()(req, res, (err) => {
+    if (err) {
+      console.error(`JSON parse error: ${err.message}`);
+      return res.status(400).json({
+        success: false,
+        error: 'Bad Request',
+        message: 'Invalid JSON in request body'
+      });
+    }
+    next();
+  });
+});
+
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Direct handler for session creation - we define this FIRST before any other routes
+app.post('/api/sessions', async (req, res) => {
+  try {
+    console.log('Creating new session with body:', req.body);
+    
+    const { name, bpm, timeSignature } = req.body;
+    
+    const newSession = new Session();
+    if (name) newSession.name = name;
+    if (bpm) newSession.bpm = bpm;
+    if (timeSignature) newSession.timeSignature = timeSignature;
+    
+    await newSession.save();
+    
+    console.log(`Created session with ID: ${newSession.id}`);
+    
+    res.status(201).json({
+      success: true,
+      sessionId: newSession.id,
+      message: 'Session created successfully'
+    });
+  } catch (error) {
+    console.error(`Error creating session: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      message: 'Failed to create session'
+    });
+  }
+});
+
 // Special compatibility route for sequence creation
-// This needs to be defined BEFORE the general route handler
 app.post('/api/sessions/:sessionId/sequences', (req, res) => {
   // Forward to the session routes handler
   sessionRoutes.handle(req, res);
@@ -78,8 +123,10 @@ if (process.env.NODE_ENV === 'production') {
 app.use((err, req, res, _next) => {
   // Logger should be used instead of console in production
   // eslint-disable-next-line no-console
+  console.error('Global error handler:');
   console.error(err.stack);
   res.status(500).json({
+    success: false,
     error: 'Server error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred',
   });
