@@ -21,19 +21,18 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// API routes
-app.use('/api/music-theory', musicTheoryRoutes);
-app.use('/api/sessions', sessionRoutes);
-app.use('/api/patterns', patternRoutes);
-app.use('/api/export', exportRoutes);
-
-// Special compatibility route for API calls from the client
-// We need to handle the sequence creation here directly since the client
-// expects a specific response format
+// Special compatibility route for sequence creation
+// This needs to be defined BEFORE the general route handler
 app.post('/api/sessions/:sessionId/sequences', (req, res) => {
   // Forward to the session routes handler
   sessionRoutes.handle(req, res);
 });
+
+// API routes - these must come AFTER any special route handlers
+app.use('/api/music-theory', musicTheoryRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/patterns', patternRoutes);
+app.use('/api/export', exportRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
