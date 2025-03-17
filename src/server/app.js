@@ -93,6 +93,7 @@ app.get('/api/sessions/:sessionId/sequences/:sequenceId', async (req, res) => {
     
     // First, check if the sequence exists in the sequences object
     if (session.sequences && session.sequences[sequenceId]) {
+      console.log(`Found sequence in sequences object with ${session.sequences[sequenceId].notes ? session.sequences[sequenceId].notes.length : 0} notes`);
       return res.json({
         success: true,
         sequence: session.sequences[sequenceId]
@@ -103,15 +104,23 @@ app.get('/api/sessions/:sessionId/sequences/:sequenceId', async (req, res) => {
     if (session.tracks) {
       const track = session.tracks.find(t => t.id === sequenceId);
       if (track) {
+        console.log(`Found sequence in tracks array with ${track.notes ? track.notes.length : 0} notes`);
         // Format as a sequence
         const sequence = {
           id: track.id,
           name: track.name,
-          tempo: track.tempo,
-          timeSignature: track.timeSignature,
-          key: track.key,
+          tempo: track.tempo || 120,
+          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
+          key: track.key || 'C major',
           notes: track.notes || []
         };
+        
+        // Sync it back to the sequences object for future calls
+        if (!session.sequences) {
+          session.sequences = {};
+        }
+        session.sequences[sequenceId] = sequence;
+        await session.save();
         
         return res.json({
           success: true,
@@ -120,17 +129,36 @@ app.get('/api/sessions/:sessionId/sequences/:sequenceId', async (req, res) => {
       }
     }
     
-    // If the sequenceId doesn't exist but we have tracks, return the first track
+    // Try returning current sequence as a fallback
+    if (session.currentSequenceId && session.sequences && session.sequences[session.currentSequenceId]) {
+      console.log(`Falling back to current sequence ${session.currentSequenceId}`);
+      return res.json({
+        success: true,
+        sequence: session.sequences[session.currentSequenceId]
+      });
+    }
+    
+    // Try first track as a last resort
     if (session.tracks && session.tracks.length > 0) {
       const firstTrack = session.tracks[0];
+      console.log(`Falling back to first track ${firstTrack.id} with ${firstTrack.notes ? firstTrack.notes.length : 0} notes`);
+      
       const sequence = {
         id: firstTrack.id,
-        name: firstTrack.name,
-        tempo: firstTrack.tempo,
-        timeSignature: firstTrack.timeSignature,
-        key: firstTrack.key,
+        name: firstTrack.name || 'Default Sequence',
+        tempo: firstTrack.tempo || 120,
+        timeSignature: firstTrack.timeSignature || { numerator: 4, denominator: 4 },
+        key: firstTrack.key || 'C major',
         notes: firstTrack.notes || []
       };
+      
+      // Sync it back
+      if (!session.sequences) {
+        session.sequences = {};
+      }
+      session.sequences[firstTrack.id] = sequence;
+      session.currentSequenceId = firstTrack.id;
+      await session.save();
       
       return res.json({
         success: true,
@@ -196,6 +224,7 @@ app.post('/api/sessions/:sessionId/patterns/chord-progression', async (req, res)
     };
     
     const notes = generatePattern(options);
+    console.log(`Generated ${notes.length} notes for chord progression in ${key}`);
     
     // Find or create the first track to store chord notes
     if (!session.tracks) {
@@ -222,6 +251,33 @@ app.post('/api/sessions/:sessionId/patterns/chord-progression', async (req, res)
       track.notes = [];
     }
     track.notes = track.notes.concat(notes);
+    
+    // CRITICAL: Also update the notes in the sequence object if it exists
+    if (session.sequences) {
+      if (track.id && session.sequences[track.id]) {
+        // If the track has a corresponding sequence, update it
+        console.log(`Updating sequence ${track.id} with ${notes.length} notes`);
+        session.sequences[track.id].notes = track.notes;
+      } else if (session.currentSequenceId && session.sequences[session.currentSequenceId]) {
+        // Or update the current sequence
+        console.log(`Updating current sequence ${session.currentSequenceId} with ${notes.length} notes`);
+        session.sequences[session.currentSequenceId].notes = track.notes;
+      } else {
+        // Create a new sequence entry if one doesn't exist
+        const sequenceId = track.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
+        track.id = sequenceId; // Ensure consistent IDs
+        session.sequences[sequenceId] = {
+          id: sequenceId,
+          name: track.name || 'Chord Progression',
+          tempo: track.tempo || 120,
+          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
+          key: track.key || 'C major',
+          notes: track.notes
+        };
+        session.currentSequenceId = sequenceId;
+        console.log(`Created new sequence ${sequenceId} with ${notes.length} notes`);
+      }
+    }
     
     await session.save();
     
@@ -283,6 +339,7 @@ app.post('/api/sessions/:sessionId/patterns/bassline', async (req, res) => {
     };
     
     const notes = generatePattern(options);
+    console.log(`Generated ${notes.length} notes for bassline in ${key}`);
     
     // Find or create a bass track
     if (!session.tracks) {
@@ -309,6 +366,33 @@ app.post('/api/sessions/:sessionId/patterns/bassline', async (req, res) => {
       track.notes = [];
     }
     track.notes = track.notes.concat(notes);
+    
+    // CRITICAL: Also update the notes in the sequence object if it exists
+    if (session.sequences) {
+      if (track.id && session.sequences[track.id]) {
+        // If the track has a corresponding sequence, update it
+        console.log(`Updating sequence ${track.id} with ${notes.length} notes`);
+        session.sequences[track.id].notes = track.notes;
+      } else if (session.currentSequenceId && session.sequences[session.currentSequenceId]) {
+        // Or update the current sequence
+        console.log(`Updating current sequence ${session.currentSequenceId} with ${notes.length} notes`);
+        session.sequences[session.currentSequenceId].notes = track.notes;
+      } else {
+        // Create a new sequence entry
+        const sequenceId = track.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
+        track.id = sequenceId; // Ensure consistent IDs
+        session.sequences[sequenceId] = {
+          id: sequenceId,
+          name: track.name || 'Bassline',
+          tempo: track.tempo || 120,
+          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
+          key: track.key || 'C major',
+          notes: track.notes
+        };
+        session.currentSequenceId = sequenceId;
+        console.log(`Created new sequence ${sequenceId} with ${notes.length} notes`);
+      }
+    }
     
     await session.save();
     
@@ -364,6 +448,7 @@ app.post('/api/sessions/:sessionId/patterns/drums', async (req, res) => {
     };
     
     const notes = generatePattern(options);
+    console.log(`Generated ${notes.length} notes for ${patternType} drum pattern`);
     
     // Find or create a drum track
     if (!session.tracks) {
@@ -390,6 +475,33 @@ app.post('/api/sessions/:sessionId/patterns/drums', async (req, res) => {
       track.notes = [];
     }
     track.notes = track.notes.concat(notes);
+    
+    // CRITICAL: Also update the notes in the sequence object if it exists
+    if (session.sequences) {
+      if (track.id && session.sequences[track.id]) {
+        // If the track has a corresponding sequence, update it
+        console.log(`Updating sequence ${track.id} with ${notes.length} notes`);
+        session.sequences[track.id].notes = track.notes;
+      } else if (session.currentSequenceId && session.sequences[session.currentSequenceId]) {
+        // Or update the current sequence
+        console.log(`Updating current sequence ${session.currentSequenceId} with ${notes.length} notes`);
+        session.sequences[session.currentSequenceId].notes = track.notes;
+      } else {
+        // Create a new sequence entry
+        const sequenceId = track.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
+        track.id = sequenceId; // Ensure consistent IDs
+        session.sequences[sequenceId] = {
+          id: sequenceId,
+          name: track.name || 'Drums',
+          tempo: track.tempo || 120,
+          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
+          key: track.key || 'C major',
+          notes: track.notes
+        };
+        session.currentSequenceId = sequenceId;
+        console.log(`Created new sequence ${sequenceId} with ${notes.length} notes`);
+      }
+    }
     
     await session.save();
     
@@ -438,6 +550,16 @@ app.delete('/api/sessions/:sessionId/notes', async (req, res) => {
     for (const track of session.tracks) {
       totalNotes += track.notes ? track.notes.length : 0;
       track.notes = [];
+      
+      // Also clear the corresponding sequence if it exists
+      if (session.sequences && track.id && session.sequences[track.id]) {
+        session.sequences[track.id].notes = [];
+      }
+    }
+    
+    // Also clear the current sequence if it exists
+    if (session.currentSequenceId && session.sequences && session.sequences[session.currentSequenceId]) {
+      session.sequences[session.currentSequenceId].notes = [];
     }
     
     await session.save();
@@ -478,6 +600,19 @@ app.get('/api/sessions/:sessionId/export/json', async (req, res) => {
         success: false,
         error: 'No tracks to export',
         message: 'No tracks found in the session to export'
+      });
+    }
+    
+    // Prefer the current sequence if it exists
+    if (session.currentSequenceId && session.sequences && session.sequences[session.currentSequenceId]) {
+      const sequence = session.sequences[session.currentSequenceId];
+      
+      return res.json({
+        success: true,
+        message: `Exported sequence ${sequence.id} as JSON`,
+        sequenceId: sequence.id,
+        noteCount: sequence.notes ? sequence.notes.length : 0,
+        data: sequence
       });
     }
     
@@ -574,7 +709,15 @@ app.post('/api/sessions/:sessionId/import', async (req, res) => {
         notes: jsonData.notes || []
       };
       
-      // Store in the session as a track
+      // Store in both places for compatibility
+      // 1. In the sequences object
+      if (!session.sequences) {
+        session.sequences = {};
+      }
+      session.sequences[sequence.id] = sequence;
+      session.currentSequenceId = sequence.id;
+      
+      // 2. In the tracks array
       if (!session.tracks) {
         session.tracks = [];
       }
