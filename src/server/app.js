@@ -456,6 +456,60 @@ app.delete('/api/sessions/:sessionId/notes', async (req, res) => {
   }
 });
 
+// Special handler for exporting JSON
+app.get('/api/sessions/:sessionId/export/json', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Check if session exists
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Check if there are tracks
+    if (!session.tracks || session.tracks.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No tracks to export',
+        message: 'No tracks found in the session to export'
+      });
+    }
+    
+    // Use the first track as the sequence data
+    const track = session.tracks[0];
+    
+    // Format the data similar to the original API
+    const sequenceData = {
+      id: track.id,
+      name: track.name,
+      tempo: track.tempo || 120,
+      timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
+      key: track.key || 'C major',
+      notes: track.notes || []
+    };
+    
+    res.json({
+      success: true,
+      message: `Exported sequence ${track.id} as JSON`,
+      sequenceId: track.id,
+      noteCount: track.notes ? track.notes.length : 0,
+      data: sequenceData
+    });
+  } catch (error) {
+    console.error(`Error exporting JSON: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 // API routes - these must come AFTER any special route handlers
 app.use('/api/music-theory', musicTheoryRoutes);
 app.use('/api/sessions', sessionRoutes);
