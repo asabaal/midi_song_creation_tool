@@ -416,8 +416,8 @@
       updateStatus('Exporting MIDI file...');
       
       try {
-        // Trigger file download using the export endpoint
-        const response = await callApi(`/sessions/${state.sessionId}/export/midi`);
+        // Use the correct direct endpoint for MIDI export
+        const response = await callApi(`/sessions/${state.sessionId}/export/midi`, 'GET');
         
         if (!response) {
           throw new Error('Failed to get MIDI file from server');
@@ -621,49 +621,47 @@
     // Refresh piano roll with notes
     async function refreshPianoRoll() {
       try {
-        // Get session data - we need to use the session endpoint now
-        const data = await callApi(`/sessions/${state.sessionId}`);
-        if (!data) {
-          log('Failed to get session data', 'error');
-          return;
+        // First get the session to see all tracks and notes
+        const sessionData = await callApi(`/sessions/${state.sessionId}`);
+        if (!sessionData || !sessionData.session) {
+          log('Failed to load session data', 'error');
+          return 0;
         }
         
-        // Log data structure for debugging
-        console.log('Session data:', data);
+        const session = sessionData.session;
         
         // Clear existing notes
         document.querySelectorAll('.piano-note').forEach(note => note.remove());
         
-        // Extract all notes from all tracks
         let allNotes = [];
         
-        // Handle the new data structure
-        if (data.tracks && Array.isArray(data.tracks)) {
-          data.tracks.forEach(track => {
+        // Collect notes from all tracks
+        if (session.tracks && Array.isArray(session.tracks)) {
+          session.tracks.forEach(track => {
             if (track.notes && Array.isArray(track.notes)) {
-              // Add instrument/channel info from the track to each note
+              // Add instrument information to each note for display
               const trackNotes = track.notes.map(note => ({
                 ...note,
-                instrument: track.instrument,
-                channel: track.instrument
+                instrument: track.instrument || 0,
+                channel: track.instrument || 0
               }));
               allNotes = allNotes.concat(trackNotes);
             }
           });
         }
         
-        log(`Found ${allNotes.length} notes in all tracks`);
-        state.noteCount = allNotes.length;
+        log(`Found ${allNotes.length} notes across all tracks`);
         
+        // Display notes on piano roll
         if (allNotes.length > 0) {
           allNotes.forEach(note => {
             const noteElement = document.createElement('div');
             
             // Select class based on channel or instrument
-            const channel = note.channel || note.instrument || 0;
-            if (channel === 9) {
+            const instrument = note.instrument || 0;
+            if (instrument === 9) {
               noteElement.className = 'piano-note drum-note';
-            } else if (channel === 1 || channel === 32) {
+            } else if (instrument === 32) {
               noteElement.className = 'piano-note bassline-note';
             } else {
               noteElement.className = 'piano-note';
@@ -688,29 +686,17 @@
           });
           
           log(`Displayed ${allNotes.length} notes in piano roll`, 'success');
+          state.noteCount = allNotes.length;
+          
+          return allNotes.length;
         } else {
           log('No notes found to display', 'info');
-        }
-        
-        // Update player status
-        if (allNotes.length > 0) {
-          playBtn.disabled = false;
-          stopBtn.disabled = false;
-          exportMidiBtn.disabled = false;
-          exportJsonBtn.disabled = false;
-          playStatus.textContent = `${allNotes.length} notes ready to play`;
-          exportStatus.textContent = `Ready to export`;
-        } else {
-          playBtn.disabled = true;
-          stopBtn.disabled = true;
-          exportMidiBtn.disabled = true;
-          exportJsonBtn.disabled = true;
-          playStatus.textContent = 'Nothing to play';
-          exportStatus.textContent = 'Create music to export';
+          return 0;
         }
       } catch (error) {
         console.error('Error refreshing piano roll:', error);
         log(`Error refreshing piano roll: ${error.message}`, 'error');
+        return 0;
       }
     }
     
