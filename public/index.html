@@ -416,8 +416,8 @@
       updateStatus('Exporting MIDI file...');
       
       try {
-        // Trigger file download using the export endpoint
-        const response = await callApi(`/sessions/${state.sessionId}/export/midi`);
+        // Use the correct direct endpoint for MIDI export
+        const response = await callApi(`/sessions/${state.sessionId}/export/midi`, 'GET');
         
         if (!response) {
           throw new Error('Failed to get MIDI file from server');
@@ -621,76 +621,47 @@
     // Refresh piano roll with notes
     async function refreshPianoRoll() {
       try {
-        // First try to get the specific sequence
-        const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences/${state.sequenceId}`);
+        // First get the session to see all tracks and notes
+        const sessionData = await callApi(`/sessions/${state.sessionId}`);
+        if (!sessionData || !sessionData.session) {
+          log('Failed to load session data', 'error');
+          return 0;
+        }
+        
+        const session = sessionData.session;
         
         // Clear existing notes
         document.querySelectorAll('.piano-note').forEach(note => note.remove());
         
-        let notes = [];
+        let allNotes = [];
         
-        // Process sequence data if available
-        if (sequenceData && sequenceData.sequence && sequenceData.sequence.notes) {
-          notes = sequenceData.sequence.notes;
-          log(`Found ${notes.length} notes in sequence ${state.sequenceId}`);
-        } else {
-          // If specific sequence not found, try to get all notes from the session
-          log('Sequence-specific notes not found, looking for notes in session');
-          
-          try {
-            // Get session with all sequences and notes
-            const sessionData = await callApi(`/sessions/${state.sessionId}`);
-            
-            if (sessionData && sessionData.session) {
-              const session = sessionData.session;
-              
-              // Check for notes in the sequences object first
-              if (session.sequences && session.currentSequenceId && 
-                  session.sequences[session.currentSequenceId] && 
-                  session.sequences[session.currentSequenceId].notes) {
-                notes = session.sequences[session.currentSequenceId].notes;
-                log(`Found ${notes.length} notes in current sequence from session data`);
-              } 
-              // If not found in sequences, check tracks
-              else if (session.tracks && Array.isArray(session.tracks)) {
-                // Find track corresponding to current sequence
-                const track = session.tracks.find(t => t.id === state.sequenceId);
-                if (track && track.notes) {
-                  notes = track.notes;
-                  log(`Found ${notes.length} notes in track ${track.id} from session data`);
-                }
-                // If no specific track found, collect all notes
-                else {
-                  session.tracks.forEach(track => {
-                    if (track.notes && Array.isArray(track.notes)) {
-                      const trackNotes = track.notes.map(note => ({
-                        ...note,
-                        instrument: track.instrument,
-                        channel: track.instrument
-                      }));
-                      notes = notes.concat(trackNotes);
-                    }
-                  });
-                  log(`Found ${notes.length} notes across all tracks in session`);
-                }
-              }
+        // Collect notes from all tracks
+        if (session.tracks && Array.isArray(session.tracks)) {
+          session.tracks.forEach(track => {
+            if (track.notes && Array.isArray(track.notes)) {
+              // Add instrument information to each note for display
+              const trackNotes = track.notes.map(note => ({
+                ...note,
+                instrument: track.instrument || 0,
+                channel: track.instrument || 0
+              }));
+              allNotes = allNotes.concat(trackNotes);
             }
-          } catch (error) {
-            console.error('Error fetching session data:', error);
-            log(`Error fetching session data: ${error.message}`, 'error');
-          }
+          });
         }
         
+        log(`Found ${allNotes.length} notes across all tracks`);
+        
         // Display notes on piano roll
-        if (notes.length > 0) {
-          notes.forEach(note => {
+        if (allNotes.length > 0) {
+          allNotes.forEach(note => {
             const noteElement = document.createElement('div');
             
             // Select class based on channel or instrument
-            const channel = note.channel || note.instrument || 0;
-            if (channel === 9) {
+            const instrument = note.instrument || 0;
+            if (instrument === 9) {
               noteElement.className = 'piano-note drum-note';
-            } else if (channel === 1 || channel === 32) {
+            } else if (instrument === 32) {
               noteElement.className = 'piano-note bassline-note';
             } else {
               noteElement.className = 'piano-note';
@@ -714,10 +685,10 @@
             pianoRoll.appendChild(noteElement);
           });
           
-          log(`Displayed ${notes.length} notes in piano roll`, 'success');
-          state.noteCount = notes.length;
+          log(`Displayed ${allNotes.length} notes in piano roll`, 'success');
+          state.noteCount = allNotes.length;
           
-          return notes.length;
+          return allNotes.length;
         } else {
           log('No notes found to display', 'info');
           return 0;
