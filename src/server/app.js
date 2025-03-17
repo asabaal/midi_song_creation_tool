@@ -9,14 +9,40 @@ const musicTheoryRoutes = require('./routes/musicTheoryRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const patternRoutes = require('./routes/patternRoutes');
 const exportRoutes = require('./routes/exportRoutes');
+const compatRouter = require('./routes/compatRouter');
+
+// Import session service
+const sessionService = require('./services/sessionService');
 
 // Create Express app
 const app = express();
+
+// Make session service available to all routes through app.locals
+app.locals.sessionService = sessionService;
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toLocaleTimeString()} API Call: ${req.method} ${req.url}`);
+  
+  // Track response for logging
+  const originalSend = res.send;
+  res.send = function(data) {
+    if (res.statusCode >= 400) {
+      console.log(`${new Date().toLocaleTimeString()} API error (${res.statusCode}): ${data}`);
+    }
+    return originalSend.call(this, data);
+  };
+  
+  next();
+});
+
+// Add compatibility router for old API paths (must be before API routes)
+app.use('/', compatRouter);
 
 // API routes
 app.use('/api/music-theory', musicTheoryRoutes);
@@ -54,6 +80,7 @@ if (process.env.NODE_ENV === 'production') {
     res.json({
       message: 'Debug information',
       environment: process.env.NODE_ENV || 'development',
+      sessionCount: sessionService.sessions.size,
       versions: {
         node: process.version,
         app: '0.2.0'
@@ -68,6 +95,7 @@ app.use((err, req, res, _next) => {
   // eslint-disable-next-line no-console
   console.error(err.stack);
   res.status(500).json({
+    success: false,
     error: 'Server error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred',
   });

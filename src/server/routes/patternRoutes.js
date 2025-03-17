@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { generatePattern } = require('../../core/patternGenerator');
-const { Session } = require('../models/session');
+const sessionService = require('../services/sessionService');
 
 /**
  * Generate chord progression pattern
@@ -19,20 +19,22 @@ router.post('/chord-progression', async (req, res) => {
       rhythmPattern = [4] 
     } = req.body;
     
-    // Find or create session
-    let session;
-    if (sessionId) {
-      session = await Session.findById(sessionId);
-      if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
-      }
-    } else {
-      session = new Session({
-        name: `${key} ${progressionName} Progression`,
-        bpm: 120,
-        timeSignature: [4, 4],
+    if (!sessionId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Session ID is required',
+        message: 'Session ID is required'
       });
-      await session.save();
+    }
+    
+    // Check if session exists
+    const session = sessionService.getSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
     }
     
     // Generate chord progression pattern
@@ -47,32 +49,46 @@ router.post('/chord-progression', async (req, res) => {
     
     const notes = generatePattern(options);
     
-    // Add notes to session
-    const track = session.tracks.find(t => t.instrument === 0) || { 
-      id: session.tracks.length + 1,
-      name: 'Chord Progression',
-      instrument: 0,
-      notes: []
-    };
-    
-    // If track doesn't exist yet, add it
-    if (!session.tracks.find(t => t.id === track.id)) {
-      session.tracks.push(track);
+    try {
+      // Try to add notes to existing sequence
+      if (!session.currentSequenceId) {
+        throw new Error('No current sequence');
+      }
+      
+      const updatedSequence = sessionService.addNotes(sessionId, notes);
+      
+      res.json({
+        success: true,
+        message: `Added ${notes.length} notes from ${key} ${progressionName} progression`,
+        sessionId: sessionId,
+        sequenceId: session.currentSequenceId,
+        noteCount: updatedSequence.notes.length
+      });
+    } catch (error) {
+      // If there's no current sequence, create one first
+      const sequence = sessionService.createSequence(sessionId, {
+        name: `${key} ${progressionName} Progression`,
+        key: `${key} ${scaleType}`
+      });
+      
+      // Then add notes
+      const updatedSequence = sessionService.addNotes(sessionId, notes);
+      
+      res.json({
+        success: true,
+        message: `Created new sequence and added ${notes.length} notes from ${key} ${progressionName} progression`,
+        sessionId: sessionId,
+        sequenceId: sequence.id,
+        noteCount: updatedSequence.notes.length
+      });
     }
-    
-    // Add notes to track
-    track.notes = track.notes.concat(notes);
-    
-    await session.save();
-    
-    res.json({
-      success: true,
-      message: `Added ${notes.length} notes from ${key} ${progressionName} progression`,
-      sessionId: session._id,
-      noteCount: track.notes.length
-    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`Error generating chord progression: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      message: error.message
+    });
   }
 });
 
@@ -91,20 +107,22 @@ router.post('/bassline', async (req, res) => {
       rhythmPattern = [1, 0.5, 0.5] 
     } = req.body;
     
-    // Find or create session
-    let session;
-    if (sessionId) {
-      session = await Session.findById(sessionId);
-      if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
-      }
-    } else {
-      session = new Session({
-        name: `${key} ${progressionName} Bassline`,
-        bpm: 120,
-        timeSignature: [4, 4],
+    if (!sessionId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Session ID is required',
+        message: 'Session ID is required'
       });
-      await session.save();
+    }
+    
+    // Check if session exists
+    const session = sessionService.getSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
     }
     
     // Generate bassline pattern
@@ -119,32 +137,46 @@ router.post('/bassline', async (req, res) => {
     
     const notes = generatePattern(options);
     
-    // Add notes to session
-    const track = session.tracks.find(t => t.instrument === 32) || { 
-      id: session.tracks.length + 1,
-      name: 'Bassline',
-      instrument: 32, // Acoustic bass
-      notes: []
-    };
-    
-    // If track doesn't exist yet, add it
-    if (!session.tracks.find(t => t.id === track.id)) {
-      session.tracks.push(track);
+    try {
+      // Try to add notes to existing sequence
+      if (!session.currentSequenceId) {
+        throw new Error('No current sequence');
+      }
+      
+      const updatedSequence = sessionService.addNotes(sessionId, notes);
+      
+      res.json({
+        success: true,
+        message: `Added ${notes.length} notes for ${key} ${progressionName} bassline`,
+        sessionId: sessionId,
+        sequenceId: session.currentSequenceId,
+        noteCount: updatedSequence.notes.length
+      });
+    } catch (error) {
+      // If there's no current sequence, create one first
+      const sequence = sessionService.createSequence(sessionId, {
+        name: `${key} ${progressionName} Bassline`,
+        key: `${key} ${scaleType}`
+      });
+      
+      // Then add notes
+      const updatedSequence = sessionService.addNotes(sessionId, notes);
+      
+      res.json({
+        success: true,
+        message: `Created new sequence and added ${notes.length} notes for ${key} ${progressionName} bassline`,
+        sessionId: sessionId,
+        sequenceId: sequence.id,
+        noteCount: updatedSequence.notes.length
+      });
     }
-    
-    // Add notes to track
-    track.notes = track.notes.concat(notes);
-    
-    await session.save();
-    
-    res.json({
-      success: true,
-      message: `Added ${notes.length} notes for ${key} ${progressionName} bassline`,
-      sessionId: session._id,
-      noteCount: track.notes.length
-    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`Error generating bassline: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      message: error.message
+    });
   }
 });
 
@@ -160,20 +192,22 @@ router.post('/drums', async (req, res) => {
       measures = 2 
     } = req.body;
     
-    // Find or create session
-    let session;
-    if (sessionId) {
-      session = await Session.findById(sessionId);
-      if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
-      }
-    } else {
-      session = new Session({
-        name: `${patternType.charAt(0).toUpperCase() + patternType.slice(1)} Drum Pattern`,
-        bpm: 120,
-        timeSignature: [4, 4],
+    if (!sessionId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Session ID is required',
+        message: 'Session ID is required'
       });
-      await session.save();
+    }
+    
+    // Check if session exists
+    const session = sessionService.getSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
     }
     
     // Generate drum pattern
@@ -185,71 +219,95 @@ router.post('/drums', async (req, res) => {
     
     const notes = generatePattern(options);
     
-    // Add notes to session
-    const track = session.tracks.find(t => t.instrument === 9) || { 
-      id: session.tracks.length + 1,
-      name: 'Drums',
-      instrument: 9, // MIDI channel 10 (9 in zero-indexed)
-      notes: []
-    };
-    
-    // If track doesn't exist yet, add it
-    if (!session.tracks.find(t => t.id === track.id)) {
-      session.tracks.push(track);
+    try {
+      // Try to add notes to existing sequence
+      if (!session.currentSequenceId) {
+        throw new Error('No current sequence');
+      }
+      
+      const updatedSequence = sessionService.addNotes(sessionId, notes);
+      
+      res.json({
+        success: true,
+        message: `Added ${notes.length} notes for ${patternType} drum pattern`,
+        sessionId: sessionId,
+        sequenceId: session.currentSequenceId,
+        noteCount: updatedSequence.notes.length
+      });
+    } catch (error) {
+      // If there's no current sequence, create one first
+      const sequence = sessionService.createSequence(sessionId, {
+        name: `${patternType.charAt(0).toUpperCase() + patternType.slice(1)} Drum Pattern`,
+        key: 'C major'  // Key doesn't matter for drums
+      });
+      
+      // Then add notes
+      const updatedSequence = sessionService.addNotes(sessionId, notes);
+      
+      res.json({
+        success: true,
+        message: `Created new sequence and added ${notes.length} notes for ${patternType} drum pattern`,
+        sessionId: sessionId,
+        sequenceId: sequence.id,
+        noteCount: updatedSequence.notes.length
+      });
     }
-    
-    // Add notes to track
-    track.notes = track.notes.concat(notes);
-    
-    await session.save();
-    
-    res.json({
-      success: true,
-      message: `Added ${notes.length} notes for ${patternType} drum pattern`,
-      sessionId: session._id,
-      noteCount: track.notes.length
-    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(`Error generating drum pattern: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      message: error.message
+    });
   }
 });
 
 /**
- * Clear notes from a track
- * DELETE /api/patterns/notes/:sessionId/:trackId
+ * Clear notes from a sequence
+ * DELETE /api/patterns/notes/:sessionId/:sequenceId
  */
-router.delete('/notes/:sessionId/:trackId', async (req, res) => {
+router.delete('/notes/:sessionId/:sequenceId', async (req, res) => {
   try {
-    const { sessionId, trackId } = req.params;
+    const { sessionId, sequenceId } = req.params;
     
-    // Find session
-    const session = await Session.findById(sessionId);
+    // Check if session exists
+    const session = sessionService.getSession(sessionId);
     if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
     }
     
-    // Find track
-    const trackIndex = session.tracks.findIndex(t => t.id.toString() === trackId);
-    if (trackIndex === -1) {
-      return res.status(404).json({ error: 'Track not found' });
+    // Get the sequence
+    const sequence = sessionService.getSequence(sessionId, sequenceId);
+    if (!sequence) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Sequence not found',
+        message: `Sequence with ID ${sequenceId} not found in session ${sessionId}`
+      });
     }
     
     // Store note count before clearing
-    const previousNoteCount = session.tracks[trackIndex].notes.length;
+    const previousNoteCount = sequence.notes.length;
     
     // Clear notes
-    session.tracks[trackIndex].notes = [];
-    
-    await session.save();
+    sequence.notes = [];
     
     res.json({
       success: true,
-      message: `Cleared ${previousNoteCount} notes from track ${trackId}`,
-      sessionId: session._id,
-      trackId
+      message: `Cleared ${previousNoteCount} notes from sequence ${sequenceId}`,
+      sessionId: sessionId,
+      sequenceId: sequenceId
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      message: error.message
+    });
   }
 });
 
