@@ -22,6 +22,8 @@ This project is organized with a clean directory structure:
 2. **Server** (`src/server`): Provides structured API endpoints
 3. **Web Interface** (`public`): Simple UI for testing and visualization
 
+> **Note:** If you're migrating from the previous version, please see the [Migration Guide](MIGRATION.md) for details on the new structure and API changes.
+
 ## Requirements
 
 - Node.js (v14 or higher)
@@ -31,118 +33,111 @@ This project is organized with a clean directory structure:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/asabaal/midi_song_creation_tool.git
-   cd midi_song_creation_tool
+   git clone https://github.com/asabaal/midi-song-creation-tool.git
+   cd midi-song-creation-tool
+   ```
 
-Checkout the develop branch (this contains the most recent code):
-bashCopygit checkout develop
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-Install dependencies:
-bashCopynpm install
+## Usage
 
+1. Start the server:
+   ```bash
+   npm start
+   ```
 
-Usage
+2. For development mode with auto-restart:
+   ```bash
+   npm run dev
+   ```
 
-Start the server:
-bashCopynpm start
+3. Open your browser and go to:
+   ```
+   http://localhost:3000
+   ```
 
-For development mode with auto-restart:
-bashCopynpm run dev
+4. Use the interface to create music:
+   - Click "Set Up" to create a session and sequence
+   - Add chord progressions, basslines, and drum patterns
+   - Use the Play button to hear your creation
+   - Export to MIDI or JSON when ready
 
-Open your browser and go to:
-Copyhttp://localhost:3000
+## Import/Export Functionality
 
-Use the interface to create music:
+### Exporting Your Music
 
-Click "Set Up" to create a session and sequence
-Add chord progressions, basslines, and drum patterns
-Use the Play button to hear your creation
-Export to MIDI or JSON when ready
-
-
-
-Import/Export Functionality
-Exporting Your Music
 The tool offers two export formats:
 
-MIDI File (.mid) - Standard MIDI files can be opened in any DAW such as:
+1. **MIDI File (.mid)** - Standard MIDI files can be opened in any DAW such as:
+   - Ableton Live
+   - Logic Pro
+   - FL Studio
+   - GarageBand
+   - Pro Tools
+   - And more!
 
-Ableton Live
-Logic Pro
-FL Studio
-GarageBand
-Pro Tools
-And more!
-
-
-JSON Format - A text-based format for:
-
-Sharing with others who use this tool
-Backing up your work
-Importing later to continue editing
-
-
+2. **JSON Format** - A text-based format for:
+   - Sharing with others who use this tool
+   - Backing up your work
+   - Importing later to continue editing
 
 To export:
+- Create some music (chord progression, bassline, drums)
+- Click either "Export to MIDI File" or "Export as JSON"
+- For JSON exports, you can copy the data or save it as a file
 
-Create some music (chord progression, bassline, drums)
-Click either "Export to MIDI File" or "Export as JSON"
-For JSON exports, you can copy the data or save it as a file
+### Importing Music
 
-Importing Music
 To import previously exported JSON data:
+1. Click "Import"
+2. Either:
+   - Paste the JSON data into the text area, or
+   - Use the file input to upload a JSON file
+3. Click "Process Import"
 
-Click "Import"
-Either:
+## API Endpoints
 
-Paste the JSON data into the text area, or
-Use the file input to upload a JSON file
-
-
-Click "Process Import"
-
-API Endpoints
 The tool exposes a RESTful API for programmatic access. Here are the key endpoints:
-Session Management
 
-POST /api/sessions - Create a new session
-GET /api/sessions/:sessionId - Get session info
+### Session Management
+- `POST /api/sessions` - Create a new session
+- `GET /api/sessions/:sessionId` - Get session info
 
-Sequence Management
+### Sequence Management
+- `POST /api/sessions/:sessionId/sequences` - Create a new sequence
+- `GET /api/sessions/:sessionId/sequences/:sequenceId` - Get sequence details
 
-POST /api/sessions/:sessionId/sequences - Create a new sequence
-GET /api/sessions/:sessionId/sequences/:sequenceId - Get sequence details
+### Pattern Generation
+- `POST /api/sessions/:sessionId/patterns/chord-progression` - Generate chord progression
+- `POST /api/sessions/:sessionId/patterns/bassline` - Generate bassline
+- `POST /api/sessions/:sessionId/patterns/drums` - Generate drum pattern
 
-Pattern Generation
+### Note Management
+- `DELETE /api/sessions/:sessionId/notes` - Clear all notes from current sequence
 
-POST /api/sessions/:sessionId/patterns/chord-progression - Generate chord progression
-POST /api/sessions/:sessionId/patterns/bassline - Generate bassline
-POST /api/sessions/:sessionId/patterns/drums - Generate drum pattern
+### Import/Export
+- `GET /api/sessions/:sessionId/export/midi` - Export current sequence as MIDI file
+- `GET /api/sessions/:sessionId/export/json` - Export current sequence as JSON
+- `POST /api/sessions/:sessionId/import` - Import sequence from JSON data
 
-Note Management
+## Debugging
 
-DELETE /api/sessions/:sessionId/notes - Clear all notes from current sequence
-
-Import/Export
-
-GET /api/sessions/:sessionId/export/midi - Export current sequence as MIDI file
-GET /api/sessions/:sessionId/export/json - Export current sequence as JSON
-POST /api/sessions/:sessionId/import - Import sequence from JSON data
-
-Debugging
 If you encounter issues:
+- Check the server console for error messages
+- Try the debug interface: http://localhost:3000/debug.html
+- Review the error.log file for detailed error information
 
-Check the server console for error messages
-Try the debug interface: http://localhost:3000/debug.html
-Review the error.log file for detailed error information
+## Next Steps for Development
 
-Next Steps for Development
+- Adding more pattern types (arpeggios, melodies)
+- Improving the piano roll with editing capabilities
+- Supporting MIDI input devices
+- Adding more instrument sounds for playback
+- Integration with external tools and services
 
-Adding more pattern types (arpeggios, melodies)
-Improving the piano roll with editing capabilities
-Supporting MIDI input devices
-Adding more instrument sounds for playback
-Integration with external tools and services
+## License
 
-License
 MIT
