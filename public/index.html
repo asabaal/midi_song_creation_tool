@@ -436,10 +436,10 @@
         const disposition = response.headers.get('Content-Disposition');
         let filename = 'my_music.mid';
         if (disposition && disposition.indexOf('attachment') !== -1) {
-          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const filenameRegex = /filename[^;=\\n]*=((['\"]).*?\\2|[^;\\n]*)/;
           const matches = filenameRegex.exec(disposition);
           if (matches != null && matches[1]) { 
-            filename = matches[1].replace(/['"]/g, '');
+            filename = matches[1].replace(/['\"]/g, '');
           }
         }
         
@@ -620,54 +620,97 @@
     
     // Refresh piano roll with notes
     async function refreshPianoRoll() {
-      // Get sequence data
-      const data = await callApi(`/sessions/${state.sessionId}/sequences/${state.sequenceId}`);
-      if (!data) {
-        log('Failed to get sequence data', 'error');
-        return;
-      }
-      
-      // Clear existing notes
-      document.querySelectorAll('.piano-note').forEach(note => note.remove());
-      
-      // Add notes
-      const sequence = data.sequence || data;
-      const notes = sequence.notes || [];
-      
-      if (notes.length > 0) {
-        notes.forEach(note => {
-          const noteElement = document.createElement('div');
-          
-          // Select class based on channel or instrument
-          const channel = note.channel || note.instrument || 0;
-          if (channel === 9) {
-            noteElement.className = 'piano-note drum-note';
-          } else if (channel === 1 || channel === 32) {
-            noteElement.className = 'piano-note bassline-note';
-          } else {
-            noteElement.className = 'piano-note';
-          }
-          
-          // Position and size
-          noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
-          noteElement.style.left = `${note.startTime * 30 + 100}px`;
-          noteElement.style.width = `${note.duration * 30}px`;
-          
-          // Add data for playback
-          noteElement.dataset.pitch = note.pitch;
-          noteElement.dataset.start = note.startTime;
-          noteElement.dataset.duration = note.duration;
-          noteElement.dataset.velocity = note.velocity || 100;
-          noteElement.dataset.channel = note.channel || note.instrument || 0;
-          
-          // Add note name for better visibility
-          noteElement.textContent = note.pitch;
-          
-          pianoRoll.appendChild(noteElement);
-        });
+      try {
+        // Get session data - we need to use the session endpoint now
+        const data = await callApi(`/sessions/${state.sessionId}`);
+        if (!data) {
+          log('Failed to get session data', 'error');
+          return;
+        }
         
-        log(`Displayed ${notes.length} notes in piano roll`, 'success');
-        state.noteCount = notes.length;
+        // Log data structure for debugging
+        console.log('Session data:', data);
+        
+        // Clear existing notes
+        document.querySelectorAll('.piano-note').forEach(note => note.remove());
+        
+        // Extract all notes from all tracks
+        let allNotes = [];
+        
+        // Handle the new data structure
+        if (data.tracks && Array.isArray(data.tracks)) {
+          data.tracks.forEach(track => {
+            if (track.notes && Array.isArray(track.notes)) {
+              // Add instrument/channel info from the track to each note
+              const trackNotes = track.notes.map(note => ({
+                ...note,
+                instrument: track.instrument,
+                channel: track.instrument
+              }));
+              allNotes = allNotes.concat(trackNotes);
+            }
+          });
+        }
+        
+        log(`Found ${allNotes.length} notes in all tracks`);
+        state.noteCount = allNotes.length;
+        
+        if (allNotes.length > 0) {
+          allNotes.forEach(note => {
+            const noteElement = document.createElement('div');
+            
+            // Select class based on channel or instrument
+            const channel = note.channel || note.instrument || 0;
+            if (channel === 9) {
+              noteElement.className = 'piano-note drum-note';
+            } else if (channel === 1 || channel === 32) {
+              noteElement.className = 'piano-note bassline-note';
+            } else {
+              noteElement.className = 'piano-note';
+            }
+            
+            // Position and size
+            noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
+            noteElement.style.left = `${note.startTime * 30 + 100}px`;
+            noteElement.style.width = `${note.duration * 30}px`;
+            
+            // Add data for playback
+            noteElement.dataset.pitch = note.pitch;
+            noteElement.dataset.start = note.startTime;
+            noteElement.dataset.duration = note.duration;
+            noteElement.dataset.velocity = note.velocity || 100;
+            noteElement.dataset.channel = note.channel || note.instrument || 0;
+            
+            // Add note name for better visibility
+            noteElement.textContent = note.pitch;
+            
+            pianoRoll.appendChild(noteElement);
+          });
+          
+          log(`Displayed ${allNotes.length} notes in piano roll`, 'success');
+        } else {
+          log('No notes found to display', 'info');
+        }
+        
+        // Update player status
+        if (allNotes.length > 0) {
+          playBtn.disabled = false;
+          stopBtn.disabled = false;
+          exportMidiBtn.disabled = false;
+          exportJsonBtn.disabled = false;
+          playStatus.textContent = `${allNotes.length} notes ready to play`;
+          exportStatus.textContent = `Ready to export`;
+        } else {
+          playBtn.disabled = true;
+          stopBtn.disabled = true;
+          exportMidiBtn.disabled = true;
+          exportJsonBtn.disabled = true;
+          playStatus.textContent = 'Nothing to play';
+          exportStatus.textContent = 'Create music to export';
+        }
+      } catch (error) {
+        console.error('Error refreshing piano roll:', error);
+        log(`Error refreshing piano roll: ${error.message}`, 'error');
       }
     }
     
