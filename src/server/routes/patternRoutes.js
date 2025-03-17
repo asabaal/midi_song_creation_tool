@@ -21,9 +21,11 @@ router.post('/chord-progression', async (req, res) => {
     
     // Find session
     if (!sessionId) {
+      // Creating a pattern without a session is not allowed
       return res.status(400).json({ 
         success: false,
-        error: 'Session ID is required' 
+        error: 'Session ID is required',
+        message: 'Session ID is required to create a pattern'
       });
     }
     
@@ -31,7 +33,8 @@ router.post('/chord-progression', async (req, res) => {
     if (!session) {
       return res.status(404).json({ 
         success: false,
-        error: 'Session not found' 
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
       });
     }
     
@@ -110,7 +113,8 @@ router.post('/bassline', async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({ 
         success: false,
-        error: 'Session ID is required' 
+        error: 'Session ID is required',
+        message: 'Session ID is required to create a pattern'
       });
     }
     
@@ -118,7 +122,8 @@ router.post('/bassline', async (req, res) => {
     if (!session) {
       return res.status(404).json({ 
         success: false,
-        error: 'Session not found' 
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
       });
     }
     
@@ -194,7 +199,8 @@ router.post('/drums', async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({ 
         success: false,
-        error: 'Session ID is required' 
+        error: 'Session ID is required',
+        message: 'Session ID is required to create a pattern'
       });
     }
     
@@ -202,7 +208,8 @@ router.post('/drums', async (req, res) => {
     if (!session) {
       return res.status(404).json({ 
         success: false,
-        error: 'Session not found' 
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
       });
     }
     
