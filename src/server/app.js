@@ -27,15 +27,6 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/patterns', patternRoutes);
 app.use('/api/export', exportRoutes);
 
-// Special compatibility route for older API
-app.post('/api/sessions/:sessionId/sequences', (req, res) => {
-  const { sessionId } = req.params;
-  const { name, tempo, timeSignature, key } = req.body;
-  
-  // Forward to the pattern handler to create a sequence
-  res.redirect(307, `/api/patterns/chord-progression?sessionId=${sessionId}`);
-});
-
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../../public')));
