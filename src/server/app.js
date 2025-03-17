@@ -10,6 +10,9 @@ const sessionRoutes = require('./routes/sessionRoutes');
 const patternRoutes = require('./routes/patternRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 
+// Make sessions accessible in routes
+const { sessions } = require('./models/session');
+
 // Create Express app
 const app = express();
 
@@ -23,6 +26,15 @@ app.use('/api/music-theory', musicTheoryRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/patterns', patternRoutes);
 app.use('/api/export', exportRoutes);
+
+// Special compatibility route for older API
+app.post('/api/sessions/:sessionId/sequences', (req, res) => {
+  const { sessionId } = req.params;
+  const { name, tempo, timeSignature, key } = req.body;
+  
+  // Forward to the pattern handler to create a sequence
+  res.redirect(307, `/api/patterns/chord-progression?sessionId=${sessionId}`);
+});
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
@@ -45,7 +57,8 @@ if (process.env.NODE_ENV === 'production') {
         '/api/music-theory',
         '/api/patterns',
         '/api/export'
-      ]
+      ],
+      activeSessions: sessions.size
     });
   });
   
@@ -57,7 +70,8 @@ if (process.env.NODE_ENV === 'production') {
       versions: {
         node: process.version,
         app: '0.2.0'
-      }
+      },
+      activeSessions: sessions.size
     });
   });
 }
