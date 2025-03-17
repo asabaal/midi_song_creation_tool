@@ -20,9 +20,16 @@ router.post('/', async (req, res) => {
     
     await newSession.save();
     
-    res.status(201).json(newSession);
+    res.status(201).json({
+      success: true,
+      sessionId: newSession._id,
+      message: 'Session created successfully'
+    });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -33,9 +40,15 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const sessions = await Session.find();
-    res.json(sessions);
+    res.json({
+      success: true,
+      sessions
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -48,12 +61,21 @@ router.get('/:id', async (req, res) => {
     const session = await Session.findById(req.params.id);
     
     if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found' 
+      });
     }
     
-    res.json(session);
+    res.json({
+      success: true,
+      session
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -66,7 +88,10 @@ router.put('/:id', async (req, res) => {
     const session = await Session.findById(req.params.id);
     
     if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found' 
+      });
     }
     
     // Update session properties
@@ -80,9 +105,15 @@ router.put('/:id', async (req, res) => {
     
     await session.save();
     
-    res.json(session);
+    res.json({
+      success: true,
+      session
+    });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -95,12 +126,21 @@ router.delete('/:id', async (req, res) => {
     const session = await Session.findByIdAndDelete(req.params.id);
     
     if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found' 
+      });
     }
     
-    res.json({ message: 'Session deleted successfully' });
+    res.json({ 
+      success: true,
+      message: 'Session deleted successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
