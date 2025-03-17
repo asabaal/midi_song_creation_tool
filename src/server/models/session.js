@@ -1,48 +1,44 @@
 // src/server/models/session.js
 const { v4: uuidv4 } = require('uuid');
 
-// In testing mode, use the mock database
-if (process.env.NODE_ENV === 'test') {
-  // Get the mock Session model from the test setup
-  const { Session } = require('../../../tests/fixtures/mock-data/db-setup');
-  module.exports = { Session };
-} else {
-  // Use real Mongoose in production
-  const mongoose = require('mongoose');
+// In-memory Session implementation similar to the original code
+class Session {
+  constructor(options = {}) {
+    this._id = options._id || uuidv4();
+    this.id = this._id; // For backward compatibility
+    this.name = options.name || 'Untitled Session';
+    this.bpm = options.bpm || 120;
+    this.timeSignature = options.timeSignature || [4, 4];
+    this.tracks = options.tracks || [];
+    this.createdAt = options.createdAt || new Date();
+  }
 
-  // Note schema (embedded in Track)
-  const NoteSchema = new mongoose.Schema({
-    id: { type: String, default: () => uuidv4() },
-    pitch: { type: Number, required: true },
-    startTime: { type: Number, required: true },
-    duration: { type: Number, required: true },
-    velocity: { type: Number, default: 100 },
-  });
+  // Mock save method to make API compatible
+  async save() {
+    // Update the session in the in-memory store
+    sessions.set(this._id, this);
+    return this;
+  }
 
-  // Track schema (embedded in Session)
-  const TrackSchema = new mongoose.Schema({
-    id: { type: Number, required: true },
-    name: { type: String, default: 'Untitled Track' },
-    instrument: { type: Number, default: 0 },
-    notes: [NoteSchema],
-  });
+  // Static methods for finding/querying
+  static async findById(id) {
+    return sessions.get(id) || null;
+  }
 
-  // Session schema
-  const SessionSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    bpm: { type: Number, required: true, default: 120 },
-    timeSignature: { type: [Number], required: true, default: [4, 4] },
-    tracks: [TrackSchema],
-    loop: {
-      enabled: { type: Boolean, default: false },
-      start: { type: Number, default: 0 },
-      end: { type: Number, default: 8 },
-    },
-    createdAt: { type: Date, default: Date.now },
-  });
+  static async find(query = {}) {
+    return Array.from(sessions.values());
+  }
 
-  // Create models
-  const Session = mongoose.model('Session', SessionSchema);
-
-  module.exports = { Session };
+  static async findByIdAndDelete(id) {
+    const session = sessions.get(id);
+    if (session) {
+      sessions.delete(id);
+    }
+    return session;
+  }
 }
+
+// In-memory store for sessions
+const sessions = new Map();
+
+module.exports = { Session, sessions };
