@@ -4,13 +4,17 @@ const { MidiSequence, MidiNote } = require('./sequence');
 
 // In-memory Session implementation similar to the original code
 class Session {
-  constructor(id = null) {
-    this.id = id || `session_${Date.now()}`;
-    this._id = this.id; // For MongoDB compatibility
-    this.created = new Date();
-    this.sequences = {};
+  constructor(options = {}) {
+    const id = options.id || `session_${Date.now()}`;
+    this._id = id;
+    this.id = id; // For backward compatibility
+    this.name = options.name || 'Untitled Session';
+    this.bpm = options.bpm || 120;
+    this.timeSignature = options.timeSignature || [4, 4];
+    this.tracks = options.tracks || [];
+    this.createdAt = options.createdAt || new Date();
+    this.sequences = {}; // Store sequences as in the original code
     this.currentSequenceId = null;
-    this.tracks = []; // For compatibility with new model
   }
 
   // Create a new sequence
@@ -53,7 +57,7 @@ class Session {
       name: seq.name,
       key: seq.key,
       tempo: seq.tempo,
-      noteCount: seq.notes.length,
+      noteCount: seq.notes ? seq.notes.length : 0,
       duration: seq.getDuration ? seq.getDuration() : 0
     }));
   }
@@ -79,7 +83,11 @@ class Session {
       );
     }) : [];
     
-    sequence.addNotes(midiNotes);
+    if (!sequence.notes) {
+      sequence.notes = [];
+    }
+    
+    sequence.notes = sequence.notes.concat(midiNotes);
     return midiNotes;
   }
 
@@ -90,8 +98,8 @@ class Session {
       throw new Error('No current sequence selected');
     }
     
-    const previousNotes = [...sequence.notes];
-    sequence.clear();
+    const previousNotes = sequence.notes ? [...sequence.notes] : [];
+    sequence.notes = [];
     return previousNotes;
   }
 
@@ -102,13 +110,16 @@ class Session {
       throw new Error('No current sequence selected');
     }
     
-    return sequence.toJSON();
+    return sequence.toJSON ? sequence.toJSON() : sequence;
   }
 
   // Import sequence from JSON
   importSequence(json) {
     try {
-      const sequence = MidiSequence.fromJSON(json);
+      // Handle both direct MidiSequence or just data
+      const sequence = json instanceof MidiSequence ? 
+                      json : 
+                      MidiSequence.fromJSON(json);
       this.sequences[sequence.id] = sequence;
       this.currentSequenceId = sequence.id;
       return sequence;
