@@ -14,6 +14,7 @@ const exportRoutes = require('./routes/exportRoutes');
 const { Session, sessions } = require('./models/session');
 const { MidiSequence } = require('./models/sequence');
 const { generatePattern } = require('../core/patternGenerator');
+const midiExport = require('../core/midiExport');
 
 // Create Express app
 const app = express();
@@ -517,6 +518,50 @@ app.post('/api/sessions/:sessionId/patterns/drums', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: error.message 
+    });
+  }
+});
+
+// Special handler for MIDI export
+app.get('/api/sessions/:sessionId/export/midi', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Check if session exists
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required',
+        message: 'Session ID is required'
+      });
+    }
+    
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Generate MIDI file
+    const midiData = await midiExport.sessionToMidiFile(session);
+    
+    // Set response headers for file download
+    const filename = (session.name || 'midi_export').replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mid';
+    res.setHeader('Content-Type', 'audio/midi');
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.setHeader('Content-Length', midiData.length);
+    
+    // Send the MIDI file data
+    res.send(midiData);
+  } catch (error) {
+    console.error(`Error exporting MIDI: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to export MIDI',
+      message: error.message
     });
   }
 });
