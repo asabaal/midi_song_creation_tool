@@ -57,93 +57,10 @@ app.use((req, res, next) => {
 });
 
 //================================================
-// DIRECT ROUTE HANDLERS FOR KEY FUNCTIONALITY
+// DIRECT ROUTE HANDLERS FOR PATTERN GENERATION ONLY
 //================================================
 
-// Session creation
-app.post('/sessions', async (req, res) => {
-  try {
-    console.log('Creating new session with body:', req.body);
-    
-    const { name, bpm, timeSignature } = req.body;
-    
-    const newSession = new Session();
-    if (name) newSession.name = name;
-    if (bpm) newSession.bpm = bpm;
-    if (timeSignature) newSession.timeSignature = timeSignature;
-    
-    await newSession.save();
-    
-    console.log(`Created session with ID: ${newSession.id}`);
-    
-    res.status(201).json({
-      success: true,
-      sessionId: newSession.id,
-      message: 'Session created successfully'
-    });
-  } catch (error) {
-    console.error(`Error creating session: ${error.message}`);
-    res.status(500).json({ 
-      success: false,
-      error: error.message,
-      message: 'Failed to create session'
-    });
-  }
-});
-
-// Sequence creation
-app.post('/sessions/:sessionId/sequences', async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    const { name, tempo, timeSignature, key } = req.body;
-    
-    console.log(`Creating sequence in session ${sessionId} with params:`, { name, tempo, timeSignature, key });
-    
-    // Find session
-    const session = await Session.findById(sessionId);
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        error: 'Session not found',
-        message: `No session with ID ${sessionId} exists`
-      });
-    }
-    
-    // Create sequence
-    const sequence = session.createSequence({
-      name: name || 'Untitled Sequence',
-      tempo: tempo || 120,
-      timeSignature: timeSignature || { numerator: 4, denominator: 4 },
-      key: key || 'C major'
-    });
-    
-    await session.save();
-    
-    console.log(`Sequence created: ${sequence.id}`);
-    
-    res.status(201).json({
-      success: true,
-      sequenceId: sequence.id,
-      message: 'Sequence created successfully',
-      sequence: {
-        id: sequence.id,
-        name: sequence.name,
-        tempo: sequence.tempo,
-        timeSignature: sequence.timeSignature,
-        key: sequence.key
-      }
-    });
-  } catch (error) {
-    console.error(`Error creating sequence: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error',
-      message: error.message
-    });
-  }
-});
-
-// Chord progression generation
+// Chord progression generation - direct handler
 app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -155,7 +72,7 @@ app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => 
       rhythmPattern = [4] 
     } = req.body;
     
-    console.log(`Generating chord progression in session ${sessionId} with params:`, { key, octave, progressionName, scaleType });
+    console.log(`DIRECT HANDLER: Generating chord progression in session ${sessionId} with params:`, { key, octave, progressionName, scaleType });
     
     // Find session
     const session = await Session.findById(sessionId);
@@ -215,7 +132,7 @@ app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => 
   }
 });
 
-// Bassline generation
+// Bassline generation - direct handler
 app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -227,7 +144,7 @@ app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
       rhythmPattern = [1, 0.5, 0.5] 
     } = req.body;
     
-    console.log(`Generating bassline in session ${sessionId} with params:`, { key, octave, progressionName, scaleType });
+    console.log(`DIRECT HANDLER: Generating bassline in session ${sessionId} with params:`, { key, octave, progressionName, scaleType });
     
     // Find session
     const session = await Session.findById(sessionId);
@@ -285,13 +202,13 @@ app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
   }
 });
 
-// Drum pattern generation
+// Drum pattern generation - direct handler
 app.post('/sessions/:sessionId/patterns/drums', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { patternType = 'basic', measures = 2 } = req.body;
     
-    console.log(`Generating drum pattern in session ${sessionId} with params:`, { patternType, measures });
+    console.log(`DIRECT HANDLER: Generating drum pattern in session ${sessionId} with params:`, { patternType, measures });
     
     // Find session
     const session = await Session.findById(sessionId);
@@ -346,10 +263,12 @@ app.post('/sessions/:sessionId/patterns/drums', async (req, res) => {
   }
 });
 
-// Clear notes from current sequence
+// Clear notes from current sequence - direct handler
 app.delete('/sessions/:sessionId/notes', async (req, res) => {
   try {
     const { sessionId } = req.params;
+    
+    console.log(`DIRECT HANDLER: Clearing notes from session ${sessionId}`);
     
     // Check if session exists
     const session = await Session.findById(sessionId);
@@ -361,7 +280,6 @@ app.delete('/sessions/:sessionId/notes', async (req, res) => {
       });
     }
     
-    // Try to clear notes
     try {
       const previousNotes = session.clearNotes();
       
@@ -396,6 +314,43 @@ app.delete('/sessions/:sessionId/notes', async (req, res) => {
 // STANDARD ROUTES 
 //================================================
 
+// Direct handler for session creation - we need this
+app.post('/api/sessions', async (req, res) => {
+  try {
+    console.log('Creating new session with body:', req.body);
+    
+    const { name, bpm, timeSignature } = req.body;
+    
+    const newSession = new Session();
+    if (name) newSession.name = name;
+    if (bpm) newSession.bpm = bpm;
+    if (timeSignature) newSession.timeSignature = timeSignature;
+    
+    await newSession.save();
+    
+    console.log(`Created session with ID: ${newSession.id}`);
+    
+    res.status(201).json({
+      success: true,
+      sessionId: newSession.id,
+      message: 'Session created successfully'
+    });
+  } catch (error) {
+    console.error(`Error creating session: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      message: 'Failed to create session'
+    });
+  }
+});
+
+// Special compatibility route for sequence creation
+app.post('/api/sessions/:sessionId/sequences', (req, res) => {
+  // Forward to the session routes handler
+  sessionRoutes.handle(req, res);
+});
+
 // Add compatibility router for other paths
 app.use('/', compatRouter);
 
@@ -405,38 +360,50 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/patterns', patternRoutes);
 app.use('/api/export', exportRoutes);
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '../../public')));
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../../public')));
 
-// Simple route for development API testing
-app.get('/api', (req, res) => {
-  res.json({ 
-    message: 'MIDI Song Creation Tool API',
-    routes: [
-      '/api/sessions',
-      '/api/music-theory',
-      '/api/patterns',
-      '/api/export'
-    ],
-    activeSessions: sessions.size
+  // Handle client-side routing
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../public/index.html'));
   });
-});
-
-// Special debug route
-app.get('/api/debug', (req, res) => {
-  res.json({
-    message: 'Debug information',
-    environment: process.env.NODE_ENV || 'development',
-    versions: {
-      node: process.version,
-      app: '0.2.0'
-    },
-    activeSessions: sessions.size
+} else {
+  // In development, always serve static files
+  app.use(express.static(path.join(__dirname, '../../public')));
+  
+  // Simple route for development API testing
+  app.get('/api', (req, res) => {
+    res.json({ 
+      message: 'MIDI Song Creation Tool API',
+      routes: [
+        '/api/sessions',
+        '/api/music-theory',
+        '/api/patterns',
+        '/api/export'
+      ],
+      activeSessions: sessions.size
+    });
   });
-});
+  
+  // Special debug route
+  app.get('/api/debug', (req, res) => {
+    res.json({
+      message: 'Debug information',
+      environment: process.env.NODE_ENV || 'development',
+      versions: {
+        node: process.version,
+        app: '0.2.0'
+      },
+      activeSessions: sessions.size
+    });
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, _next) => {
+  // Logger should be used instead of console in production
+  // eslint-disable-next-line no-console
   console.error('Global error handler:');
   console.error(err.stack);
   res.status(500).json({
