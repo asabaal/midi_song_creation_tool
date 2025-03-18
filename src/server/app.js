@@ -1,65 +1,98 @@
-// Add before the "Special debug route" already in the file
+//================================================
+// CRITICAL: GET SESSION HANDLER FOR WEB UI
+//================================================
 
-// Special debug endpoint to investigate track/note issues
-app.get('/api/debug/sessions/:sessionId', async (req, res) => {
+// This is the critical endpoint the web UI uses to fetch the notes
+app.get('/sessions/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const session = await Session.findById(sessionId);
+    console.log(`[GET /sessions/${sessionId}] Getting session for web UI`);
     
+    const session = await Session.findById(sessionId);
     if (!session) {
       return res.status(404).json({
         success: false,
-        message: 'Session not found'
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
       });
     }
     
+    // CRITICAL: Ensure tracks are synchronized with sequence notes
+    // This is the direct approach when all else fails
+    console.log(`[GET /sessions/${sessionId}] Direct patching of session data for track synchronization`);
+    
+    // Step 1: Get current sequence and its notes
     const currentSequence = session.getCurrentSequence();
-    const sequenceNotes = currentSequence ? currentSequence.notes || [] : [];
+    if (!currentSequence) {
+      console.log(`[GET /sessions/${sessionId}] No current sequence found`);
+    } else {
+      console.log(`[GET /sessions/${sessionId}] Current sequence: ${currentSequence.id} with ${currentSequence.notes ? currentSequence.notes.length : 0} notes`);
+      
+      // Step 2: Find or create matching track
+      let currentTrack = session.tracks.find(t => t.id === currentSequence.id);
+      
+      if (!currentTrack) {
+        // Create new track if needed
+        currentTrack = {
+          id: currentSequence.id,
+          name: currentSequence.name || 'New Track',
+          instrument: 0, // Default instrument
+          notes: []
+        };
+        session.tracks.push(currentTrack);
+        console.log(`[GET /sessions/${sessionId}] Created new track for sequence ${currentSequence.id}`);
+      }
+      
+      // Step 3: Override the notes in the track with the sequence notes
+      if (currentSequence.notes && currentSequence.notes.length > 0) {
+        console.log(`[GET /sessions/${sessionId}] Copying ${currentSequence.notes.length} notes from sequence to track`);
+        
+        // Direct copy
+        currentTrack.notes = JSON.parse(JSON.stringify(currentSequence.notes));
+        
+        // Add channel info if missing
+        currentTrack.notes.forEach(note => {
+          if (!note.channel) {
+            note.channel = 0; // Default channel
+          }
+        });
+      }
+    }
     
-    // Find matching track
-    const matchingTrack = session.tracks.find(t => 
-      currentSequence && t.id === currentSequence.id
-    );
+    // Count the number of notes in all tracks for logging
+    const totalNotes = session.tracks ? 
+      session.tracks.reduce((sum, track) => sum + (track.notes ? track.notes.length : 0), 0) : 0;
+    console.log(`[GET /sessions/${sessionId}] Session has ${session.tracks ? session.tracks.length : 0} tracks with a total of ${totalNotes} notes`);
     
-    const trackNotes = matchingTrack ? matchingTrack.notes || [] : [];
+    // Save any updates we've made to the session
+    await session.save();
     
-    // Deep copy so we can safely check structures
-    const debugInfo = {
-      session: JSON.parse(JSON.stringify({
+    // Return the session data in the expected format
+    const responseData = {
+      success: true,
+      session: {
         id: session.id,
-        hasSequences: !!session.sequences,
-        sequenceCount: session.sequences ? Object.keys(session.sequences).length : 0,
+        created: session.createdAt,
         currentSequenceId: session.currentSequenceId,
-        trackCount: session.tracks ? session.tracks.length : 0,
-        hasSyncMethod: typeof session._syncTrackWithSequence === 'function',
-        isPrototype: session instanceof Session
-      })),
-      currentSequence: currentSequence ? JSON.parse(JSON.stringify({
-        id: currentSequence.id,
-        name: currentSequence.name,
-        notesCount: sequenceNotes.length,
-        notes: sequenceNotes.slice(0, 2) // Just show first few notes for brevity
-      })) : null,
-      matchingTrack: matchingTrack ? JSON.parse(JSON.stringify({
-        id: matchingTrack.id,
-        name: matchingTrack.name,
-        instrument: matchingTrack.instrument,
-        notesCount: trackNotes.length,
-        notes: trackNotes.slice(0, 2) // Just show first few notes for brevity
-      })) : null,
-      allTracks: session.tracks ? session.tracks.map(track => ({
-        id: track.id,
-        name: track.name,
-        notesCount: track.notes ? track.notes.length : 0
-      })) : []
+        sequences: session.listSequences(),
+        tracks: session.tracks || []
+      }
     };
     
-    res.json(debugInfo);
+    // Final sanity check
+    if (responseData.session.tracks && responseData.session.tracks.length > 0) {
+      const trackNotesCount = responseData.session.tracks.reduce((sum, t) => sum + (t.notes ? t.notes.length : 0), 0);
+      console.log(`[GET /sessions/${sessionId}] Response contains ${responseData.session.tracks.length} tracks with ${trackNotesCount} notes total`);
+    }
+    
+    res.json(responseData);
   } catch (error) {
-    console.error('Debug endpoint error:', error);
+    console.error(`Error getting session: ${error.message}`);
+    console.error(error.stack);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Internal server error',
+      message: error.message
     });
   }
 });
