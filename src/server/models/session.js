@@ -13,8 +13,16 @@ class Session {
     this.timeSignature = options.timeSignature || [4, 4];
     this.tracks = options.tracks || [];
     this.createdAt = options.createdAt || new Date();
-    this.sequences = {}; // Store sequences as in the original code
-    this.currentSequenceId = null;
+    this.sequences = options.sequences || {}; // Store sequences as in the original code
+    this.currentSequenceId = options.currentSequenceId || null;
+    
+    // If options already has sequences and tracks, make sure they're synced
+    if (options.sequences && Object.keys(options.sequences).length > 0) {
+      const sequenceIds = Object.keys(options.sequences);
+      sequenceIds.forEach(seqId => {
+        this._syncTrackWithSequence(options.sequences[seqId]);
+      });
+    }
   }
 
   // Create a new sequence
@@ -182,11 +190,29 @@ class Session {
   // Static methods for finding/querying
   static async findById(id) {
     if (!id) return null; // Don't throw an error, just return null if ID is missing
-    return sessions.get(id) || null;
+    
+    // Get the session from the map
+    const sessionData = sessions.get(id);
+    if (!sessionData) return null;
+    
+    // CRITICAL FIX: Ensure we return a Session instance with all prototype methods
+    // If it's already a Session instance, return it directly
+    if (sessionData instanceof Session) {
+      return sessionData;
+    }
+    
+    // Otherwise, wrap it in a new Session instance to ensure all methods are available
+    return new Session(sessionData);
   }
 
   static async find(query = {}) {
-    return Array.from(sessions.values());
+    // Convert all Map values to proper Session instances
+    return Array.from(sessions.values()).map(sessionData => {
+      if (sessionData instanceof Session) {
+        return sessionData;
+      }
+      return new Session(sessionData);
+    });
   }
 
   static async findByIdAndDelete(id) {
