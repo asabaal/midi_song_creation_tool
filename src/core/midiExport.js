@@ -2,138 +2,128 @@
 const MidiWriter = require('midi-writer-js');
 
 /**
- * Convert a session to a MIDI file
- * @param {Object} session - The session object
- * @returns {Buffer} - The MIDI file as a buffer
- */
-function sessionToMidiFile(session) {
-  return new Promise((resolve, reject) => {
-    try {
-      // Create a new MIDI writer track
-      const tracks = [];
-      
-      // Process each track in the session
-      session.tracks.forEach(track => {
-        const midiTrack = new MidiWriter.Track();
-        
-        // Set track name
-        midiTrack.addEvent(new MidiWriter.ProgramChangeEvent({
-          instrument: track.instrument || 0,
-          channel: track.id % 16  // Ensure channel is 0-15
-        }));
-        
-        // Add notes
-        (track.notes || []).forEach(note => {
-          // Convert note to MIDI writer format
-          midiTrack.addEvent(new MidiWriter.NoteEvent({
-            pitch: note.pitch,
-            duration: convertDurationToTicks(note.duration, session.bpm),
-            velocity: note.velocity || 100,
-            channel: track.id % 16,
-            startTick: convertTimeToTicks(note.startTime, session.bpm)
-          }));
-        });
-        
-        tracks.push(midiTrack);
-      });
-      
-      // Create a new MIDI writer
-      const writer = new MidiWriter.Writer(tracks);
-      
-      // Set BPM if specified
-      if (session.bpm) {
-        writer.setTempo(session.bpm);
-      }
-      
-      // Set time signature if available
-      if (session.timeSignature && Array.isArray(session.timeSignature) && session.timeSignature.length === 2) {
-        writer.setTimeSignature(session.timeSignature[0], session.timeSignature[1]);
-      }
-      
-      // Get the MIDI data
-      const midiData = writer.buildFile();
-      
-      // Convert to buffer
-      const buffer = Buffer.from(midiData, 'base64');
-      
-      resolve(buffer);
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-/**
- * Convert a time value to MIDI ticks
- * @param {number} time - The time in quarter notes
- * @param {number} bpm - The tempo in beats per minute
- * @returns {number} - The time in MIDI ticks
- */
-function convertTimeToTicks(time, bpm = 120) {
-  // MIDI uses 960 ticks per quarter note by default
-  return Math.round(time * 960);
-}
-
-/**
- * Convert a duration value to MIDI ticks format
- * @param {number} duration - The duration in quarter notes
- * @param {number} bpm - The tempo in beats per minute
- * @returns {string} - The duration in MIDI ticks format
- */
-function convertDurationToTicks(duration, bpm = 120) {
-  if (duration === 4) return '1'; // Whole note
-  if (duration === 2) return '2'; // Half note
-  if (duration === 1) return '4'; // Quarter note
-  if (duration === 0.5) return '8'; // Eighth note
-  if (duration === 0.25) return '16'; // Sixteenth note
-  
-  // For any other value, return it as ticks
-  return Math.round(duration * 960).toString();
-}
-
-/**
- * Convert a MidiSequence object to a MIDI file
- * @param {Object} sequence - The MidiSequence object
- * @returns {Buffer} - The MIDI file as a buffer
+ * Exports a sequence to a MIDI file
+ * @param {Object} sequence - The sequence to export
+ * @returns {Buffer} - MIDI file data as a buffer
  */
 function sequenceToMidiFile(sequence) {
-  // Adapt sequence format to session format for compatibility
-  const session = {
-    bpm: sequence.tempo || 120,
-    timeSignature: Array.isArray(sequence.timeSignature) 
-      ? sequence.timeSignature 
-      : [sequence.timeSignature?.numerator || 4, sequence.timeSignature?.denominator || 4],
-    tracks: []
-  };
-  
-  // Organize notes by channel
-  const channelMap = new Map();
-  
-  // Group notes by channel
-  (sequence.notes || []).forEach(note => {
-    const channel = note.channel || 0;
+  try {
+    if (!sequence || !sequence.notes) {
+      throw new Error('Invalid sequence provided for MIDI export');
+    }
+
+    // Create a new MIDI track
+    const track = new MidiWriter.Track();
+
+    // Set time signature if available
+    if (sequence.timeSignature) {
+      const numerator = sequence.timeSignature.numerator || 4;
+      const denominator = sequence.timeSignature.denominator || 4;
+      track.setTimeSignature(numerator, denominator);
+    }
+
+    // Set tempo if available (convert from BPM to microseconds per quarter note)
+    if (sequence.tempo) {
+      const tempo = sequence.tempo;
+      const microsecondsPerBeat = Math.floor(60000000 / tempo);
+      track.setTempo(microsecondsPerBeat);
+    }
+
+    // Group notes by channel
+    const notesByChannel = {};
     
-    if (!channelMap.has(channel)) {
-      channelMap.set(channel, []);
+    sequence.notes.forEach(note => {
+      const channel = note.channel || 0;
+      if (!notesByChannel[channel]) {
+        notesByChannel[channel] = [];
+      }
+      notesByChannel[channel].push(note);
+    });
+
+    // Add notes for each channel
+    Object.keys(notesByChannel).forEach(channel => {
+      const channelNotes = notesByChannel[channel];
+      
+      // Convert each note to MIDI format
+      channelNotes.forEach(note => {
+        const pitch = note.pitch;
+        const startTime = note.startTime;
+        const duration = note.duration;
+        
+        // Convert duration from beats to ticks (assuming 128 ticks per beat)
+        const durationTicks = Math.max(1, Math.round(duration * 128));
+        
+        // Create note event
+        const noteEvent = new MidiWriter.NoteEvent({
+          pitch: [pitch],
+          duration: 'T' + durationTicks,
+          velocity: note.velocity || 100,
+          channel: parseInt(channel),
+          startTick: Math.round(startTime * 128)
+        });
+        
+        track.addEvent(noteEvent);
+      });
+    });
+
+    // Create a new MIDI writer with the track
+    const writer = new MidiWriter.Writer([track]);
+    
+    // Get the MIDI data as a buffer
+    const midiData = Buffer.from(writer.buildFile());
+    
+    return midiData;
+  } catch (error) {
+    console.error('Error generating MIDI file:', error);
+    throw new Error(`Failed to generate MIDI file: ${error.message}`);
+  }
+}
+
+/**
+ * Exports a session to a MIDI file by using the current sequence
+ * @param {Object} session - The session to export
+ * @returns {Buffer} - MIDI file data as a buffer
+ */
+async function sessionToMidiFile(session) {
+  try {
+    if (!session) {
+      throw new Error('Invalid session provided for MIDI export');
     }
     
-    channelMap.get(channel).push(note);
-  });
-  
-  // Create tracks for each channel
-  channelMap.forEach((notes, channel) => {
-    session.tracks.push({
-      id: channel + 1,
-      name: `Track ${channel + 1}`,
-      instrument: channel === 9 ? 0 : channel, // Channel 10 (index 9) is always drums
-      notes
-    });
-  });
-  
-  return sessionToMidiFile(session);
+    // Get the current sequence
+    let sequence;
+    
+    if (session.getCurrentSequence) {
+      // Use the method if available
+      sequence = session.getCurrentSequence();
+    } else if (session.currentSequenceId && session.sequences && session.sequences[session.currentSequenceId]) {
+      // Direct access to the sequences object
+      sequence = session.sequences[session.currentSequenceId];
+    } else if (session.tracks && session.tracks.length > 0) {
+      // Fall back to the first track
+      const track = session.tracks[0];
+      sequence = {
+        name: track.name || 'Exported Track',
+        tempo: session.bpm || 120,
+        timeSignature: { 
+          numerator: session.timeSignature ? session.timeSignature[0] : 4, 
+          denominator: session.timeSignature ? session.timeSignature[1] : 4 
+        },
+        notes: track.notes || []
+      };
+    } else {
+      throw new Error('No sequence or track found in session');
+    }
+    
+    // Export the sequence
+    return sequenceToMidiFile(sequence);
+  } catch (error) {
+    console.error('Error exporting session to MIDI:', error);
+    throw new Error(`Failed to export session to MIDI: ${error.message}`);
+  }
 }
 
 module.exports = {
-  sessionToMidiFile,
-  sequenceToMidiFile
+  sequenceToMidiFile,
+  sessionToMidiFile
 };
