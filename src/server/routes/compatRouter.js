@@ -15,6 +15,14 @@ router.get('/sessions/:sessionId', (req, res, next) => {
   next('route');
 });
 
+// Forward session create route
+router.post('/sessions', (req, res, next) => {
+  // Rewrite the URL to match the new structure
+  req.url = `/api/sessions`;
+  console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
+  next('route');
+});
+
 // Forward session sequence routes
 router.all('/sessions/:sessionId/sequences', (req, res, next) => {
   req.url = `/api/sessions/${req.params.sessionId}/sequences`;
@@ -93,6 +101,13 @@ router.delete('/sessions/:sessionId/notes', (req, res, next) => {
       message: error.message
     });
   });
+});
+
+// Forward import route
+router.post('/sessions/:sessionId/import', (req, res, next) => {
+  req.url = `/api/sessions/${req.params.sessionId}/import`;
+  console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
+  next('route');
 });
 
 module.exports = router;
