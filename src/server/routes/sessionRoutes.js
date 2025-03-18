@@ -12,10 +12,11 @@ router.post('/', async (req, res) => {
   try {
     const { name, bpm, timeSignature } = req.body;
     
-    const newSession = new Session();
-    if (name) newSession.name = name;
-    if (bpm) newSession.bpm = bpm;
-    if (timeSignature) newSession.timeSignature = timeSignature;
+    const newSession = new Session({
+      name: name || 'New Session',
+      bpm: bpm || 120,
+      timeSignature: timeSignature || [4, 4]
+    });
     
     await newSession.save();
     
@@ -64,58 +65,29 @@ async function createSequence(req, res) {
       });
     }
     
-    // Generate a unique ID for the sequence
-    const sequenceId = `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Create a sequence object with an empty notes array
-    const newSequence = {
-      id: sequenceId,
+    // Use the Session model's createSequence method
+    const sequence = session.createSequence({
       name: name || 'Untitled Sequence',
       tempo: tempo || 120,
       timeSignature: timeSignature || { numerator: 4, denominator: 4 },
-      key: key || 'C major',
-      notes: []
-    };
-    
-    // Store in both places for compatibility
-    // 1. In the tracks array (used by pattern routes)
-    if (!session.tracks) {
-      session.tracks = [];
-    }
-    
-    // Add as a track
-    session.tracks.push({
-      id: sequenceId,
-      name: newSequence.name,
-      tempo: newSequence.tempo,
-      timeSignature: newSequence.timeSignature,
-      key: newSequence.key,
-      instrument: 0,
-      notes: []
+      key: key || 'C major'
     });
-    
-    // 2. In the sequences object (used by sequence routes)
-    if (!session.sequences) {
-      session.sequences = {};
-    }
-    session.sequences[sequenceId] = newSequence;
-    session.currentSequenceId = sequenceId;
     
     // Save the session
     await session.save();
     
-    console.log(`Sequence created: ${sequenceId}`);
+    console.log(`Sequence created: ${sequence.id}`);
     
     res.status(201).json({
       success: true,
-      sequenceId: sequenceId,
+      sequenceId: sequence.id,
       message: 'Sequence created successfully',
       sequence: {
-        id: sequenceId,
-        name: newSequence.name,
-        tempo: newSequence.tempo,
-        timeSignature: newSequence.timeSignature,
-        key: newSequence.key
+        id: sequence.id,
+        name: sequence.name,
+        tempo: sequence.tempo,
+        timeSignature: sequence.timeSignature,
+        key: sequence.key
       }
     });
   } catch (error) {
@@ -162,9 +134,23 @@ router.get('/:id', async (req, res) => {
       });
     }
     
+    // Ensure tracks are synchronized with sequences
+    if (session.sequences && session.currentSequenceId && session.sequences[session.currentSequenceId]) {
+      const currentSequence = session.sequences[session.currentSequenceId];
+      if (typeof session._syncTrackWithSequence === 'function') {
+        session._syncTrackWithSequence(currentSequence);
+      }
+    }
+    
     res.json({
       success: true,
-      session
+      session: {
+        id: session.id,
+        created: session.createdAt,
+        currentSequenceId: session.currentSequenceId,
+        sequences: session.listSequences(),
+        tracks: session.tracks || []
+      }
     });
   } catch (error) {
     res.status(500).json({ 
@@ -194,87 +180,36 @@ router.get('/:sessionId/sequences/:sequenceId', async (req, res) => {
       });
     }
     
-    // First, check if the sequence exists in the sequences object
-    if (session.sequences && session.sequences[sequenceId]) {
-      console.log(`Found sequence in sequences object with ${session.sequences[sequenceId].notes ? session.sequences[sequenceId].notes.length : 0} notes`);
-      return res.json({
+    try {
+      // Use the Session model's getSequence method
+      const sequence = session.getSequence(sequenceId);
+      
+      res.json({
         success: true,
-        sequence: session.sequences[sequenceId]
+        sequence: sequence.toJSON ? sequence.toJSON() : sequence
       });
-    }
-    
-    // If not found there, look for it in the tracks
-    if (session.tracks) {
-      const track = session.tracks.find(t => t.id === sequenceId);
-      if (track) {
-        console.log(`Found sequence in tracks array with ${track.notes ? track.notes.length : 0} notes`);
-        // Format as a sequence
-        const sequence = {
-          id: track.id,
-          name: track.name,
-          tempo: track.tempo || 120,
-          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
-          key: track.key || 'C major',
-          notes: track.notes || []
-        };
-        
-        // Sync it back to the sequences object for future calls
-        if (!session.sequences) {
-          session.sequences = {};
+    } catch (error) {
+      // If specific sequence not found, try current sequence
+      if (session.currentSequenceId) {
+        try {
+          const currentSequence = session.getCurrentSequence();
+          if (currentSequence) {
+            return res.json({
+              success: true,
+              sequence: currentSequence.toJSON ? currentSequence.toJSON() : currentSequence
+            });
+          }
+        } catch (innerError) {
+          console.log(`Could not get current sequence: ${innerError.message}`);
         }
-        session.sequences[sequenceId] = sequence;
-        await session.save();
-        
-        return res.json({
-          success: true,
-          sequence
-        });
       }
-    }
-    
-    // Try returning current sequence as a fallback
-    if (session.currentSequenceId && session.sequences && session.sequences[session.currentSequenceId]) {
-      console.log(`Falling back to current sequence ${session.currentSequenceId}`);
-      return res.json({
-        success: true,
-        sequence: session.sequences[session.currentSequenceId]
+      
+      res.status(404).json({
+        success: false,
+        error: 'Sequence not found',
+        message: `No sequence with ID ${sequenceId} exists in session ${sessionId}`
       });
     }
-    
-    // Try first track as a last resort
-    if (session.tracks && session.tracks.length > 0) {
-      const firstTrack = session.tracks[0];
-      console.log(`Falling back to first track ${firstTrack.id} with ${firstTrack.notes ? firstTrack.notes.length : 0} notes`);
-      
-      const sequence = {
-        id: firstTrack.id,
-        name: firstTrack.name || 'Default Sequence',
-        tempo: firstTrack.tempo || 120,
-        timeSignature: firstTrack.timeSignature || { numerator: 4, denominator: 4 },
-        key: firstTrack.key || 'C major',
-        notes: firstTrack.notes || []
-      };
-      
-      // Sync it back
-      if (!session.sequences) {
-        session.sequences = {};
-      }
-      session.sequences[firstTrack.id] = sequence;
-      session.currentSequenceId = firstTrack.id;
-      await session.save();
-      
-      return res.json({
-        success: true,
-        sequence
-      });
-    }
-    
-    // No sequence found
-    return res.status(404).json({
-      success: false,
-      error: 'Sequence not found',
-      message: `No sequence with ID ${sequenceId} exists in session ${sessionId}`
-    });
   } catch (error) {
     console.error(`Error getting sequence: ${error.message}`);
     res.status(500).json({
@@ -301,19 +236,26 @@ router.put('/:id', async (req, res) => {
     }
     
     // Update session properties
-    const { name, bpm, timeSignature, tracks, loop } = req.body;
+    const { name, bpm, timeSignature, loop } = req.body;
     
     if (name) session.name = name;
     if (bpm) session.bpm = bpm;
     if (timeSignature) session.timeSignature = timeSignature;
-    if (tracks) session.tracks = tracks;
     if (loop) session.loop = loop;
     
     await session.save();
     
     res.json({
       success: true,
-      session
+      session: {
+        id: session.id,
+        name: session.name,
+        bpm: session.bpm,
+        timeSignature: session.timeSignature,
+        loop: session.loop,
+        tracks: session.tracks || [],
+        currentSequenceId: session.currentSequenceId
+      }
     });
   } catch (error) {
     res.status(400).json({ 
@@ -368,55 +310,24 @@ router.delete('/:sessionId/notes', async (req, res) => {
       });
     }
     
-    // First, try to clear notes from the current sequence if it exists
-    if (session.currentSequenceId && session.sequences && session.sequences[session.currentSequenceId]) {
-      const sequence = session.sequences[session.currentSequenceId];
-      const previousNotesCount = sequence.notes ? sequence.notes.length : 0;
-      sequence.notes = [];
-      
-      // Also clear the corresponding track
-      if (session.tracks) {
-        const track = session.tracks.find(t => t.id === session.currentSequenceId);
-        if (track) {
-          track.notes = [];
-        }
-      }
+    try {
+      // Use the clearNotes method from the enhanced Session model
+      const previousNotes = session.clearNotes();
       
       await session.save();
       
       return res.json({
         success: true,
-        message: `Cleared ${previousNotesCount} notes from current sequence`,
+        message: `Cleared ${previousNotes.length} notes from current sequence`,
         currentSequenceId: session.currentSequenceId
       });
-    }
-    
-    // Fall back to clearing notes from the first track
-    if (session.tracks && session.tracks.length > 0) {
-      const track = session.tracks[0];
-      const previousNotesCount = track.notes ? track.notes.length : 0;
-      track.notes = [];
-      
-      // Also clear the corresponding sequence
-      if (session.sequences && session.sequences[track.id]) {
-        session.sequences[track.id].notes = [];
-      }
-      
-      await session.save();
-      
-      return res.json({
-        success: true,
-        message: `Cleared ${previousNotesCount} notes from current sequence`,
-        currentSequenceId: track.id
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to clear notes',
+        message: error.message
       });
     }
-    
-    // No tracks or sequences found
-    return res.status(400).json({
-      success: false,
-      error: 'No tracks or sequences found',
-      message: 'No tracks or sequences found in the session'
-    });
   } catch (error) {
     console.error(`Error clearing notes: ${error.message}`);
     res.status(500).json({
