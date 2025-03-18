@@ -80,9 +80,11 @@ app.get('/sessions/:sessionId', async (req, res) => {
     if (session.sequences && session.currentSequenceId && session.sequences[session.currentSequenceId]) {
       const currentSequence = session.sequences[session.currentSequenceId];
       
-      // Ensure synchronization via the helper method
+      // Synchronize via the helper method
       if (typeof session._syncTrackWithSequence === 'function') {
         session._syncTrackWithSequence(currentSequence);
+      } else {
+        console.warn('Session synchronization method not available, tracks may not be properly updated');
       }
     }
     
@@ -255,6 +257,13 @@ app.post('/api/sessions/:sessionId/patterns/chord-progression', async (req, res)
     // Add notes to sequence
     session.addNotes(notes);
     
+    // Update track metadata for proper display in UI
+    const currentTrack = session.tracks.find(t => t.id === session.currentSequenceId);
+    if (currentTrack) {
+      currentTrack.instrument = 0; // Piano instrument (for chords)
+      currentTrack.name = `${key} ${progressionName} Progression`;
+    }
+    
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
@@ -324,8 +333,20 @@ app.post('/api/sessions/:sessionId/patterns/bassline', async (req, res) => {
     const notes = generatePattern(options);
     console.log(`Generated ${notes.length} notes for bassline`);
     
-    // Add notes to sequence
-    session.addNotes(notes);
+    // Add notes to sequence with channel 1 for bass
+    const bassNotes = notes.map(note => ({
+      ...note,
+      channel: 1 // Important: Set channel to 1 for bassline
+    }));
+    
+    session.addNotes(bassNotes);
+    
+    // Update track metadata for proper display in UI
+    const currentTrack = session.tracks.find(t => t.id === session.currentSequenceId);
+    if (currentTrack) {
+      currentTrack.instrument = 32; // Bass instrument
+      currentTrack.name = `${key} ${progressionName} Bassline`;
+    }
     
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
@@ -385,8 +406,20 @@ app.post('/api/sessions/:sessionId/patterns/drums', async (req, res) => {
     const notes = generatePattern(options);
     console.log(`Generated ${notes.length} notes for drum pattern`);
     
-    // Add notes to sequence
-    session.addNotes(notes);
+    // Add notes to sequence with channel 9 for drums (important for UI)
+    const drumNotes = notes.map(note => ({
+      ...note,
+      channel: 9 // MIDI channel 10 (9 in zero-based) is for drums
+    }));
+    
+    session.addNotes(drumNotes);
+    
+    // Update track metadata for proper display in UI
+    const currentTrack = session.tracks.find(t => t.id === session.currentSequenceId);
+    if (currentTrack) {
+      currentTrack.instrument = 9; // Drum kit
+      currentTrack.name = `${patternType.charAt(0).toUpperCase() + patternType.slice(1)} Drum Pattern`;
+    }
     
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
@@ -509,6 +542,13 @@ app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => 
     // Add notes to sequence
     session.addNotes(notes);
     
+    // Update track metadata for proper display in UI
+    const currentTrack = session.tracks.find(t => t.id === session.currentSequenceId);
+    if (currentTrack) {
+      currentTrack.instrument = 0; // Piano instrument (for chords)
+      currentTrack.name = `${key} ${progressionName} Progression`;
+    }
+    
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
@@ -578,8 +618,20 @@ app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
     const notes = generatePattern(options);
     console.log(`Generated ${notes.length} notes for bassline`);
     
-    // Add notes to sequence
-    session.addNotes(notes);
+    // Add notes to sequence with channel 1 for bass
+    const bassNotes = notes.map(note => ({
+      ...note,
+      channel: 1 // Important: Set channel to 1 for bassline
+    }));
+    
+    session.addNotes(bassNotes);
+    
+    // Update track metadata for proper display in UI
+    const currentTrack = session.tracks.find(t => t.id === session.currentSequenceId);
+    if (currentTrack) {
+      currentTrack.instrument = 32; // Bass instrument
+      currentTrack.name = `${key} ${progressionName} Bassline`;
+    }
     
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
@@ -639,8 +691,20 @@ app.post('/sessions/:sessionId/patterns/drums', async (req, res) => {
     const notes = generatePattern(options);
     console.log(`Generated ${notes.length} notes for drum pattern`);
     
-    // Add notes to sequence
-    session.addNotes(notes);
+    // Add notes to sequence with channel 9 for drums (important for UI)
+    const drumNotes = notes.map(note => ({
+      ...note,
+      channel: 9 // MIDI channel 10 (9 in zero-based) is for drums
+    }));
+    
+    session.addNotes(drumNotes);
+    
+    // Update track metadata for proper display in UI
+    const currentTrack = session.tracks.find(t => t.id === session.currentSequenceId);
+    if (currentTrack) {
+      currentTrack.instrument = 9; // Drum kit
+      currentTrack.name = `${patternType.charAt(0).toUpperCase() + patternType.slice(1)} Drum Pattern`;
+    }
     
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
@@ -721,10 +785,11 @@ app.post('/api/sessions', async (req, res) => {
     
     const { name, bpm, timeSignature } = req.body;
     
-    const newSession = new Session();
-    if (name) newSession.name = name;
-    if (bpm) newSession.bpm = bpm;
-    if (timeSignature) newSession.timeSignature = timeSignature;
+    const newSession = new Session({
+      name: name || 'New Session',
+      bpm: bpm || 120,
+      timeSignature: timeSignature || [4, 4]
+    });
     
     await newSession.save();
     
@@ -802,8 +867,6 @@ if (process.env.NODE_ENV === 'production') {
 
 // Error handling middleware
 app.use((err, req, res, _next) => {
-  // Logger should be used instead of console in production
-  // eslint-disable-next-line no-console
   console.error('Global error handler:');
   console.error(err.stack);
   res.status(500).json({
