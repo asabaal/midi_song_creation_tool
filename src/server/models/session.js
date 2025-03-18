@@ -31,7 +31,7 @@ class Session {
     this.sequences[sequence.id] = sequence;
     this.currentSequenceId = sequence.id;
     
-    // CRITICAL FIX: Also create a corresponding track
+    // CRITICAL: Also create a corresponding track
     this._syncTrackWithSequence(sequence);
     
     return sequence;
@@ -48,13 +48,13 @@ class Session {
         id: sequence.id,
         name: sequence.name || 'New Track',
         instrument: 0, // Default instrument
-        notes: sequence.notes || []
+        notes: sequence.notes ? JSON.parse(JSON.stringify(sequence.notes)) : []
       };
       this.tracks.push(track);
       console.log(`Created new track with id ${track.id} for sequence ${sequence.id}`);
     } else {
       // Update existing track with sequence notes
-      track.notes = sequence.notes || [];
+      track.notes = sequence.notes ? JSON.parse(JSON.stringify(sequence.notes)) : [];
       console.log(`Updated track ${track.id} with ${track.notes.length} notes from sequence ${sequence.id}`);
     }
     
@@ -83,6 +83,10 @@ class Session {
       throw new Error(`Sequence with ID ${sequenceId} not found`);
     }
     this.currentSequenceId = sequenceId;
+    
+    // Make sure the track is synced
+    this._syncTrackWithSequence(this.sequences[sequenceId]);
+    
     return this.sequences[sequenceId];
   }
 
@@ -125,7 +129,7 @@ class Session {
     
     sequence.notes = sequence.notes.concat(midiNotes);
     
-    // CRITICAL FIX: Also update the corresponding track
+    // CRITICAL: Also update the corresponding track
     this._syncTrackWithSequence(sequence);
     
     return midiNotes;
@@ -141,7 +145,7 @@ class Session {
     const previousNotes = sequence.notes ? [...sequence.notes] : [];
     sequence.notes = [];
     
-    // CRITICAL FIX: Also clear notes from the corresponding track
+    // CRITICAL: Also clear notes from the corresponding track
     const track = this.tracks.find(t => t.id === sequence.id);
     if (track) {
       track.notes = [];
@@ -170,7 +174,7 @@ class Session {
       this.sequences[sequence.id] = sequence;
       this.currentSequenceId = sequence.id;
       
-      // CRITICAL FIX: Also create/update the corresponding track
+      // CRITICAL: Also create/update the corresponding track
       this._syncTrackWithSequence(sequence);
       
       return sequence;
@@ -195,7 +199,7 @@ class Session {
     const sessionData = sessions.get(id);
     if (!sessionData) return null;
     
-    // CRITICAL FIX: Ensure we return a Session instance with all prototype methods
+    // CRITICAL: Ensure we return a Session instance with all prototype methods
     // If it's already a Session instance, return it directly
     if (sessionData instanceof Session) {
       return sessionData;
