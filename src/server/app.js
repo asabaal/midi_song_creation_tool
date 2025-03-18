@@ -10,6 +10,7 @@ const sessionRoutes = require('./routes/sessionRoutes');
 const patternRoutes = require('./routes/patternRoutes');
 const exportRoutes = require('./routes/exportRoutes');
 const compatRouter = require('./routes/compatRouter');
+const debugRoutes = require('./routes/debugRoutes');
 
 // Make sessions accessible in routes
 const { Session, sessions } = require('./models/session');
@@ -56,7 +57,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Super detailed debug endpoint for diagnostics
+// Super detailed debug endpoint
 app.get('/api/debug-data', async (req, res) => {
   console.log("===== DEBUG DATA DUMP =====");
   
@@ -151,6 +152,7 @@ app.post('/api/sessions/:sessionId/sequences', (req, res) => {
 });
 
 // API routes - these must come AFTER any special route handlers
+app.use('/api/debug', debugRoutes);
 app.use('/api/music-theory', musicTheoryRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/patterns', patternRoutes);
@@ -176,7 +178,8 @@ if (process.env.NODE_ENV === 'production') {
         '/api/sessions',
         '/api/music-theory',
         '/api/patterns',
-        '/api/export'
+        '/api/export',
+        '/api/debug'
       ],
       activeSessions: sessions.size
     });
