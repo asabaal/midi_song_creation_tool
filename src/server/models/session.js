@@ -96,9 +96,12 @@ class Session {
       this.tracks.push(track);
       console.log(`Created new track with id ${track.id} for sequence ${sequence.id}`);
     } else {
-      // Update existing track with sequence notes
-      track.notes = Array.isArray(sequence.notes) ? JSON.parse(JSON.stringify(sequence.notes)) : [];
-      console.log(`Updated track ${track.id} with ${track.notes ? track.notes.length : 0} notes from sequence ${sequence.id}`);
+      // Update existing track with sequence notes if it's a proper update
+      // Only update if sequence.notes exists and has content
+      if (sequence.notes && Array.isArray(sequence.notes)) {
+        track.notes = JSON.parse(JSON.stringify(sequence.notes));
+        console.log(`Updated track ${track.id} with ${track.notes ? track.notes.length : 0} notes from sequence ${sequence.id}`);
+      }
     }
     
     // Ensure track has a name from sequence if not set
@@ -107,6 +110,43 @@ class Session {
     }
     
     return track;
+  }
+
+  // Helper method to sync a track with its corresponding sequence
+  _syncSequenceWithTrack(track) {
+    // Ensure track has an ID
+    if (!track.id) {
+      track.id = `track_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
+    }
+    
+    // Find or create a sequence for this track
+    let sequence = this.sequences[track.id];
+    
+    if (!sequence) {
+      // Create a new sequence if one doesn't exist
+      sequence = new MidiSequence({
+        id: track.id,
+        name: track.name || 'New Sequence',
+        tempo: track.tempo || this.bpm || 120,
+        key: track.key || 'C major',
+        notes: Array.isArray(track.notes) ? [...track.notes] : []
+      });
+      this.sequences[track.id] = sequence;
+      console.log(`Created new sequence with id ${sequence.id} for track ${track.id}`);
+    } else {
+      // Update existing sequence with track notes
+      if (track.notes && Array.isArray(track.notes)) {
+        sequence.notes = [...track.notes];
+        console.log(`Updated sequence ${sequence.id} with ${sequence.notes.length} notes from track ${track.id}`);
+      }
+    }
+    
+    // Ensure sequence has a name from track if not set
+    if (!sequence.name && track.name) {
+      sequence.name = track.name;
+    }
+    
+    return sequence;
   }
 
   // Get a sequence by ID
@@ -194,6 +234,7 @@ class Session {
       sequence.notes = [];
     }
     
+    // Add notes to the sequence
     sequence.notes = sequence.notes.concat(midiNotes);
     
     // CRITICAL: Also update the corresponding track
@@ -264,8 +305,29 @@ class Session {
     }
   }
 
+  // Debug method to ensure tracks and sequences are synced
+  syncAllTracksAndSequences() {
+    console.log(`Syncing all tracks and sequences in session ${this.id}`);
+    
+    // First, sync all sequences to tracks
+    Object.values(this.sequences).forEach(sequence => {
+      this._syncTrackWithSequence(sequence);
+    });
+    
+    // Then, sync all tracks to sequences
+    this.tracks.forEach(track => {
+      this._syncSequenceWithTrack(track);
+    });
+    
+    console.log(`Sync complete: ${this.tracks.length} tracks and ${Object.keys(this.sequences).length} sequences`);
+    return this;
+  }
+
   // Mock save method to make API compatible
   async save() {
+    // First sync all tracks and sequences
+    this.syncAllTracksAndSequences();
+    
     // Update the session in the in-memory store
     sessions.set(this.id, this);
     
