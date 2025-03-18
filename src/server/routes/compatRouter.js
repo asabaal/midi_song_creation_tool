@@ -29,20 +29,35 @@ router.all('/sessions/:sessionId/sequences/:sequenceId', (req, res, next) => {
   next('route');
 });
 
-// Forward pattern routes
-router.all('/sessions/:sessionId/patterns/:patternType', (req, res, next) => {
+// Forward pattern routes - FIXED to directly call pattern routes with sessionId
+router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
   const { sessionId, patternType } = req.params;
   
-  // For POST requests, we need to inject the sessionId into the body
-  if (req.method === 'POST') {
-    req.url = `/api/patterns/${patternType}`;
-    req.body.sessionId = sessionId;
-  } else {
-    req.url = `/api/sessions/${sessionId}/patterns/${patternType}`;
-  }
+  // Get the pattern routes module
+  const patternRoutes = require('./patternRoutes');
   
-  console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
-  next('route');
+  // Add sessionId to the body if it doesn't exist
+  if (!req.body) {
+    req.body = {};
+  }
+  req.body.sessionId = sessionId;
+  
+  console.log(`Manually forwarding ${req.originalUrl} to pattern route for ${patternType} with sessionId ${sessionId}`);
+  
+  // Directly call the appropriate route handler based on pattern type
+  if (patternType === 'chord-progression') {
+    patternRoutes.handleChordProgression(req, res);
+  } else if (patternType === 'bassline') {
+    patternRoutes.handleBassline(req, res);
+  } else if (patternType === 'drums') {
+    patternRoutes.handleDrums(req, res);
+  } else {
+    res.status(404).json({
+      success: false,
+      error: 'Pattern type not found',
+      message: `Pattern type ${patternType} is not supported`
+    });
+  }
 });
 
 // Forward export routes
