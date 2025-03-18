@@ -193,7 +193,7 @@ debugServer.use((req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 3003; // Ensure port is consistently 3003
 debugServer.listen(PORT, () => {
   console.log(`MIDI Song Creation Tool server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
