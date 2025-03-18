@@ -54,7 +54,7 @@ class Session {
           });
         } else {
           // Make sure sequence has the track's notes
-          this.sequences[track.id].notes = track.notes || [];
+          this.sequences[track.id].notes = Array.isArray(track.notes) ? [...track.notes] : [];
         }
       });
     }
@@ -126,7 +126,20 @@ class Session {
         this.currentSequenceId = sequenceIds[0];
         return this.sequences[this.currentSequenceId];
       }
-      return null;
+      
+      // If no sequences exist, create one
+      const newSequence = new MidiSequence({
+        name: 'New Sequence',
+        tempo: this.bpm,
+        key: 'C major'
+      });
+      this.sequences[newSequence.id] = newSequence;
+      this.currentSequenceId = newSequence.id;
+      
+      // Create corresponding track
+      this._syncTrackWithSequence(newSequence);
+      
+      return newSequence;
     }
     return this.sequences[this.currentSequenceId];
   }
