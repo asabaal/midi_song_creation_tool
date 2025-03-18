@@ -4,11 +4,8 @@ const router = express.Router();
 const { generatePattern } = require('../../core/patternGenerator');
 const { Session } = require('../models/session');
 
-/**
- * Generate chord progression pattern
- * POST /api/patterns/chord-progression
- */
-router.post('/chord-progression', async (req, res) => {
+// Handler function for chord progression - can be called directly
+async function handleChordProgression(req, res) {
   try {
     const { 
       sessionId, 
@@ -18,6 +15,8 @@ router.post('/chord-progression', async (req, res) => {
       scaleType = 'major', 
       rhythmPattern = [4] 
     } = req.body;
+    
+    console.log(`Handling chord progression for session ${sessionId} with key ${key}`);
     
     // Find session
     if (!sessionId) {
@@ -120,13 +119,10 @@ router.post('/chord-progression', async (req, res) => {
       error: error.message 
     });
   }
-});
+}
 
-/**
- * Generate bassline pattern
- * POST /api/patterns/bassline
- */
-router.post('/bassline', async (req, res) => {
+// Handler function for bassline - can be called directly
+async function handleBassline(req, res) {
   try {
     const { 
       sessionId, 
@@ -136,6 +132,8 @@ router.post('/bassline', async (req, res) => {
       scaleType = 'major', 
       rhythmPattern = [1, 0.5, 0.5] 
     } = req.body;
+    
+    console.log(`Handling bassline for session ${sessionId} with key ${key}`);
     
     // Find session
     if (!sessionId) {
@@ -237,19 +235,18 @@ router.post('/bassline', async (req, res) => {
       error: error.message 
     });
   }
-});
+}
 
-/**
- * Generate drum pattern
- * POST /api/patterns/drums
- */
-router.post('/drums', async (req, res) => {
+// Handler function for drums - can be called directly
+async function handleDrums(req, res) {
   try {
     const { 
       sessionId, 
       patternType = 'basic', 
       measures = 2 
     } = req.body;
+    
+    console.log(`Handling drums for session ${sessionId} with pattern ${patternType}`);
     
     // Find session
     if (!sessionId) {
@@ -348,7 +345,25 @@ router.post('/drums', async (req, res) => {
       error: error.message 
     });
   }
-});
+}
+
+/**
+ * Generate chord progression pattern
+ * POST /api/patterns/chord-progression
+ */
+router.post('/chord-progression', handleChordProgression);
+
+/**
+ * Generate bassline pattern
+ * POST /api/patterns/bassline
+ */
+router.post('/bassline', handleBassline);
+
+/**
+ * Generate drum pattern
+ * POST /api/patterns/drums
+ */
+router.post('/drums', handleDrums);
 
 /**
  * Clear notes from a track
@@ -412,4 +427,8 @@ router.delete('/notes/:sessionId/:trackId', async (req, res) => {
   }
 });
 
+// Export the router and the handler functions
 module.exports = router;
+module.exports.handleChordProgression = handleChordProgression;
+module.exports.handleBassline = handleBassline;
+module.exports.handleDrums = handleDrums;
