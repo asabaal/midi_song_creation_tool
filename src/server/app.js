@@ -57,11 +57,93 @@ app.use((req, res, next) => {
 });
 
 //================================================
-// DIRECT ROUTE HANDLERS FOR PATTERN GENERATION ONLY
+// DIRECT ROUTE HANDLERS FOR API PREFIXED ROUTES
 //================================================
 
-// Chord progression generation - direct handler
-app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => {
+// API test endpoint - specifically for the debug interface
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is working correctly',
+    sessions: sessions.size
+  });
+});
+
+// Get Session (for debug interface)
+app.get('/api/sessions/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    console.log(`DEBUG: Getting session ${sessionId} from API-prefixed route`);
+    
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    res.json({
+      success: true,
+      session: {
+        id: session.id,
+        created: session.created,
+        currentSequenceId: session.currentSequenceId,
+        sequences: session.listSequences()
+      }
+    });
+  } catch (error) {
+    console.error(`Error getting session: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Get Sequence (for debug interface)
+app.get('/api/sessions/:sessionId/sequences/:sequenceId', async (req, res) => {
+  try {
+    const { sessionId, sequenceId } = req.params;
+    console.log(`DEBUG: Getting sequence ${sequenceId} from session ${sessionId} from API-prefixed route`);
+    
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    try {
+      const sequence = session.getSequence(sequenceId);
+      
+      res.json({
+        success: true,
+        sequence: sequence.toJSON ? sequence.toJSON() : sequence
+      });
+    } catch (error) {
+      res.status(404).json({
+        success: false,
+        error: 'Sequence not found',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error getting sequence: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// API-prefixed Chord progression generation
+app.post('/api/sessions/:sessionId/patterns/chord-progression', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { 
@@ -72,7 +154,7 @@ app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => 
       rhythmPattern = [4] 
     } = req.body;
     
-    console.log(`DIRECT HANDLER: Generating chord progression in session ${sessionId} with params:`, { key, octave, progressionName, scaleType });
+    console.log(`DEBUG: Generating chord progression in session ${sessionId} with API-prefixed route`);
     
     // Find session
     const session = await Session.findById(sessionId);
@@ -132,8 +214,8 @@ app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => 
   }
 });
 
-// Bassline generation - direct handler
-app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
+// API-prefixed Bassline generation
+app.post('/api/sessions/:sessionId/patterns/bassline', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { 
@@ -144,7 +226,7 @@ app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
       rhythmPattern = [1, 0.5, 0.5] 
     } = req.body;
     
-    console.log(`DIRECT HANDLER: Generating bassline in session ${sessionId} with params:`, { key, octave, progressionName, scaleType });
+    console.log(`DEBUG: Generating bassline in session ${sessionId} with API-prefixed route`);
     
     // Find session
     const session = await Session.findById(sessionId);
@@ -202,13 +284,13 @@ app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
   }
 });
 
-// Drum pattern generation - direct handler
-app.post('/sessions/:sessionId/patterns/drums', async (req, res) => {
+// API-prefixed Drum pattern generation
+app.post('/api/sessions/:sessionId/patterns/drums', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { patternType = 'basic', measures = 2 } = req.body;
     
-    console.log(`DIRECT HANDLER: Generating drum pattern in session ${sessionId} with params:`, { patternType, measures });
+    console.log(`DEBUG: Generating drum pattern in session ${sessionId} with API-prefixed route`);
     
     // Find session
     const session = await Session.findById(sessionId);
@@ -263,12 +345,266 @@ app.post('/sessions/:sessionId/patterns/drums', async (req, res) => {
   }
 });
 
-// Clear notes from current sequence - direct handler
+// API-prefixed Clear notes from current sequence
+app.delete('/api/sessions/:sessionId/notes', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    console.log(`DEBUG: Clearing notes from session ${sessionId} with API-prefixed route`);
+    
+    // Check if session exists
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    try {
+      const previousNotes = session.clearNotes();
+      
+      console.log(`Cleared ${previousNotes.length} notes from session ${sessionId}`);
+      
+      await session.save();
+      
+      res.json({
+        success: true,
+        message: `Cleared ${previousNotes.length} notes from current sequence`,
+        currentSequenceId: session.currentSequenceId
+      });
+    } catch (error) {
+      console.error(`Error clearing notes: ${error.message}`);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to clear notes',
+        message: error.message
+      });
+    }
+  } catch (error) {
+    console.error(`Error in clear notes endpoint: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+//================================================
+// DIRECT ROUTE HANDLERS FOR NON-API PREFIXED ROUTES (FOR WEB UI)
+//================================================
+
+// Chord progression generation - direct handler for web UI
+app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { 
+      key = 'C', 
+      octave = 4, 
+      progressionName = 'I-IV-V-I', 
+      scaleType = 'major', 
+      rhythmPattern = [4] 
+    } = req.body;
+    
+    console.log(`DEBUG: Generating chord progression in session ${sessionId} with non-API-prefixed route`);
+    
+    // Find session
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Create a sequence if none exists
+    if (!session.getCurrentSequence()) {
+      console.log('No current sequence, creating one');
+      session.createSequence({
+        name: `${key} ${progressionName} Progression`,
+        key: `${key} ${scaleType}`
+      });
+    }
+    
+    // Generate chord progression pattern
+    const options = {
+      type: 'chord',
+      root: key,
+      octave: parseInt(octave),
+      progression: progressionName.split('-'),
+      chordType: scaleType,
+      rhythmPattern: Array.isArray(rhythmPattern) ? rhythmPattern : [4]
+    };
+    
+    const notes = generatePattern(options);
+    console.log(`Generated ${notes.length} notes for chord progression`);
+    
+    // Add notes to sequence
+    session.addNotes(notes);
+    
+    const currentSequence = session.getCurrentSequence();
+    console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
+    
+    await session.save();
+    
+    res.json({
+      success: true,
+      message: `Added ${notes.length} notes from ${key} ${progressionName} progression`,
+      progression: progressionName,
+      currentSequenceId: session.currentSequenceId,
+      noteCount: currentSequence.notes.length
+    });
+  } catch (error) {
+    console.error(`Error generating chord progression: ${error.message}`);
+    console.error(error.stack);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Bassline generation - direct handler for web UI
+app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { 
+      key = 'C', 
+      octave = 3, 
+      progressionName = 'I-IV-V-I', 
+      scaleType = 'major', 
+      rhythmPattern = [1, 0.5, 0.5] 
+    } = req.body;
+    
+    console.log(`DEBUG: Generating bassline in session ${sessionId} with non-API-prefixed route`);
+    
+    // Find session
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Create a sequence if none exists
+    if (!session.getCurrentSequence()) {
+      console.log('No current sequence, creating one for bassline');
+      session.createSequence({
+        name: `${key} ${progressionName} Bassline`,
+        key: `${key} ${scaleType}`
+      });
+    }
+    
+    // Generate bassline pattern
+    const options = {
+      type: 'bassline',
+      key: key,
+      octave: parseInt(octave),
+      progression: progressionName.split('-'),
+      style: 'walking',
+      rhythmPattern: Array.isArray(rhythmPattern) ? rhythmPattern : [1, 0.5, 0.5]
+    };
+    
+    const notes = generatePattern(options);
+    console.log(`Generated ${notes.length} notes for bassline`);
+    
+    // Add notes to sequence
+    session.addNotes(notes);
+    
+    const currentSequence = session.getCurrentSequence();
+    console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
+    
+    await session.save();
+    
+    res.json({
+      success: true,
+      message: `Added ${notes.length} notes for ${key} ${progressionName} bassline`,
+      currentSequenceId: session.currentSequenceId,
+      noteCount: currentSequence.notes.length
+    });
+  } catch (error) {
+    console.error(`Error generating bassline: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Drum pattern generation - direct handler for web UI
+app.post('/sessions/:sessionId/patterns/drums', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { patternType = 'basic', measures = 2 } = req.body;
+    
+    console.log(`DEBUG: Generating drum pattern in session ${sessionId} with non-API-prefixed route`);
+    
+    // Find session
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Create a sequence if none exists
+    if (!session.getCurrentSequence()) {
+      console.log('No current sequence, creating one for drums');
+      session.createSequence({
+        name: `${patternType.charAt(0).toUpperCase() + patternType.slice(1)} Drum Pattern`,
+        key: 'C major'  // Key doesn't matter for drums
+      });
+    }
+    
+    // Generate drum pattern
+    const options = {
+      type: 'drum',
+      style: patternType,
+      bars: parseInt(measures) || 2
+    };
+    
+    const notes = generatePattern(options);
+    console.log(`Generated ${notes.length} notes for drum pattern`);
+    
+    // Add notes to sequence
+    session.addNotes(notes);
+    
+    const currentSequence = session.getCurrentSequence();
+    console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
+    
+    await session.save();
+    
+    res.json({
+      success: true,
+      message: `Added ${notes.length} notes for ${patternType} drum pattern`,
+      currentSequenceId: session.currentSequenceId,
+      noteCount: currentSequence.notes.length
+    });
+  } catch (error) {
+    console.error(`Error generating drum pattern: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Clear notes from current sequence - direct handler for web UI
 app.delete('/sessions/:sessionId/notes', async (req, res) => {
   try {
     const { sessionId } = req.params;
     
-    console.log(`DIRECT HANDLER: Clearing notes from session ${sessionId}`);
+    console.log(`DEBUG: Clearing notes from session ${sessionId} with non-API-prefixed route`);
     
     // Check if session exists
     const session = await Session.findById(sessionId);
