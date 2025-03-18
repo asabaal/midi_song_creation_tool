@@ -22,6 +22,10 @@ class Session {
     const sequence = new MidiSequence(options);
     this.sequences[sequence.id] = sequence;
     this.currentSequenceId = sequence.id;
+    
+    // Create a corresponding track for the sequence
+    this._syncTrackWithSequence(sequence);
+    
     return sequence;
   }
 
@@ -88,6 +92,10 @@ class Session {
     }
     
     sequence.notes = sequence.notes.concat(midiNotes);
+    
+    // Sync notes to the corresponding track
+    this._syncTrackWithSequence(sequence);
+    
     return midiNotes;
   }
 
@@ -100,6 +108,10 @@ class Session {
     
     const previousNotes = sequence.notes ? [...sequence.notes] : [];
     sequence.notes = [];
+    
+    // Clear notes from the corresponding track
+    this._syncTrackWithSequence(sequence);
+    
     return previousNotes;
   }
 
@@ -122,11 +134,57 @@ class Session {
                       MidiSequence.fromJSON(json);
       this.sequences[sequence.id] = sequence;
       this.currentSequenceId = sequence.id;
+      
+      // Sync track with the imported sequence
+      this._syncTrackWithSequence(sequence);
+      
       return sequence;
     } catch (error) {
       console.error('Failed to import sequence:', error.message);
       throw new Error(`Failed to import sequence: ${error.message}`);
     }
+  }
+
+  // Private helper function to sync tracks with sequences
+  _syncTrackWithSequence(sequence) {
+    if (!sequence) return;
+    
+    // Initialize tracks array if it doesn't exist
+    if (!this.tracks) {
+      this.tracks = [];
+    }
+    
+    // Find or create a track for this sequence
+    let track = this.tracks.find(t => t.id === sequence.id);
+    
+    // Determine the appropriate instrument based on the first note channel
+    let instrument = 0; // Default to piano
+    if (sequence.notes && sequence.notes.length > 0) {
+      const firstNote = sequence.notes[0];
+      if (firstNote.channel === 9 || (firstNote.channel === 10 && firstNote.pitch >= 35 && firstNote.pitch <= 81)) {
+        instrument = 9; // Drums
+      } else if (firstNote.channel === 1 || firstNote.channel === 32) {
+        instrument = 32; // Bass
+      }
+    }
+    
+    // If no track exists for this sequence, create one
+    if (!track) {
+      track = {
+        id: sequence.id,
+        name: sequence.name || 'Unnamed Track',
+        instrument,
+        notes: []
+      };
+      this.tracks.push(track);
+    }
+    
+    // Update the track with the sequence's notes
+    track.notes = sequence.notes || [];
+    track.name = sequence.name;
+    track.instrument = instrument;
+    
+    return track;
   }
 
   // Mock save method to make API compatible
