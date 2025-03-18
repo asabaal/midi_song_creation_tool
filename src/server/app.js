@@ -25,7 +25,7 @@ app.use(cors());
 
 // Custom bodyParser setup with better error handling
 app.use((req, res, next) => {
-  bodyParser.json()(req, res, (err) => {
+  bodyParser.json({ limit: '10mb' })(req, res, (err) => {
     if (err) {
       console.error(`JSON parse error: ${err.message}`);
       return res.status(400).json({
@@ -57,7 +57,7 @@ app.use((req, res, next) => {
 });
 
 //================================================
-// GET SESSION HANDLER FOR WEB UI
+// CRITICAL: GET SESSION HANDLER FOR WEB UI
 //================================================
 
 // This is the critical endpoint the web UI uses to fetch the notes
@@ -76,31 +76,14 @@ app.get('/sessions/:sessionId', async (req, res) => {
     }
     
     // CRITICAL: Ensure tracks are synchronized with sequence notes
-    // If session has sequences with notes but tracks don't have them, copy them over
+    // If session has sequences with notes but tracks don't match, sync them
     if (session.sequences && session.currentSequenceId && session.sequences[session.currentSequenceId]) {
       const currentSequence = session.sequences[session.currentSequenceId];
       
-      // Make sure we have a tracks array
-      if (!session.tracks) {
-        session.tracks = [];
+      // Ensure synchronization via the helper method
+      if (typeof session._syncTrackWithSequence === 'function') {
+        session._syncTrackWithSequence(currentSequence);
       }
-      
-      // Find or create a track for the current sequence
-      let track = session.tracks.find(t => t.id === currentSequence.id);
-      if (!track) {
-        track = {
-          id: currentSequence.id,
-          name: currentSequence.name || 'Current Sequence',
-          instrument: 0, // Default instrument
-          notes: []
-        };
-        session.tracks.push(track);
-      }
-      
-      // Set the notes from the current sequence to the track
-      track.notes = currentSequence.notes || [];
-      
-      console.log(`Synchronized track ${track.id} with ${track.notes.length} notes from sequence ${currentSequence.id}`);
     }
     
     // Count the number of notes in all tracks for logging
@@ -112,7 +95,7 @@ app.get('/sessions/:sessionId', async (req, res) => {
       success: true,
       session: {
         id: session.id,
-        created: session.created,
+        created: session.createdAt,
         currentSequenceId: session.currentSequenceId,
         sequences: session.listSequences(),
         tracks: session.tracks || []
@@ -156,13 +139,22 @@ app.get('/api/sessions/:sessionId', async (req, res) => {
       });
     }
     
+    // Ensure tracks are synchronized with sequences
+    if (session.sequences && session.currentSequenceId && session.sequences[session.currentSequenceId]) {
+      const currentSequence = session.sequences[session.currentSequenceId];
+      if (typeof session._syncTrackWithSequence === 'function') {
+        session._syncTrackWithSequence(currentSequence);
+      }
+    }
+    
     res.json({
       success: true,
       session: {
         id: session.id,
-        created: session.created,
+        created: session.createdAt,
         currentSequenceId: session.currentSequenceId,
-        sequences: session.listSequences()
+        sequences: session.listSequences(),
+        tracks: session.tracks || []
       }
     });
   } catch (error) {
@@ -266,25 +258,6 @@ app.post('/api/sessions/:sessionId/patterns/chord-progression', async (req, res)
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
-    // CRITICAL: Also update the notes in the tracks for the web UI
-    if (!session.tracks) {
-      session.tracks = [];
-    }
-    
-    let track = session.tracks.find(t => t.id === currentSequence.id);
-    if (!track) {
-      track = {
-        id: currentSequence.id,
-        name: currentSequence.name || 'Chord Progression',
-        instrument: 0, // Default instrument
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Update the track notes
-    track.notes = currentSequence.notes;
-    
     await session.save();
     
     res.json({
@@ -357,25 +330,6 @@ app.post('/api/sessions/:sessionId/patterns/bassline', async (req, res) => {
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
-    // CRITICAL: Also update the notes in the tracks for the web UI
-    if (!session.tracks) {
-      session.tracks = [];
-    }
-    
-    let track = session.tracks.find(t => t.id === currentSequence.id);
-    if (!track) {
-      track = {
-        id: currentSequence.id,
-        name: currentSequence.name || 'Bassline',
-        instrument: 32, // Bass instrument
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Update the track notes
-    track.notes = currentSequence.notes;
-    
     await session.save();
     
     res.json({
@@ -437,25 +391,6 @@ app.post('/api/sessions/:sessionId/patterns/drums', async (req, res) => {
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
-    // CRITICAL: Also update the notes in the tracks for the web UI
-    if (!session.tracks) {
-      session.tracks = [];
-    }
-    
-    let track = session.tracks.find(t => t.id === currentSequence.id);
-    if (!track) {
-      track = {
-        id: currentSequence.id,
-        name: currentSequence.name || 'Drums',
-        instrument: 9, // Drum instrument
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Update the track notes
-    track.notes = currentSequence.notes;
-    
     await session.save();
     
     res.json({
@@ -495,14 +430,6 @@ app.delete('/api/sessions/:sessionId/notes', async (req, res) => {
       const previousNotes = session.clearNotes();
       
       console.log(`Cleared ${previousNotes.length} notes from session ${sessionId}`);
-      
-      // CRITICAL: Also clear notes from the corresponding track
-      if (session.tracks && session.currentSequenceId) {
-        const track = session.tracks.find(t => t.id === session.currentSequenceId);
-        if (track) {
-          track.notes = [];
-        }
-      }
       
       await session.save();
       
@@ -585,25 +512,6 @@ app.post('/sessions/:sessionId/patterns/chord-progression', async (req, res) => 
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
-    // CRITICAL: Also update the notes in the tracks for the web UI
-    if (!session.tracks) {
-      session.tracks = [];
-    }
-    
-    let track = session.tracks.find(t => t.id === currentSequence.id);
-    if (!track) {
-      track = {
-        id: currentSequence.id,
-        name: currentSequence.name || 'Chord Progression',
-        instrument: 0, // Default instrument
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Update the track notes
-    track.notes = currentSequence.notes;
-    
     await session.save();
     
     res.json({
@@ -676,25 +584,6 @@ app.post('/sessions/:sessionId/patterns/bassline', async (req, res) => {
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
-    // CRITICAL: Also update the notes in the tracks for the web UI
-    if (!session.tracks) {
-      session.tracks = [];
-    }
-    
-    let track = session.tracks.find(t => t.id === currentSequence.id);
-    if (!track) {
-      track = {
-        id: currentSequence.id,
-        name: currentSequence.name || 'Bassline',
-        instrument: 32, // Bass instrument
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Update the track notes
-    track.notes = currentSequence.notes;
-    
     await session.save();
     
     res.json({
@@ -756,25 +645,6 @@ app.post('/sessions/:sessionId/patterns/drums', async (req, res) => {
     const currentSequence = session.getCurrentSequence();
     console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
     
-    // CRITICAL: Also update the notes in the tracks for the web UI
-    if (!session.tracks) {
-      session.tracks = [];
-    }
-    
-    let track = session.tracks.find(t => t.id === currentSequence.id);
-    if (!track) {
-      track = {
-        id: currentSequence.id,
-        name: currentSequence.name || 'Drums',
-        instrument: 9, // Drum instrument
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Update the track notes
-    track.notes = currentSequence.notes;
-    
     await session.save();
     
     res.json({
@@ -814,14 +684,6 @@ app.delete('/sessions/:sessionId/notes', async (req, res) => {
       const previousNotes = session.clearNotes();
       
       console.log(`Cleared ${previousNotes.length} notes from session ${sessionId}`);
-      
-      // CRITICAL: Also clear notes from the corresponding track
-      if (session.tracks && session.currentSequenceId) {
-        const track = session.tracks.find(t => t.id === session.currentSequenceId);
-        if (track) {
-          track.notes = [];
-        }
-      }
       
       await session.save();
       
