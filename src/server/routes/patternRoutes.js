@@ -7,8 +7,9 @@ const { Session } = require('../models/session');
 // Handler function for chord progression - can be called directly
 async function handleChordProgression(req, res) {
   try {
+    // Get sessionId from either params or body
+    const sessionId = req.params.sessionId || req.body.sessionId;
     const { 
-      sessionId, 
       key = 'C', 
       octave = 4, 
       progressionName = 'I-IV-V-I', 
@@ -108,7 +109,7 @@ async function handleChordProgression(req, res) {
     res.json({
       success: true,
       message: `Added ${notes.length} notes from ${key} ${progressionName} progression`,
-      sessionId: session._id,
+      sessionId: session._id || session.id,
       currentSequenceId: track.id,
       noteCount: track.notes.length
     });
@@ -124,8 +125,9 @@ async function handleChordProgression(req, res) {
 // Handler function for bassline - can be called directly
 async function handleBassline(req, res) {
   try {
+    // Get sessionId from either params or body
+    const sessionId = req.params.sessionId || req.body.sessionId;
     const { 
-      sessionId, 
       key = 'C', 
       octave = 3, 
       progressionName = 'I-IV-V-I', 
@@ -224,7 +226,7 @@ async function handleBassline(req, res) {
     res.json({
       success: true,
       message: `Added ${notes.length} notes for ${key} ${progressionName} bassline`,
-      sessionId: session._id,
+      sessionId: session._id || session.id,
       currentSequenceId: track.id,
       noteCount: track.notes.length
     });
@@ -240,8 +242,9 @@ async function handleBassline(req, res) {
 // Handler function for drums - can be called directly
 async function handleDrums(req, res) {
   try {
+    // Get sessionId from either params or body
+    const sessionId = req.params.sessionId || req.body.sessionId;
     const { 
-      sessionId, 
       patternType = 'basic', 
       measures = 2 
     } = req.body;
@@ -334,7 +337,7 @@ async function handleDrums(req, res) {
     res.json({
       success: true,
       message: `Added ${notes.length} notes for ${patternType} drum pattern`,
-      sessionId: session._id,
+      sessionId: session._id || session.id,
       currentSequenceId: track.id,
       noteCount: track.notes.length
     });
@@ -351,19 +354,22 @@ async function handleDrums(req, res) {
  * Generate chord progression pattern
  * POST /api/patterns/chord-progression
  */
-router.post('/chord-progression', handleChordProgression);
+// Modified to accept sessionId as a parameter
+router.post('/chord-progression/:sessionId?', handleChordProgression);
 
 /**
  * Generate bassline pattern
  * POST /api/patterns/bassline
  */
-router.post('/bassline', handleBassline);
+// Modified to accept sessionId as a parameter
+router.post('/bassline/:sessionId?', handleBassline);
 
 /**
  * Generate drum pattern
  * POST /api/patterns/drums
  */
-router.post('/drums', handleDrums);
+// Modified to accept sessionId as a parameter
+router.post('/drums/:sessionId?', handleDrums);
 
 /**
  * Clear notes from a track
@@ -415,7 +421,7 @@ router.delete('/notes/:sessionId/:trackId', async (req, res) => {
     res.json({
       success: true,
       message: `Cleared ${previousNoteCount} notes from track ${trackId}`,
-      sessionId: session._id,
+      sessionId: session._id || session.id,
       trackId
     });
   } catch (error) {
