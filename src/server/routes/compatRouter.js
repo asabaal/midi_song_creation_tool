@@ -44,13 +44,16 @@ router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
   // Get the pattern routes module
   const patternRoutes = require('./patternRoutes');
   
-  // Add sessionId to the body if it doesn't exist
+  // IMPORTANT: Make sure req.body exists
   if (!req.body) {
     req.body = {};
   }
+  
+  // Add sessionId to both req.params and req.body for maximum compatibility
+  req.params.sessionId = sessionId;
   req.body.sessionId = sessionId;
   
-  console.log(`Manually forwarding ${req.originalUrl} to pattern route for ${patternType} with sessionId ${sessionId}`);
+  console.log(`Manually forwarding ${req.originalUrl} to pattern route for ${patternType} with sessionId ${sessionId} in both params and body`);
   
   // Directly call the appropriate route handler based on pattern type
   if (patternType === 'chord-progression') {
@@ -77,13 +80,27 @@ router.all('/sessions/:sessionId/export/:format', (req, res, next) => {
 });
 
 // Forward clear notes route
-router.delete('/sessions/:sessionId/notes', (req, res, next) => {
+router.delete('/sessions/:sessionId/notes', (req, res) => {
   const { sessionId } = req.params;
   const { Session } = require('../models/session');
   
+  // Ensure both params and body have the sessionId
+  if (!req.body) {
+    req.body = {};
+  }
+  req.body.sessionId = sessionId;
+  
   // Get the session to find the current sequence
   Session.findById(sessionId).then(session => {
-    if (!session || !session.currentSequenceId) {
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    if (!session.currentSequenceId) {
       return res.status(404).json({
         success: false,
         error: 'No current sequence',
@@ -91,9 +108,23 @@ router.delete('/sessions/:sessionId/notes', (req, res, next) => {
       });
     }
     
-    req.url = `/api/sessions/${sessionId}/notes`;
-    console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
-    next('route');
+    // Call the clearNotes method on the session
+    try {
+      const previousNotes = session.clearNotes();
+      session.save().then(() => {
+        res.json({
+          success: true,
+          message: `Cleared ${previousNotes.length} notes from current sequence`,
+          currentSequenceId: session.currentSequenceId
+        });
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to clear notes',
+        message: error.message
+      });
+    }
   }).catch(error => {
     res.status(500).json({
       success: false,
@@ -105,6 +136,12 @@ router.delete('/sessions/:sessionId/notes', (req, res, next) => {
 
 // Forward import route
 router.post('/sessions/:sessionId/import', (req, res, next) => {
+  // Add sessionId to the body
+  if (!req.body) {
+    req.body = {};
+  }
+  req.body.sessionId = req.params.sessionId;
+  
   req.url = `/api/sessions/${req.params.sessionId}/import`;
   console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
   next('route');
