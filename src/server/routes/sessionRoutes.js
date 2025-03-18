@@ -20,12 +20,15 @@ router.post('/', async (req, res) => {
     
     await newSession.save();
     
+    console.log(`Created new session with ID: ${newSession.id}`);
+    
     res.status(201).json({
       success: true,
       sessionId: newSession.id,
       message: 'Session created successfully'
     });
   } catch (error) {
+    console.error(`Error creating session: ${error.message}`);
     res.status(400).json({ 
       success: false,
       error: error.message 
@@ -109,9 +112,16 @@ router.get('/', async (req, res) => {
     const sessionsArray = await Session.find();
     res.json({
       success: true,
-      sessions: sessionsArray
+      sessions: sessionsArray.map(session => ({
+        id: session.id,
+        name: session.name,
+        createdAt: session.createdAt,
+        sequenceCount: Object.keys(session.sequences || {}).length,
+        trackCount: (session.tracks || []).length
+      }))
     });
   } catch (error) {
+    console.error(`Error getting sessions: ${error.message}`);
     res.status(500).json({ 
       success: false,
       error: error.message 
@@ -125,16 +135,31 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
+    console.log(`Getting session with ID: ${req.params.id}`);
     const session = await Session.findById(req.params.id);
     
     if (!session) {
+      console.log(`Session ${req.params.id} not found`);
       return res.status(404).json({ 
         success: false,
-        error: 'Session not found' 
+        error: 'Session not found',
+        message: `No session with ID ${req.params.id} exists`
       });
     }
     
+    // Ensure we have at least one sequence
+    if (!session.currentSequenceId || !session.getCurrentSequence()) {
+      console.log(`No current sequence found in session ${req.params.id}, creating one`);
+      const newSequence = session.createSequence({
+        name: 'New Sequence',
+        tempo: session.bpm || 120,
+        key: 'C major'
+      });
+      session.currentSequenceId = newSequence.id;
+    }
+    
     // Ensure tracks are synchronized with sequences
+    console.log(`Ensuring tracks are synced in session ${req.params.id}`);
     if (session.sequences && session.currentSequenceId && session.sequences[session.currentSequenceId]) {
       const currentSequence = session.sequences[session.currentSequenceId];
       if (typeof session._syncTrackWithSequence === 'function') {
@@ -142,20 +167,41 @@ router.get('/:id', async (req, res) => {
       }
     }
     
+    // Ensure all sequences have corresponding tracks
+    console.log(`Ensuring all sequences have tracks in session ${req.params.id}`);
+    if (session.sequences) {
+      Object.values(session.sequences).forEach(sequence => {
+        if (typeof session._syncTrackWithSequence === 'function') {
+          session._syncTrackWithSequence(sequence);
+        }
+      });
+    }
+    
+    // Count the number of notes in all tracks for logging
+    const totalNotes = session.tracks ? 
+      session.tracks.reduce((sum, track) => sum + (track.notes ? track.notes.length : 0), 0) : 0;
+    console.log(`Session ${req.params.id} has ${session.tracks ? session.tracks.length : 0} tracks with a total of ${totalNotes} notes`);
+    
+    // Save any changes made during the sync process
+    await session.save();
+    
+    // Format the response in the exact way the client expects
     res.json({
       success: true,
       session: {
         id: session.id,
-        created: session.createdAt,
+        created: session.createdAt || new Date(),
         currentSequenceId: session.currentSequenceId,
-        sequences: session.listSequences(),
+        sequences: session.listSequences ? session.listSequences() : [],
         tracks: session.tracks || []
       }
     });
   } catch (error) {
+    console.error(`Error getting session: ${error.message}`);
     res.status(500).json({ 
       success: false,
-      error: error.message 
+      error: 'Internal server error',
+      message: error.message 
     });
   }
 });
@@ -183,6 +229,12 @@ router.get('/:sessionId/sequences/:sequenceId', async (req, res) => {
     try {
       // Use the Session model's getSequence method
       const sequence = session.getSequence(sequenceId);
+      
+      // Ensure sequence has corresponding track
+      if (typeof session._syncTrackWithSequence === 'function') {
+        session._syncTrackWithSequence(sequence);
+        await session.save();
+      }
       
       res.json({
         success: true,
@@ -258,6 +310,7 @@ router.put('/:id', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error(`Error updating session: ${error.message}`);
     res.status(400).json({ 
       success: false,
       error: error.message 
@@ -285,6 +338,7 @@ router.delete('/:id', async (req, res) => {
       message: 'Session deleted successfully' 
     });
   } catch (error) {
+    console.error(`Error deleting session: ${error.message}`);
     res.status(500).json({ 
       success: false,
       error: error.message 
