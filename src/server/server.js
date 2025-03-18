@@ -42,8 +42,10 @@ debugServer.use((req, res) => {
 // Start the server
 const PORT = process.env.PORT || 3003; // Ensure we're using port 3003 consistently
 debugServer.listen(PORT, () => {
-  console.log(`MIDI Song Creation Tool server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Server endpoints available at http://localhost:${PORT}/api`);
-  console.log(`Debug mode enabled - all requests will be logged`);
+  console.log(`====================================================`);
+  console.log(`MIDI Song Creation Tool API`);
+  console.log(`Running on port ${PORT}`);
+  console.log(`Web interface available at http://localhost:${PORT}`);
+  console.log(`Try the debug interface at http://localhost:${PORT}/debug.html`);
+  console.log(`====================================================`);
 });
