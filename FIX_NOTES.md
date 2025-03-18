@@ -15,6 +15,7 @@ The main issues were related to session handling, track/sequence synchronization
    - Enhanced the Session model to properly synchronize between sequences and tracks
    - Added `_syncTrackWithSequence` helper method to ensure notes are properly reflected in UI
    - Updated all Session methods to maintain this synchronization automatically
+   - Fixed Session.findById to ensure returned sessions have prototype methods
 
 3. **Pattern Generation**
    - Fixed pattern generation to properly set channel values for proper UI display
@@ -24,7 +25,8 @@ The main issues were related to session handling, track/sequence synchronization
 4. **API Endpoint Consistency**
    - Fixed API endpoints to ensure consistent behavior between API-prefixed and non-API-prefixed routes
    - Ensured session routes properly utilize the enhanced Session model
-   - Simplified sequence creation to use the model's methods
+   - Enhanced GET /sessions/:sessionId endpoint to forcefully sync tracks with sequences
+   - Added better debugging and logging to identify synchronization issues
 
 ## Files Modified
 
@@ -32,6 +34,40 @@ The main issues were related to session handling, track/sequence synchronization
 2. `src/server/models/session.js` - Enhanced to properly synchronize tracks and sequences
 3. `src/server/app.js` - Updated API endpoints for pattern generation
 4. `src/server/routes/sessionRoutes.js` - Simplified to use enhanced Session model
+
+## Key Changes - Latest Fixes
+
+Most recently, we identified that there was an issue with session objects not retaining their prototype methods when retrieved from storage. We fixed this by:
+
+1. Updating `Session.findById` to ensure the sessions returned have all of the prototype methods:
+   ```javascript
+   static async findById(id) {
+     const sessionData = sessions.get(id);
+     if (!sessionData) return null;
+     
+     // If it's already a Session instance, return it directly
+     if (sessionData instanceof Session) {
+       return sessionData;
+     }
+     
+     // Otherwise, wrap it in a new Session instance
+     return new Session(sessionData);
+   }
+   ```
+
+2. Enhancing session endpoint to forcefully sync tracks with sequences:
+   ```javascript
+   // CRITICAL: Ensure tracks are synchronized with sequence notes
+   if (session.sequences && session.currentSequenceId) {
+     const currentSequence = session.sequences[session.currentSequenceId];
+     
+     if (currentSequence.notes && currentSequence.notes.length > 0) {
+       session._syncTrackWithSequence(currentSequence);
+     }
+   }
+   ```
+
+3. Adding debug logging to track synchronization issues
 
 ## How to Test
 
