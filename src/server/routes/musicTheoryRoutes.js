@@ -1,228 +1,207 @@
 // src/server/routes/musicTheoryRoutes.js
 const express = require('express');
 const router = express.Router();
-const musicTheory = require('../../core/musicTheory');
+const { ChordGenerator } = require('../../core/patternGenerator');
+
+// Music theory constants
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const SCALE_TYPES = {
+  major: [0, 2, 4, 5, 7, 9, 11],
+  minor: [0, 2, 3, 5, 7, 8, 10],
+  pentatonic: [0, 2, 4, 7, 9],
+  blues: [0, 3, 5, 6, 7, 10]
+};
+
+const CHORD_TYPES = {
+  major: [0, 4, 7],
+  minor: [0, 3, 7],
+  '7th': [0, 4, 7, 10],
+  'maj7': [0, 4, 7, 11],
+  'min7': [0, 3, 7, 10]
+};
+
+const PROGRESSION_MAP = {
+  '1-4-5': ['I', 'IV', 'V'],
+  '1-5-6-4': ['I', 'V', 'vi', 'IV'],
+  '1-6-4-5': ['I', 'vi', 'IV', 'V'],
+  '2-5-1': ['ii', 'V', 'I'],
+  'blues': ['I', 'I', 'I', 'I', 'IV', 'IV', 'I', 'I', 'V', 'IV', 'I', 'V']
+};
 
 /**
- * Get a scale
+ * Generate a scale based on root note and scale type
  * GET /api/music-theory/scales/:root/:type
  */
 router.get('/scales/:root/:type', (req, res) => {
   try {
     const { root, type } = req.params;
-    const octave = parseInt(req.query.octave || 4);
-
-    // Generate the scale in MIDI notes
-    const midiNotes = musicTheory.generateScale(root, type, octave);
-
-    // Convert MIDI notes to note names
-    const notes = midiNotes.map(midiNote => {
-      const noteName = musicTheory.midiToNote(midiNote);
-      return noteName.replace(/\d+$/, ''); // Remove octave number
+    const octave = parseInt(req.query.octave) || 4;
+    
+    // Validate inputs
+    if (!NOTE_NAMES.includes(root)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid root note',
+        message: `Root note must be one of: ${NOTE_NAMES.join(', ')}`
+      });
+    }
+    
+    if (!SCALE_TYPES[type]) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid scale type',
+        message: `Scale type must be one of: ${Object.keys(SCALE_TYPES).join(', ')}`
+      });
+    }
+    
+    // Generate scale
+    const rootIndex = NOTE_NAMES.indexOf(root);
+    const scale = SCALE_TYPES[type].map(interval => {
+      const noteIndex = (rootIndex + interval) % 12;
+      const noteName = NOTE_NAMES[noteIndex];
+      return {
+        noteName,
+        midiNumber: (octave * 12) + rootIndex + interval
+      };
     });
-
+    
     res.json({
+      success: true,
+      scale,
       root,
       type,
-      octave,
-      notes,
-      midiNotes,
+      octave
     });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
 /**
- * Get a chord
+ * Generate a chord based on root note and chord type
  * GET /api/music-theory/chords/:root/:type
  */
 router.get('/chords/:root/:type', (req, res) => {
   try {
     const { root, type } = req.params;
-    const octave = parseInt(req.query.octave || 4);
-
-    // Generate the chord in MIDI notes
-    const midiNotes = musicTheory.generateChord(root, type, octave);
-
-    // Convert MIDI notes to note names
-    const notes = midiNotes.map(midiNote => {
-      const noteName = musicTheory.midiToNote(midiNote);
-      return noteName.replace(/\d+$/, ''); // Remove octave number
-    });
-
-    res.json({
-      root,
-      type,
-      octave,
-      notes,
-      midiNotes,
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-/**
- * Get a chord progression
- * GET /api/music-theory/progressions/:key/:mode
- */
-router.get('/progressions/:key/:mode', (req, res) => {
-  try {
-    const { key, mode } = req.params;
-    const numerals = req.query.numerals || 'I-IV-V-I';
-    const octave = parseInt(req.query.octave || 4);
-
-    // Split numerals string into array
-    const numeralArray = numerals.split('-');
-
-    // Generate the progression
-    const chordArrays = musicTheory.generateChordProgression(numeralArray, key, mode, octave);
-
-    // Format the response
-    const chords = chordArrays.map((chordMidiNotes, index) => {
-      const notes = chordMidiNotes.map(midiNote => {
-        const noteName = musicTheory.midiToNote(midiNote);
-        return noteName.replace(/\d+$/, ''); // Remove octave number
+    const octave = parseInt(req.query.octave) || 4;
+    
+    // Validate inputs
+    if (!NOTE_NAMES.includes(root)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid root note',
+        message: `Root note must be one of: ${NOTE_NAMES.join(', ')}`
       });
-
+    }
+    
+    if (!CHORD_TYPES[type]) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid chord type',
+        message: `Chord type must be one of: ${Object.keys(CHORD_TYPES).join(', ')}`
+      });
+    }
+    
+    // Generate chord
+    const rootIndex = NOTE_NAMES.indexOf(root);
+    const chord = CHORD_TYPES[type].map(interval => {
+      const noteIndex = (rootIndex + interval) % 12;
+      const noteName = NOTE_NAMES[noteIndex];
       return {
-        numeral: numeralArray[index],
-        notes,
-        midiNotes: chordMidiNotes,
+        noteName,
+        midiNumber: (octave * 12) + rootIndex + interval
       };
     });
-
+    
     res.json({
-      key,
-      mode,
-      numerals,
-      octave,
-      chords,
-    });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-/**
- * Get key signature
- * GET /api/music-theory/key-signature/:key/:mode
- */
-router.get('/key-signature/:key/:mode', (req, res) => {
-  try {
-    const { key, mode } = req.params;
-
-    // Get key signature info
-    const keySignatureInfo = musicTheory.getKeySignature(`${key} ${mode}`);
-
-    res.json(keySignatureInfo);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-/**
- * Analyze a chord
- * POST /api/music-theory/analyze-chord
- */
-router.post('/analyze-chord', (req, res) => {
-  try {
-    const { midiNotes } = req.body;
-
-    if (!Array.isArray(midiNotes) || midiNotes.length < 3) {
-      return res.status(400).json({ error: 'At least 3 notes required to analyze a chord' });
-    }
-
-    // Sort notes in ascending order
-    const sortedNotes = [...midiNotes].sort((a, b) => a - b);
-
-    // Get note names
-    const noteNames = sortedNotes.map(midiNote => {
-      const noteName = musicTheory.midiToNote(midiNote);
-      return noteName.replace(/\d+$/, ''); // Remove octave number
-    });
-
-    // Analyze chord (simplified implementation)
-    // In a real implementation, this would use more advanced chord recognition algorithms
-    let root = noteNames[0];
-    let type = 'unknown';
-    let inversion = 0;
-
-    // Try to identify common chord types based on intervals
-    const intervals = [];
-    for (let i = 1; i < sortedNotes.length; i++) {
-      intervals.push(sortedNotes[i] - sortedNotes[0]);
-    }
-
-    // Major triad [0, 4, 7]
-    if (intervals.length === 2 && intervals[0] === 4 && intervals[1] === 7) {
-      type = 'major';
-    }
-    // Minor triad [0, 3, 7]
-    else if (intervals.length === 2 && intervals[0] === 3 && intervals[1] === 7) {
-      type = 'minor';
-    }
-    // Diminished triad [0, 3, 6]
-    else if (intervals.length === 2 && intervals[0] === 3 && intervals[1] === 6) {
-      type = 'diminished';
-    }
-    // Augmented triad [0, 4, 8]
-    else if (intervals.length === 2 && intervals[0] === 4 && intervals[1] === 8) {
-      type = 'augmented';
-    }
-    // Major 7th [0, 4, 7, 11]
-    else if (
-      intervals.length === 3 &&
-      intervals[0] === 4 &&
-      intervals[1] === 7 &&
-      intervals[2] === 11
-    ) {
-      type = 'major7';
-    }
-    // Dominant 7th [0, 4, 7, 10]
-    else if (
-      intervals.length === 3 &&
-      intervals[0] === 4 &&
-      intervals[1] === 7 &&
-      intervals[2] === 10
-    ) {
-      type = 'dominant7';
-    }
-    // Minor 7th [0, 3, 7, 10]
-    else if (
-      intervals.length === 3 &&
-      intervals[0] === 3 &&
-      intervals[1] === 7 &&
-      intervals[2] === 10
-    ) {
-      type = 'minor7';
-    }
-
-    // If chord is recognized, check for inversions
-    // This is a simplified approach; a real implementation would be more sophisticated
-    if (type !== 'unknown') {
-      // Check for 1st inversion (3rd in bass)
-      if (type === 'major' && noteNames[0] === noteNames[1].replace(/[0-9]/g, '')) {
-        root = noteNames[2];
-        inversion = 1;
-      }
-      // Check for 2nd inversion (5th in bass)
-      else if (type === 'major' && noteNames[0] === noteNames[2].replace(/[0-9]/g, '')) {
-        root = noteNames[1];
-        inversion = 2;
-      }
-    }
-
-    res.json({
+      success: true,
+      chord,
       root,
       type,
-      inversion,
-      notes: noteNames,
-      midiNotes: sortedNotes,
+      octave
     });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * Generate a chord progression based on key and progression type
+ * GET /api/music-theory/progressions/:key/:progression
+ */
+router.get('/progressions/:key/:progression', (req, res) => {
+  try {
+    const { key, progression } = req.params;
+    const scaleType = req.query.scaleType || 'major';
+    const octave = parseInt(req.query.octave) || 4;
+    
+    // Validate inputs
+    if (!NOTE_NAMES.includes(key)) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid key',
+        message: `Key must be one of: ${NOTE_NAMES.join(', ')}`
+      });
+    }
+    
+    let progressionNumerals;
+    if (PROGRESSION_MAP[progression]) {
+      progressionNumerals = PROGRESSION_MAP[progression];
+    } else {
+      // Handle custom progressions like "1-4-5-1"
+      progressionNumerals = progression.split('-').map(numeral => {
+        switch (numeral) {
+          case '1': return 'I';
+          case '2': return 'ii';
+          case '3': return 'iii';
+          case '4': return 'IV';
+          case '5': return 'V';
+          case '6': return 'vi';
+          case '7': return 'viio';
+          default: return 'I';
+        }
+      });
+    }
+    
+    // Generate the progression using ChordGenerator
+    const chordGen = new ChordGenerator();
+    const chords = chordGen.generateProgression(progressionNumerals, key, scaleType, octave);
+    
+    // Format the response
+    const formattedChords = chords.map((chord, index) => {
+      // Extract the root note for each chord
+      const rootName = progressionNumerals[index];
+      
+      // Get the pitches from the chord
+      const pitches = chord.map(note => note.pitch);
+      
+      return {
+        position: index + 1,
+        numeral: progressionNumerals[index],
+        notes: pitches
+      };
+    });
+    
+    res.json({
+      success: true,
+      progression: formattedChords,
+      key,
+      scaleType,
+      progressionName: progression
+    });
+  } catch (error) {
+    console.error('Error generating progression:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
