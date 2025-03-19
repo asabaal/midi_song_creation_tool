@@ -37,35 +37,52 @@ router.all('/sessions/:sessionId/sequences/:sequenceId', (req, res, next) => {
   next('route');
 });
 
-// Forward pattern routes - IMPROVED to handle session ID correctly
+// Forward pattern routes - COMPLETELY REWRITTEN with explicit context handling
 router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
   const { sessionId, patternType } = req.params;
   
   // Get the pattern routes module
   const patternRoutes = require('./patternRoutes');
   
-  // IMPORTANT: Make sure req.body exists
-  if (!req.body) {
-    req.body = {};
-  }
+  console.log(`==== PATTERN REQUEST HANDLING ====`);
+  console.log(`Original URL: ${req.originalUrl}`);
+  console.log(`Session ID: ${sessionId}`);
+  console.log(`Pattern Type: ${patternType}`);
   
-  // Make sure sessionId is set in the body (this is critical)
-  req.body.sessionId = sessionId;
-  
-  console.log(`Manually forwarding ${req.originalUrl} to pattern route for ${patternType} with sessionId ${sessionId} in body`);
-  
-  // Log the full request state for debugging
-  console.log(`Request params: ${JSON.stringify(req.params)}`);
-  console.log(`Request body: ${JSON.stringify(req.body)}`);
-  
-  // Directly call the appropriate route handler based on pattern type
+  // Use a direct method call with explicit parameters instead of the req/res forwarding
+  // This creates a new context that's completely controlled by us
   try {
+    // Create a copy of req.body to ensure we don't lose data in forwarding
+    const requestData = {
+      ...(req.body || {}),
+      sessionId: sessionId  // Explicitly add sessionId again
+    };
+    
+    console.log(`Calling pattern handler with data:`, requestData);
+    
+    // Call the appropriate route handler with explicit session ID
     if (patternType === 'chord-progression') {
-      patternRoutes.handleChordProgression(req, res);
+      // Create a completely new request object with sessionId guaranteed
+      const patternReq = {
+        body: requestData,
+        params: { sessionId },
+        query: { sessionId }
+      };
+      patternRoutes.handleChordProgression(patternReq, res);
     } else if (patternType === 'bassline') {
-      patternRoutes.handleBassline(req, res);
+      const patternReq = {
+        body: requestData,
+        params: { sessionId },
+        query: { sessionId }
+      };
+      patternRoutes.handleBassline(patternReq, res);
     } else if (patternType === 'drums') {
-      patternRoutes.handleDrums(req, res);
+      const patternReq = {
+        body: requestData,
+        params: { sessionId },
+        query: { sessionId }
+      };
+      patternRoutes.handleDrums(patternReq, res);
     } else {
       res.status(404).json({
         success: false,
@@ -74,7 +91,7 @@ router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
       });
     }
   } catch (error) {
-    console.error(`Error in compat router for patterns: ${error.message}`);
+    console.error(`ERROR in compat router for patterns: ${error.message}`);
     console.error(error.stack);
     res.status(500).json({
       success: false,
@@ -102,6 +119,8 @@ router.delete('/sessions/:sessionId/notes', (req, res) => {
     req.body = {};
   }
   req.body.sessionId = sessionId;
+  
+  console.log(`Clear notes request for session: ${sessionId}`);
   
   // Get the session to find the current sequence
   Session.findById(sessionId).then(session => {
