@@ -21,8 +21,8 @@ const PianoRoll = () => {
     console.log("PianoRoll DEBUG - Component rendering with props:", {
       currentSession: currentSession?.id,
       selectedTrackId,
-      tracksAvailable: currentSession?.tracks?.length || 0,
-      currentSequenceId: currentSession?.currentSequenceId
+      currentSequenceId: currentSession?.currentSequenceId,
+      tracksAvailable: currentSession?.tracks?.length || 0
     });
     
     // Find the currently selected track
@@ -55,7 +55,7 @@ const PianoRoll = () => {
   const [quantizeValue, setQuantizeValue] = useState('0.25');
   const [zoomLevel, setZoomLevel] = useState(1);
   
-  // Get the current track - ENHANCED with better sequence/track selection logic
+  // Get the current track
   const getCurrentTrack = () => {
     // Check for current session and tracks
     if (!currentSession || !currentSession.tracks || currentSession.tracks.length === 0) {
@@ -63,48 +63,33 @@ const PianoRoll = () => {
       return { id: 0, name: 'Default', notes: [] };
     }
     
-    // First, if there's a selected track that has notes, use it
+    // First, get the track matching the selected track ID
     if (selectedTrackId) {
       const selectedTrack = currentSession.tracks.find(t => t.id === selectedTrackId);
-      if (selectedTrack && selectedTrack.notes && selectedTrack.notes.length > 0) {
-        console.log(`PianoRoll DEBUG - Using selected track ${selectedTrack.id} with ${selectedTrack.notes.length} notes`);
+      if (selectedTrack) {
+        console.log(`PianoRoll DEBUG - Using selected track ${selectedTrack.id}`);
         return selectedTrack;
       }
     }
     
-    // IMPROVED: If the selected track has no notes, find ANY track with notes regardless of ID
-    const trackWithNotes = currentSession.tracks.find(t => t.notes && t.notes.length > 0);
-    if (trackWithNotes) {
-      console.log(`PianoRoll DEBUG - Selected track has no notes, using track ${trackWithNotes.id} with ${trackWithNotes.notes.length} notes instead`);
-      
-      // Auto-select this track so UI stays consistent
-      if (trackWithNotes.id !== selectedTrackId) {
-        console.log(`PianoRoll DEBUG - Auto-selecting track with notes: ${trackWithNotes.id}`);
-        setSelectedTrackId(trackWithNotes.id);
-      }
-      
-      return trackWithNotes;
-    }
-    
-    // If no track has notes, but there is a currentSequenceId, use the track matching that
+    // If no selected track ID, or track not found, use the current sequence's track
     if (currentSession.currentSequenceId) {
-      const currentSeqTrack = currentSession.tracks.find(t => t.id === currentSession.currentSequenceId);
-      if (currentSeqTrack) {
-        console.log(`PianoRoll DEBUG - Using track matching currentSequenceId: ${currentSeqTrack.id}`);
-        return currentSeqTrack;
+      const currentSequenceTrack = currentSession.tracks.find(t => t.id === currentSession.currentSequenceId);
+      if (currentSequenceTrack) {
+        console.log(`PianoRoll DEBUG - Using current sequence track ${currentSequenceTrack.id}`);
+        
+        // Auto-select this track for consistency
+        if (currentSequenceTrack.id !== selectedTrackId) {
+          console.log(`PianoRoll DEBUG - Auto-selecting current sequence track: ${currentSequenceTrack.id}`);
+          setSelectedTrackId(currentSequenceTrack.id);
+        }
+        
+        return currentSequenceTrack;
       }
     }
     
-    // Last resort: just return the selected track or first track
-    if (selectedTrackId) {
-      const fallbackTrack = currentSession.tracks.find(t => t.id === selectedTrackId);
-      if (fallbackTrack) {
-        console.log(`PianoRoll DEBUG - Using selected track as fallback: ${fallbackTrack.id}`);
-        return fallbackTrack;
-      }
-    }
-    
-    console.log(`PianoRoll DEBUG - Using first track as last resort: ${currentSession.tracks[0].id}`);
+    // Last resort: return the first track
+    console.log(`PianoRoll DEBUG - Using first track as fallback`);
     return currentSession.tracks[0];
   };
   
@@ -454,17 +439,11 @@ const PianoRoll = () => {
     }
   };
   
-  // IMPROVED: Show note count in UI for each track
-  const renderTrackOptions = () => {
-    if (!currentSession.tracks || currentSession.tracks.length === 0) {
-      return <option value="">No tracks available</option>;
-    }
-    
-    return currentSession.tracks.map(track => (
-      <option key={track.id} value={track.id}>
-        {track.name} {track.notes && track.notes.length > 0 ? `(${track.notes.length} notes)` : '(empty)'}
-      </option>
-    ));
+  // Handle track selection change
+  const handleTrackChange = (e) => {
+    const trackId = parseInt(e.target.value);
+    console.log(`PianoRoll DEBUG - Track selection changed to: ${trackId}`);
+    setSelectedTrackId(trackId);
   };
   
   return (
@@ -475,9 +454,15 @@ const PianoRoll = () => {
             Track:
             <select
               value={selectedTrackId || ''}
-              onChange={(e) => setSelectedTrackId(parseInt(e.target.value))}
+              onChange={handleTrackChange}
             >
-              {renderTrackOptions()}
+              {currentSession.tracks && currentSession.tracks.map(track => (
+                <option key={track.id} value={track.id}>
+                  {track.name} 
+                  {track.notes && track.notes.length > 0 ? ` (${track.notes.length} notes)` : ' (empty)'}
+                  {track.id === currentSession.currentSequenceId ? ' (current)' : ''}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -505,14 +490,6 @@ const PianoRoll = () => {
           </label>
         </div>
         
-        {/* DEBUG: Force select button */}
-        <button 
-          onClick={forceSelectTrackWithNotes}
-          style={{background: 'orange', padding: '5px', margin: '5px'}}
-        >
-          Force Select Track With Notes
-        </button>
-        
         {/* ENHANCED: Add refresh button */}
         <button 
           onClick={() => {
@@ -521,17 +498,27 @@ const PianoRoll = () => {
               forceRefresh();
             }
           }}
-          style={{background: 'lightgreen', padding: '5px', margin: '5px'}}
+          className="refresh-button"
         >
           Refresh Display
         </button>
         
-        {/* NEW: Display current track info */}
-        <div style={{background: '#f0f0f0', padding: '5px', margin: '5px', borderRadius: '4px'}}>
-          <small>
-            Current: {currentTrack.name} - {currentTrack.notes?.length || 0} notes
-            {currentTrack.id === currentSession.currentSequenceId ? ' (matches currentSequenceId)' : ''}
-          </small>
+        {/* Only show the force select button in development */}
+        {process.env.NODE_ENV !== 'production' && (
+          <button 
+            onClick={forceSelectTrackWithNotes}
+            className="debug-button"
+          >
+            Find Track With Notes
+          </button>
+        )}
+        
+        {/* Track info display */}
+        <div className="track-info">
+          <span>
+            {currentTrack?.name} - {currentTrack?.notes?.length || 0} notes
+            {currentTrack?.id === currentSession?.currentSequenceId ? ' (current)' : ''}
+          </span>
         </div>
       </div>
       
