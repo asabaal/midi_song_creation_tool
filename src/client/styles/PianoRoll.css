@@ -1,95 +1,127 @@
-/* src/client/styles/PianoRoll.css */
-
 .piano-roll {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  border: 1px solid #ddd;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  padding: 15px;
+  border: 1px solid #dee2e6;
 }
 
 .piano-roll-toolbar {
   display: flex;
   align-items: center;
-  background-color: #2c3e50;
-  color: white;
-  padding: 8px 16px;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
 }
 
-.track-selector select,
+.track-selector {
+  display: flex;
+  align-items: center;
+}
+
+.track-selector select, 
 .quantize-control select {
-  background-color: #34495e;
-  color: white;
-  border: none;
+  margin-left: 5px;
+  padding: 5px;
+  border: 1px solid #ced4da;
   border-radius: 4px;
-  padding: 4px 8px;
-  margin-left: 8px;
 }
 
 .zoom-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+}
+
+.zoom-controls span {
+  margin: 0 5px;
 }
 
 .zoom-controls button {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background-color: #34495e;
-  color: white;
-  border: none;
-  font-size: 16px;
+  width: 25px;
+  height: 25px;
+  border: 1px solid #ced4da;
+  background-color: #fff;
+  border-radius: 4px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.zoom-controls button:hover {
-  background-color: #3d566e;
+.quantize-control {
+  display: flex;
+  align-items: center;
+}
+
+.refresh-button, 
+.debug-button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.refresh-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.debug-button {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.track-info {
+  margin-left: auto;
+  padding: 5px 10px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .piano-roll-content {
   display: flex;
-  height: 500px;
-  overflow: auto;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
 }
 
 .piano-keys-container {
   width: 100px;
-  height: 100%;
-  border-right: 1px solid #ddd;
   overflow-y: auto;
   overflow-x: hidden;
+  border-right: 1px solid #dee2e6;
 }
 
 .note-grid-container {
   flex: 1;
-  height: 100%;
   overflow: auto;
+  position: relative;
 }
 
-/* Custom scrollbar styles */
-.piano-roll-content::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+.note-grid-container canvas,
+.piano-keys-container canvas {
+  display: block;
 }
 
-.piano-roll-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
+/* Ensure the scrollbars of piano keys and note grid are synchronized */
+.piano-keys-container, .note-grid-container {
+  scrollbar-width: thin;
 }
 
-.piano-roll-content::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 5px;
+.piano-keys-container::-webkit-scrollbar, 
+.note-grid-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.piano-roll-content::-webkit-scrollbar-thumb:hover {
-  background: #555;
+.piano-keys-container::-webkit-scrollbar-thumb, 
+.note-grid-container::-webkit-scrollbar-thumb {
+  background-color: #adb5bd;
+  border-radius: 4px;
+}
+
+.piano-keys-container::-webkit-scrollbar-track, 
+.note-grid-container::-webkit-scrollbar-track {
+  background-color: #f8f9fa;
 }
