@@ -11,12 +11,32 @@ const PatternGenerator = () => {
   
   // Debug logging when component mounts and when session changes
   useEffect(() => {
-    console.log('PatternGenerator: Current session data:', {
+    console.log('PatternGenerator DEBUG - Current session data:', {
       id: currentSession?.id,
       name: currentSession?.name,
-      tracks: currentSession?.tracks?.length || 0
+      tracks: currentSession?.tracks?.length || 0,
+      currentSequenceId: currentSession?.currentSequenceId
     });
+    
+    // Log details about all tracks
+    if (currentSession?.tracks) {
+      console.log("PatternGenerator DEBUG - All tracks and note counts:");
+      currentSession.tracks.forEach(track => {
+        console.log(`  - Track ${track.id} (${track.name}): ${track.notes?.length || 0} notes`);
+      });
+    }
   }, [currentSession]);
+  
+  // Auto-select the current sequence's track if none is selected
+  useEffect(() => {
+    if (!selectedTrackId && currentSession?.currentSequenceId && currentSession?.tracks) {
+      const currentSequenceTrack = currentSession.tracks.find(t => t.id === currentSession.currentSequenceId);
+      if (currentSequenceTrack) {
+        console.log(`PatternGenerator DEBUG - Auto-selecting track matching currentSequenceId: ${currentSequenceTrack.id}`);
+        setSelectedTrackId(currentSequenceTrack.id);
+      }
+    }
+  }, [currentSession, selectedTrackId, setSelectedTrackId]);
   
   // State for UI tabs and forms
   const [activeTab, setActiveTab] = useState('chord');
@@ -47,7 +67,31 @@ const PatternGenerator = () => {
   
   // Handle track selection change
   const handleTrackChange = (e) => {
-    setSelectedTrackId(parseInt(e.target.value));
+    const newTrackId = parseInt(e.target.value);
+    console.log(`PatternGenerator DEBUG - Changing selected track to: ${newTrackId}`);
+    setSelectedTrackId(newTrackId);
+  };
+  
+  // Helper function to get the best track to use for pattern generation
+  const getTargetTrackId = () => {
+    // If there's a selected track ID, use it
+    if (selectedTrackId && currentSession?.tracks?.find(t => t.id === selectedTrackId)) {
+      return selectedTrackId;
+    }
+    
+    // If there's a current sequence ID, use that
+    if (currentSession?.currentSequenceId && currentSession?.tracks?.find(t => t.id === currentSession.currentSequenceId)) {
+      return currentSession.currentSequenceId;
+    }
+    
+    // Last resort, use the first track if available
+    if (currentSession?.tracks?.length > 0) {
+      return currentSession.tracks[0].id;
+    }
+    
+    // Should never get here if the app is working correctly
+    console.error("PatternGenerator DEBUG - No valid track found for pattern generation");
+    return null;
   };
   
   // Handle chord parameter changes
@@ -87,9 +131,17 @@ const PatternGenerator = () => {
     setError(null);
     
     try {
+      const targetTrackId = getTargetTrackId();
+      if (!targetTrackId) {
+        throw new Error("No track selected for pattern generation");
+      }
+      
       // DEBUG: Log session and params before API call
-      console.log('generateChordPattern - SessionID before API call:', currentSession?.id);
-      console.log('generateChordPattern - Full session object:', currentSession);
+      console.log('PatternGenerator DEBUG - generateChordPattern - Session info:', {
+        sessionId: currentSession?.id,
+        targetTrackId: targetTrackId,
+        currentSequenceId: currentSession?.currentSequenceId
+      });
       
       const patternParams = {
         type: 'chord',
@@ -97,14 +149,18 @@ const PatternGenerator = () => {
         chordType: chordParams.chordType,
         octave: chordParams.octave,
         duration: chordParams.duration,
-        trackId: selectedTrackId
+        trackId: targetTrackId
       };
       
-      console.log('generateChordPattern - Request params:', patternParams);
+      console.log('PatternGenerator DEBUG - Request params:', patternParams);
       
       const result = await apiService.generatePattern(currentSession.id, patternParams, isPreview);
       
-      console.log('generateChordPattern - API response:', result);
+      console.log('PatternGenerator DEBUG - API response:', {
+        success: result?.success,
+        noteCount: result?.notes?.length || 0,
+        firstFewNotes: result?.notes?.slice(0, 3)
+      });
       
       if (isPreview) {
         // For preview, just store the pattern for display
@@ -112,13 +168,13 @@ const PatternGenerator = () => {
       } else {
         // ENHANCED: Log before adding notes to track
         console.log("PatternGenerator DEBUG - Before adding notes to track:", {
-          trackId: selectedTrackId,
+          trackId: targetTrackId,
           noteCount: result.notes?.length || 0,
           firstFewNotes: result.notes?.slice(0, 3)
         });
         
         // Add the notes to the track
-        await addNotesToTrack(selectedTrackId, result.notes);
+        await addNotesToTrack(targetTrackId, result.notes);
         
         // ENHANCED: Force refresh to ensure UI updates
         if (typeof forceRefresh === 'function') {
@@ -127,14 +183,20 @@ const PatternGenerator = () => {
         }
         
         console.log("PatternGenerator DEBUG - After adding notes to track:", {
-          trackId: selectedTrackId,
+          trackId: targetTrackId,
           noteCount: result.notes?.length || 0
         });
         
         setPreviewPattern(null);
+        
+        // Make sure the track with notes is selected
+        if (targetTrackId !== selectedTrackId) {
+          console.log(`PatternGenerator DEBUG - Updating selected track ID to: ${targetTrackId}`);
+          setSelectedTrackId(targetTrackId);
+        }
       }
     } catch (err) {
-      console.error('generateChordPattern - Error:', err);
+      console.error('PatternGenerator DEBUG - Error generating chord pattern:', err);
       setError(err.message || 'Failed to generate chord pattern');
     } finally {
       setIsLoading(false);
@@ -147,8 +209,17 @@ const PatternGenerator = () => {
     setError(null);
     
     try {
+      const targetTrackId = getTargetTrackId();
+      if (!targetTrackId) {
+        throw new Error("No track selected for pattern generation");
+      }
+      
       // DEBUG: Log session and params before API call
-      console.log('generateBasslinePattern - SessionID before API call:', currentSession?.id);
+      console.log('PatternGenerator DEBUG - generateBasslinePattern - Session info:', {
+        sessionId: currentSession?.id,
+        targetTrackId: targetTrackId,
+        currentSequenceId: currentSession?.currentSequenceId
+      });
       
       const patternParams = {
         type: 'bassline',
@@ -156,26 +227,30 @@ const PatternGenerator = () => {
         roots: basslineParams.roots.split(' '),
         octave: basslineParams.octave,
         bars: basslineParams.bars,
-        trackId: selectedTrackId
+        trackId: targetTrackId
       };
       
-      console.log('generateBasslinePattern - Request params:', patternParams);
+      console.log('PatternGenerator DEBUG - Request params:', patternParams);
       
       const result = await apiService.generatePattern(currentSession.id, patternParams, isPreview);
       
-      console.log('generateBasslinePattern - API response:', result);
+      console.log('PatternGenerator DEBUG - API response:', {
+        success: result?.success,
+        noteCount: result?.notes?.length || 0,
+        firstFewNotes: result?.notes?.slice(0, 3)
+      });
       
       if (isPreview) {
         setPreviewPattern(result);
       } else {
         // ENHANCED: Log before adding notes to track
         console.log("PatternGenerator DEBUG - Before adding notes to track:", {
-          trackId: selectedTrackId,
+          trackId: targetTrackId,
           noteCount: result.notes?.length || 0,
           firstFewNotes: result.notes?.slice(0, 3)
         });
         
-        await addNotesToTrack(selectedTrackId, result.notes);
+        await addNotesToTrack(targetTrackId, result.notes);
         
         // ENHANCED: Force refresh to ensure UI updates
         if (typeof forceRefresh === 'function') {
@@ -184,14 +259,20 @@ const PatternGenerator = () => {
         }
         
         console.log("PatternGenerator DEBUG - After adding notes to track:", {
-          trackId: selectedTrackId,
+          trackId: targetTrackId,
           noteCount: result.notes?.length || 0
         });
         
         setPreviewPattern(null);
+        
+        // Make sure the track with notes is selected
+        if (targetTrackId !== selectedTrackId) {
+          console.log(`PatternGenerator DEBUG - Updating selected track ID to: ${targetTrackId}`);
+          setSelectedTrackId(targetTrackId);
+        }
       }
     } catch (err) {
-      console.error('generateBasslinePattern - Error:', err);
+      console.error('PatternGenerator DEBUG - Error generating bassline pattern:', err);
       setError(err.message || 'Failed to generate bassline pattern');
     } finally {
       setIsLoading(false);
@@ -204,34 +285,47 @@ const PatternGenerator = () => {
     setError(null);
     
     try {
+      const targetTrackId = getTargetTrackId();
+      if (!targetTrackId) {
+        throw new Error("No track selected for pattern generation");
+      }
+      
       // DEBUG: Log session and params before API call
-      console.log('generateDrumPattern - SessionID before API call:', currentSession?.id);
+      console.log('PatternGenerator DEBUG - generateDrumPattern - Session info:', {
+        sessionId: currentSession?.id,
+        targetTrackId: targetTrackId,
+        currentSequenceId: currentSession?.currentSequenceId
+      });
       
       const patternParams = {
         type: 'drum',
         style: drumParams.style,
         bars: drumParams.bars,
         fill: drumParams.fill,
-        trackId: selectedTrackId
+        trackId: targetTrackId
       };
       
-      console.log('generateDrumPattern - Request params:', patternParams);
+      console.log('PatternGenerator DEBUG - Request params:', patternParams);
       
       const result = await apiService.generatePattern(currentSession.id, patternParams, isPreview);
       
-      console.log('generateDrumPattern - API response:', result);
+      console.log('PatternGenerator DEBUG - API response:', {
+        success: result?.success,
+        noteCount: result?.notes?.length || 0,
+        firstFewNotes: result?.notes?.slice(0, 3)
+      });
       
       if (isPreview) {
         setPreviewPattern(result);
       } else {
         // ENHANCED: Log before adding notes to track
         console.log("PatternGenerator DEBUG - Before adding notes to track:", {
-          trackId: selectedTrackId,
+          trackId: targetTrackId,
           noteCount: result.notes?.length || 0,
           firstFewNotes: result.notes?.slice(0, 3)
         });
         
-        await addNotesToTrack(selectedTrackId, result.notes);
+        await addNotesToTrack(targetTrackId, result.notes);
         
         // ENHANCED: Force refresh to ensure UI updates
         if (typeof forceRefresh === 'function') {
@@ -240,14 +334,20 @@ const PatternGenerator = () => {
         }
         
         console.log("PatternGenerator DEBUG - After adding notes to track:", {
-          trackId: selectedTrackId,
+          trackId: targetTrackId,
           noteCount: result.notes?.length || 0
         });
         
         setPreviewPattern(null);
+        
+        // Make sure the track with notes is selected
+        if (targetTrackId !== selectedTrackId) {
+          console.log(`PatternGenerator DEBUG - Updating selected track ID to: ${targetTrackId}`);
+          setSelectedTrackId(targetTrackId);
+        }
       }
     } catch (err) {
-      console.error('generateDrumPattern - Error:', err);
+      console.error('PatternGenerator DEBUG - Error generating drum pattern:', err);
       setError(err.message || 'Failed to generate drum pattern');
     } finally {
       setIsLoading(false);
@@ -326,12 +426,18 @@ const PatternGenerator = () => {
         </div>
         <button 
           onClick={async () => {
-            await addNotesToTrack(selectedTrackId, previewPattern.notes);
+            const targetTrackId = getTargetTrackId();
+            await addNotesToTrack(targetTrackId, previewPattern.notes);
             // ENHANCED: Force refresh after adding notes
             if (typeof forceRefresh === 'function') {
               forceRefresh();
             }
             setPreviewPattern(null);
+            
+            // Make sure the track with notes is selected
+            if (targetTrackId !== selectedTrackId) {
+              setSelectedTrackId(targetTrackId);
+            }
           }}
           disabled={isLoading}
         >
@@ -339,6 +445,20 @@ const PatternGenerator = () => {
         </button>
       </div>
     );
+  };
+  
+  // IMPROVED: Show note count in UI for each track
+  const renderTrackOptions = () => {
+    if (!currentSession.tracks || currentSession.tracks.length === 0) {
+      return <option value="">No tracks available</option>;
+    }
+    
+    return currentSession.tracks.map(track => (
+      <option key={track.id} value={track.id}>
+        {track.name} {track.notes && track.notes.length > 0 ? `(${track.notes.length} notes)` : '(empty)'}
+        {track.id === currentSession.currentSequenceId ? ' (current)' : ''}
+      </option>
+    ));
   };
   
   // Render the track selector
@@ -349,14 +469,10 @@ const PatternGenerator = () => {
           Target Track:
           <select 
             aria-label="Target Track"
-            value={selectedTrackId} 
+            value={selectedTrackId || ''} 
             onChange={handleTrackChange}
           >
-            {currentSession.tracks.map(track => (
-              <option key={track.id} value={track.id}>
-                {track.name}
-              </option>
-            ))}
+            {renderTrackOptions()}
           </select>
         </label>
       </div>
