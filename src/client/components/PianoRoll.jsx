@@ -12,7 +12,8 @@ const PianoRoll = () => {
     updateNote, 
     deleteNote, 
     selectedTrackId, 
-    setSelectedTrackId 
+    setSelectedTrackId,
+    forceRefresh 
   } = useSessionContext();
 
   // DEBUG: Add detailed logging for component mounting and data flow
@@ -45,10 +46,33 @@ const PianoRoll = () => {
   const [quantizeValue, setQuantizeValue] = useState('0.25');
   const [zoomLevel, setZoomLevel] = useState(1);
   
-  // Get the current track
-  const currentTrack = currentSession.tracks.find(track => track.id === selectedTrackId) || 
-                      currentSession.tracks[0] || 
-                      { id: 0, name: 'Default', notes: [] };
+  // Get the current track - ENHANCED with fallback logic and error prevention
+  const getCurrentTrack = () => {
+    // First try to find the selected track
+    if (selectedTrackId && currentSession?.tracks) {
+      const track = currentSession.tracks.find(t => t.id === selectedTrackId);
+      if (track) return track;
+    }
+    
+    // If no selected track or it doesn't exist, find any track with notes
+    if (currentSession?.tracks && currentSession.tracks.length > 0) {
+      const trackWithNotes = currentSession.tracks.find(t => t.notes && t.notes.length > 0);
+      if (trackWithNotes) {
+        // Auto-select this track
+        console.log(`PianoRoll DEBUG - Auto-selecting track with notes: ${trackWithNotes.id}`);
+        setSelectedTrackId(trackWithNotes.id);
+        return trackWithNotes;
+      }
+      
+      // If no track has notes, just return the first track
+      return currentSession.tracks[0];
+    }
+    
+    // Fallback to an empty track
+    return { id: 0, name: 'Default', notes: [] };
+  };
+  
+  const currentTrack = getCurrentTrack();
   
   // DEBUG: Log whenever the current track changes
   useEffect(() => {
@@ -173,8 +197,15 @@ const PianoRoll = () => {
         noteCount: currentTrack?.notes?.length || 0
       });
       
-      // Draw notes
-      if (currentTrack && currentTrack.notes) {
+      // ENHANCED: Check both currentTrack and its notes array before trying to use
+      if (currentTrack && Array.isArray(currentTrack.notes) && currentTrack.notes.length > 0) {
+        console.log("PianoRoll DEBUG - Found notes to draw:", {
+          trackId: currentTrack.id,
+          noteCount: currentTrack.notes.length,
+          sampleNotes: currentTrack.notes.slice(0, 3)
+        });
+        
+        // Draw notes
         currentTrack.notes.forEach(note => {
           const x = note.startTime * PIXELS_PER_BEAT * zoomLevel;
           const width = note.duration * PIXELS_PER_BEAT * zoomLevel;
@@ -198,6 +229,8 @@ const PianoRoll = () => {
           context.lineWidth = 1;
           context.strokeRect(x, y, width, NOTE_HEIGHT);
         });
+      } else {
+        console.log("PianoRoll DEBUG - No notes found to draw in the current track");
       }
     };
     
@@ -364,6 +397,12 @@ const PianoRoll = () => {
         noteCount: trackWithNotes.notes.length
       });
       setSelectedTrackId(trackWithNotes.id);
+      
+      // ENHANCED: Force a refresh after selecting track
+      if (typeof forceRefresh === 'function') {
+        console.log("PianoRoll DEBUG - Forcing refresh after track selection");
+        forceRefresh();
+      }
     } else {
       console.log("PianoRoll DEBUG - No tracks with notes found");
     }
@@ -376,14 +415,19 @@ const PianoRoll = () => {
           <label>
             Track:
             <select
-              value={selectedTrackId}
+              value={selectedTrackId || ''}
               onChange={(e) => setSelectedTrackId(parseInt(e.target.value))}
             >
-              {currentSession.tracks.map(track => (
-                <option key={track.id} value={track.id}>
-                  {track.name}
-                </option>
-              ))}
+              {/* ENHANCED: Add message if no tracks available */}
+              {currentSession.tracks.length === 0 ? (
+                <option value="">No tracks available</option>
+              ) : (
+                currentSession.tracks.map(track => (
+                  <option key={track.id} value={track.id}>
+                    {track.name} {track.notes?.length ? `(${track.notes.length} notes)` : ''}
+                  </option>
+                ))
+              )}
             </select>
           </label>
         </div>
@@ -417,6 +461,19 @@ const PianoRoll = () => {
           style={{background: 'orange', padding: '5px', margin: '5px'}}
         >
           Force Select Track With Notes
+        </button>
+        
+        {/* ENHANCED: Add refresh button */}
+        <button 
+          onClick={() => {
+            if (typeof forceRefresh === 'function') {
+              console.log("PianoRoll DEBUG - Manual refresh triggered");
+              forceRefresh();
+            }
+          }}
+          style={{background: 'lightgreen', padding: '5px', margin: '5px'}}
+        >
+          Refresh Display
         </button>
       </div>
       
