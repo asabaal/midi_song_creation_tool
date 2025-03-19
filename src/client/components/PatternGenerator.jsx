@@ -7,7 +7,7 @@ import '../styles/PatternGenerator.css';
  * PatternGenerator component - generates musical patterns like chords, basslines, and drums
  */
 const PatternGenerator = () => {
-  const { currentSession, selectedTrackId, setSelectedTrackId, addNotesToTrack } = useSessionContext();
+  const { currentSession, selectedTrackId, setSelectedTrackId, addNotesToTrack, forceRefresh } = useSessionContext();
   
   // Debug logging when component mounts and when session changes
   useEffect(() => {
@@ -110,8 +110,27 @@ const PatternGenerator = () => {
         // For preview, just store the pattern for display
         setPreviewPattern(result);
       } else {
+        // ENHANCED: Log before adding notes to track
+        console.log("PatternGenerator DEBUG - Before adding notes to track:", {
+          trackId: selectedTrackId,
+          noteCount: result.notes?.length || 0,
+          firstFewNotes: result.notes?.slice(0, 3)
+        });
+        
         // Add the notes to the track
         await addNotesToTrack(selectedTrackId, result.notes);
+        
+        // ENHANCED: Force refresh to ensure UI updates
+        if (typeof forceRefresh === 'function') {
+          console.log("PatternGenerator DEBUG - Forcing session refresh after adding notes");
+          forceRefresh();
+        }
+        
+        console.log("PatternGenerator DEBUG - After adding notes to track:", {
+          trackId: selectedTrackId,
+          noteCount: result.notes?.length || 0
+        });
+        
         setPreviewPattern(null);
       }
     } catch (err) {
@@ -149,7 +168,26 @@ const PatternGenerator = () => {
       if (isPreview) {
         setPreviewPattern(result);
       } else {
+        // ENHANCED: Log before adding notes to track
+        console.log("PatternGenerator DEBUG - Before adding notes to track:", {
+          trackId: selectedTrackId,
+          noteCount: result.notes?.length || 0,
+          firstFewNotes: result.notes?.slice(0, 3)
+        });
+        
         await addNotesToTrack(selectedTrackId, result.notes);
+        
+        // ENHANCED: Force refresh to ensure UI updates
+        if (typeof forceRefresh === 'function') {
+          console.log("PatternGenerator DEBUG - Forcing session refresh after adding notes");
+          forceRefresh();
+        }
+        
+        console.log("PatternGenerator DEBUG - After adding notes to track:", {
+          trackId: selectedTrackId,
+          noteCount: result.notes?.length || 0
+        });
+        
         setPreviewPattern(null);
       }
     } catch (err) {
@@ -186,7 +224,26 @@ const PatternGenerator = () => {
       if (isPreview) {
         setPreviewPattern(result);
       } else {
+        // ENHANCED: Log before adding notes to track
+        console.log("PatternGenerator DEBUG - Before adding notes to track:", {
+          trackId: selectedTrackId,
+          noteCount: result.notes?.length || 0,
+          firstFewNotes: result.notes?.slice(0, 3)
+        });
+        
         await addNotesToTrack(selectedTrackId, result.notes);
+        
+        // ENHANCED: Force refresh to ensure UI updates
+        if (typeof forceRefresh === 'function') {
+          console.log("PatternGenerator DEBUG - Forcing session refresh after adding notes");
+          forceRefresh();
+        }
+        
+        console.log("PatternGenerator DEBUG - After adding notes to track:", {
+          trackId: selectedTrackId,
+          noteCount: result.notes?.length || 0
+        });
+        
         setPreviewPattern(null);
       }
     } catch (err) {
@@ -268,7 +325,14 @@ const PatternGenerator = () => {
           ))}
         </div>
         <button 
-          onClick={() => addNotesToTrack(selectedTrackId, previewPattern.notes)}
+          onClick={async () => {
+            await addNotesToTrack(selectedTrackId, previewPattern.notes);
+            // ENHANCED: Force refresh after adding notes
+            if (typeof forceRefresh === 'function') {
+              forceRefresh();
+            }
+            setPreviewPattern(null);
+          }}
           disabled={isLoading}
         >
           Add to Track
