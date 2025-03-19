@@ -145,7 +145,7 @@ app.post('/api/sessions', async (req, res) => {
   }
 });
 
-// NEW: Special compatibility route for getting a session
+// Special compatibility route for getting a session
 app.get('/api/sessions/:sessionId', async (req, res) => {
   try {
     console.log(`DIRECT SESSION GET HANDLER for: ${req.params.sessionId}`);
@@ -179,6 +179,28 @@ app.get('/api/sessions/:sessionId', async (req, res) => {
       session.currentSequenceId = newSequence.id;
     }
     
+    // NEW: Check all tracks and select a track with notes if current track has none
+    if (session.tracks && session.tracks.length > 0) {
+      // First, check if current sequence has notes
+      const currentSeq = session.getCurrentSequence();
+      const currentNoteCount = currentSeq && currentSeq.notes ? currentSeq.notes.length : 0;
+      
+      // If current sequence has no notes, find one that does
+      if (currentNoteCount === 0) {
+        console.log(`Current sequence has no notes, checking for sequences with notes...`);
+        
+        // Find a track with notes to make active
+        const trackWithNotes = session.tracks.find(track => 
+          track.notes && track.notes.length > 0
+        );
+        
+        if (trackWithNotes) {
+          console.log(`Found track ${trackWithNotes.id} with ${trackWithNotes.notes.length} notes, making it current.`);
+          session.currentSequenceId = trackWithNotes.id;
+        }
+      }
+    }
+    
     // Ensure tracks are synchronized with sequences
     console.log(`Ensuring tracks are synced in session ${sessionId}`);
     if (session.syncAllTracksAndSequences) {
@@ -188,8 +210,15 @@ app.get('/api/sessions/:sessionId', async (req, res) => {
     // Save any changes made during the sync process
     await session.save();
     
+    // Log what is being returned
+    console.log(`Returning session with currentSequenceId: ${session.currentSequenceId}`);
+    const currentTrack = session.tracks.find(t => t.id === session.currentSequenceId);
+    if (currentTrack) {
+      console.log(`Current track has ${currentTrack.notes ? currentTrack.notes.length : 0} notes`);
+    }
+    
     // Format the response in the exact way the client expects
-    res.json({
+    const response = {
       success: true,
       session: {
         id: session.id,
@@ -198,7 +227,11 @@ app.get('/api/sessions/:sessionId', async (req, res) => {
         sequences: session.listSequences ? session.listSequences() : [],
         tracks: session.tracks || []
       }
-    });
+    };
+    
+    console.log(`Response includes ${response.session.tracks.length} tracks and currentSequenceId: ${response.session.currentSequenceId}`);
+    
+    res.json(response);
   } catch (error) {
     console.error(`Error getting session: ${error.message}`);
     res.status(500).json({
