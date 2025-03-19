@@ -145,13 +145,77 @@ app.post('/api/sessions', async (req, res) => {
   }
 });
 
+// NEW: Special compatibility route for getting a session
+app.get('/api/sessions/:sessionId', async (req, res) => {
+  try {
+    console.log(`DIRECT SESSION GET HANDLER for: ${req.params.sessionId}`);
+    
+    const sessionId = req.params.sessionId;
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required',
+        message: 'Session ID is required'
+      });
+    }
+    
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Ensure we have at least one sequence
+    if (!session.currentSequenceId || !session.getCurrentSequence()) {
+      console.log(`No current sequence found in session ${sessionId}, creating one`);
+      const newSequence = session.createSequence({
+        name: 'New Sequence',
+        tempo: session.bpm || 120,
+        key: 'C major'
+      });
+      session.currentSequenceId = newSequence.id;
+    }
+    
+    // Ensure tracks are synchronized with sequences
+    console.log(`Ensuring tracks are synced in session ${sessionId}`);
+    if (session.syncAllTracksAndSequences) {
+      session.syncAllTracksAndSequences();
+    }
+    
+    // Save any changes made during the sync process
+    await session.save();
+    
+    // Format the response in the exact way the client expects
+    res.json({
+      success: true,
+      session: {
+        id: session.id,
+        created: session.createdAt || new Date(),
+        currentSequenceId: session.currentSequenceId,
+        sequences: session.listSequences ? session.listSequences() : [],
+        tracks: session.tracks || []
+      }
+    });
+  } catch (error) {
+    console.error(`Error getting session: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 // Special compatibility route for sequence creation
 app.post('/api/sessions/:sessionId/sequences', (req, res) => {
   // Forward to the session routes handler
   sessionRoutes.handle(req, res);
 });
 
-// NEW: Special compatibility route for pattern creation
+// Special compatibility route for pattern creation
 app.post('/api/sessions/:sessionId/patterns/:patternType', (req, res) => {
   console.log(`DIRECT PATTERN HANDLER in app.js for: ${req.params.sessionId}/patterns/${req.params.patternType}`);
   
