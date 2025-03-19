@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSessionContext } from '../context/SessionContext';
 import * as apiService from '../services/apiService';
 import '../styles/PatternGenerator.css';
@@ -8,6 +8,15 @@ import '../styles/PatternGenerator.css';
  */
 const PatternGenerator = () => {
   const { currentSession, selectedTrackId, setSelectedTrackId, addNotesToTrack } = useSessionContext();
+  
+  // Debug logging when component mounts and when session changes
+  useEffect(() => {
+    console.log('PatternGenerator: Current session data:', {
+      id: currentSession?.id,
+      name: currentSession?.name,
+      tracks: currentSession?.tracks?.length || 0
+    });
+  }, [currentSession]);
   
   // State for UI tabs and forms
   const [activeTab, setActiveTab] = useState('chord');
@@ -78,6 +87,10 @@ const PatternGenerator = () => {
     setError(null);
     
     try {
+      // DEBUG: Log session and params before API call
+      console.log('generateChordPattern - SessionID before API call:', currentSession?.id);
+      console.log('generateChordPattern - Full session object:', currentSession);
+      
       const patternParams = {
         type: 'chord',
         root: chordParams.root,
@@ -87,7 +100,11 @@ const PatternGenerator = () => {
         trackId: selectedTrackId
       };
       
-      const result = await apiService.generatePattern(currentSession.id, patternParams);
+      console.log('generateChordPattern - Request params:', patternParams);
+      
+      const result = await apiService.generatePattern(currentSession.id, patternParams, isPreview);
+      
+      console.log('generateChordPattern - API response:', result);
       
       if (isPreview) {
         // For preview, just store the pattern for display
@@ -98,6 +115,7 @@ const PatternGenerator = () => {
         setPreviewPattern(null);
       }
     } catch (err) {
+      console.error('generateChordPattern - Error:', err);
       setError(err.message || 'Failed to generate chord pattern');
     } finally {
       setIsLoading(false);
@@ -110,6 +128,9 @@ const PatternGenerator = () => {
     setError(null);
     
     try {
+      // DEBUG: Log session and params before API call
+      console.log('generateBasslinePattern - SessionID before API call:', currentSession?.id);
+      
       const patternParams = {
         type: 'bassline',
         style: basslineParams.style,
@@ -119,7 +140,11 @@ const PatternGenerator = () => {
         trackId: selectedTrackId
       };
       
-      const result = await apiService.generatePattern(currentSession.id, patternParams);
+      console.log('generateBasslinePattern - Request params:', patternParams);
+      
+      const result = await apiService.generatePattern(currentSession.id, patternParams, isPreview);
+      
+      console.log('generateBasslinePattern - API response:', result);
       
       if (isPreview) {
         setPreviewPattern(result);
@@ -128,6 +153,7 @@ const PatternGenerator = () => {
         setPreviewPattern(null);
       }
     } catch (err) {
+      console.error('generateBasslinePattern - Error:', err);
       setError(err.message || 'Failed to generate bassline pattern');
     } finally {
       setIsLoading(false);
@@ -140,6 +166,9 @@ const PatternGenerator = () => {
     setError(null);
     
     try {
+      // DEBUG: Log session and params before API call
+      console.log('generateDrumPattern - SessionID before API call:', currentSession?.id);
+      
       const patternParams = {
         type: 'drum',
         style: drumParams.style,
@@ -148,7 +177,11 @@ const PatternGenerator = () => {
         trackId: selectedTrackId
       };
       
-      const result = await apiService.generatePattern(currentSession.id, patternParams);
+      console.log('generateDrumPattern - Request params:', patternParams);
+      
+      const result = await apiService.generatePattern(currentSession.id, patternParams, isPreview);
+      
+      console.log('generateDrumPattern - API response:', result);
       
       if (isPreview) {
         setPreviewPattern(result);
@@ -157,6 +190,7 @@ const PatternGenerator = () => {
         setPreviewPattern(null);
       }
     } catch (err) {
+      console.error('generateDrumPattern - Error:', err);
       setError(err.message || 'Failed to generate drum pattern');
     } finally {
       setIsLoading(false);
