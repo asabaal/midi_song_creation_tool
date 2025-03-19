@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { generatePattern } = require('../../core/patternGenerator');
 const { Session } = require('../models/session');
+const { MidiNote } = require('../models/sequence');
 
 // Handler function for chord progression - can be called directly
 async function handleChordProgression(req, res) {
@@ -48,73 +49,43 @@ async function handleChordProgression(req, res) {
       rhythmPattern: Array.isArray(rhythmPattern) ? rhythmPattern : [4]
     };
     
-    const notes = generatePattern(options);
+    const rawNotes = generatePattern(options);
+    
+    // Convert raw notes to MidiNote objects
+    const notes = rawNotes.map(note => 
+      new MidiNote(note.pitch, note.startTime, note.duration, note.velocity || 80, note.channel || 0)
+    );
+    
     console.log(`Generated ${notes.length} notes for chord progression in ${key}`);
     
-    // Find or create the first track to store chord notes
-    if (!session.tracks) {
-      session.tracks = [];
-    }
+    // IMPORTANT: Use the session's addNotes method to properly sync with tracks
+    const addedNotes = session.addNotes(notes);
     
-    let track;
-    if (session.tracks.length === 0) {
-      // Create a new track
-      track = {
-        id: '1',
-        name: 'Chord Progression',
-        instrument: 0,
-        notes: []
-      };
-      session.tracks.push(track);
-    } else {
-      // Use the first track
-      track = session.tracks[0];
-    }
-    
-    // Add notes to track
-    if (!track.notes) {
-      track.notes = [];
-    }
-    track.notes = track.notes.concat(notes);
-    
-    // CRITICAL: Also update the notes in the sequence object if it exists
-    if (session.sequences) {
-      if (track.id && session.sequences[track.id]) {
-        // If the track has a corresponding sequence, update it
-        console.log(`Updating sequence ${track.id} with ${notes.length} notes`);
-        session.sequences[track.id].notes = track.notes;
-      } else if (session.currentSequenceId && session.sequences[session.currentSequenceId]) {
-        // Or update the current sequence
-        console.log(`Updating current sequence ${session.currentSequenceId} with ${notes.length} notes`);
-        session.sequences[session.currentSequenceId].notes = track.notes;
-      } else {
-        // Create a new sequence entry if one doesn't exist
-        const sequenceId = track.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
-        track.id = sequenceId; // Ensure consistent IDs
-        session.sequences[sequenceId] = {
-          id: sequenceId,
-          name: track.name || 'Chord Progression',
-          tempo: track.tempo || 120,
-          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
-          key: track.key || 'C major',
-          notes: track.notes
-        };
-        session.currentSequenceId = sequenceId;
-        console.log(`Created new sequence ${sequenceId} with ${notes.length} notes`);
-      }
-    }
-    
+    // Force sync to ensure both tracks and sequences have notes
+    session.syncAllTracksAndSequences();
     await session.save();
+    
+    // Double check note counts for debug purposes
+    const currentSequence = session.getCurrentSequence();
+    const sequenceNoteCount = currentSequence ? currentSequence.notes.length : 0;
+    
+    // Find the matching track
+    const track = session.tracks.find(t => t.id === currentSequence.id);
+    const trackNoteCount = track ? track.notes.length : 0;
+    
+    console.log(`After saving: Sequence has ${sequenceNoteCount} notes, Track has ${trackNoteCount} notes`);
     
     res.json({
       success: true,
       message: `Added ${notes.length} notes from ${key} ${progressionName} progression`,
-      sessionId: session._id || session.id,
-      currentSequenceId: track.id,
-      noteCount: track.notes.length
+      sessionId: session.id,
+      currentSequenceId: currentSequence.id,
+      noteCount: sequenceNoteCount,
+      trackNoteCount: trackNoteCount
     });
   } catch (error) {
     console.error(`Error generating chord progression: ${error.message}`);
+    console.error(error.stack);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -165,73 +136,36 @@ async function handleBassline(req, res) {
       rhythmPattern: Array.isArray(rhythmPattern) ? rhythmPattern : [1, 0.5, 0.5]
     };
     
-    const notes = generatePattern(options);
+    const rawNotes = generatePattern(options);
+    
+    // Convert raw notes to MidiNote objects
+    const notes = rawNotes.map(note => 
+      new MidiNote(note.pitch, note.startTime, note.duration, note.velocity || 80, note.channel || 1)
+    );
+    
     console.log(`Generated ${notes.length} notes for bassline in ${key}`);
     
-    // Find or create a bass track
-    if (!session.tracks) {
-      session.tracks = [];
-    }
+    // IMPORTANT: Use the session's addNotes method to properly sync with tracks
+    const addedNotes = session.addNotes(notes);
     
-    let track;
-    // Look for an existing bass track
-    track = session.tracks.find(t => t.instrument === 32);
-    
-    if (!track) {
-      // Create a new track if none exists
-      track = {
-        id: session.tracks.length > 0 ? String(session.tracks.length + 1) : '1',
-        name: 'Bassline',
-        instrument: 32,
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Add notes to track
-    if (!track.notes) {
-      track.notes = [];
-    }
-    track.notes = track.notes.concat(notes);
-    
-    // CRITICAL: Also update the notes in the sequence object if it exists
-    if (session.sequences) {
-      if (track.id && session.sequences[track.id]) {
-        // If the track has a corresponding sequence, update it
-        console.log(`Updating sequence ${track.id} with ${notes.length} notes`);
-        session.sequences[track.id].notes = track.notes;
-      } else if (session.currentSequenceId && session.sequences[session.currentSequenceId]) {
-        // Or update the current sequence
-        console.log(`Updating current sequence ${session.currentSequenceId} with ${notes.length} notes`);
-        session.sequences[session.currentSequenceId].notes = track.notes;
-      } else {
-        // Create a new sequence entry
-        const sequenceId = track.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
-        track.id = sequenceId; // Ensure consistent IDs
-        session.sequences[sequenceId] = {
-          id: sequenceId,
-          name: track.name || 'Bassline',
-          tempo: track.tempo || 120,
-          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
-          key: track.key || 'C major',
-          notes: track.notes
-        };
-        session.currentSequenceId = sequenceId;
-        console.log(`Created new sequence ${sequenceId} with ${notes.length} notes`);
-      }
-    }
-    
+    // Force sync to ensure both tracks and sequences have notes
+    session.syncAllTracksAndSequences();
     await session.save();
+    
+    // Double check note counts for debug purposes
+    const currentSequence = session.getCurrentSequence();
+    const sequenceNoteCount = currentSequence ? currentSequence.notes.length : 0;
     
     res.json({
       success: true,
       message: `Added ${notes.length} notes for ${key} ${progressionName} bassline`,
-      sessionId: session._id || session.id,
-      currentSequenceId: track.id,
-      noteCount: track.notes.length
+      sessionId: session.id,
+      currentSequenceId: currentSequence.id,
+      noteCount: sequenceNoteCount
     });
   } catch (error) {
     console.error(`Error generating bassline: ${error.message}`);
+    console.error(error.stack);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -276,73 +210,36 @@ async function handleDrums(req, res) {
       bars: parseInt(measures) || 2
     };
     
-    const notes = generatePattern(options);
+    const rawNotes = generatePattern(options);
+    
+    // Convert raw notes to MidiNote objects
+    const notes = rawNotes.map(note => 
+      new MidiNote(note.pitch, note.startTime, note.duration, note.velocity || 100, note.channel || 9)
+    );
+    
     console.log(`Generated ${notes.length} notes for ${patternType} drum pattern`);
     
-    // Find or create a drum track
-    if (!session.tracks) {
-      session.tracks = [];
-    }
+    // IMPORTANT: Use the session's addNotes method to properly sync with tracks
+    const addedNotes = session.addNotes(notes);
     
-    let track;
-    // Look for an existing drum track
-    track = session.tracks.find(t => t.instrument === 9);
-    
-    if (!track) {
-      // Create a new track if none exists
-      track = {
-        id: session.tracks.length > 0 ? String(session.tracks.length + 1) : '1',
-        name: 'Drums',
-        instrument: 9,
-        notes: []
-      };
-      session.tracks.push(track);
-    }
-    
-    // Add notes to track
-    if (!track.notes) {
-      track.notes = [];
-    }
-    track.notes = track.notes.concat(notes);
-    
-    // CRITICAL: Also update the notes in the sequence object if it exists
-    if (session.sequences) {
-      if (track.id && session.sequences[track.id]) {
-        // If the track has a corresponding sequence, update it
-        console.log(`Updating sequence ${track.id} with ${notes.length} notes`);
-        session.sequences[track.id].notes = track.notes;
-      } else if (session.currentSequenceId && session.sequences[session.currentSequenceId]) {
-        // Or update the current sequence
-        console.log(`Updating current sequence ${session.currentSequenceId} with ${notes.length} notes`);
-        session.sequences[session.currentSequenceId].notes = track.notes;
-      } else {
-        // Create a new sequence entry
-        const sequenceId = track.id || `seq_${Date.now()}${Math.random().toString(36).substring(2, 9)}`;
-        track.id = sequenceId; // Ensure consistent IDs
-        session.sequences[sequenceId] = {
-          id: sequenceId,
-          name: track.name || 'Drums',
-          tempo: track.tempo || 120,
-          timeSignature: track.timeSignature || { numerator: 4, denominator: 4 },
-          key: track.key || 'C major',
-          notes: track.notes
-        };
-        session.currentSequenceId = sequenceId;
-        console.log(`Created new sequence ${sequenceId} with ${notes.length} notes`);
-      }
-    }
-    
+    // Force sync to ensure both tracks and sequences have notes
+    session.syncAllTracksAndSequences();
     await session.save();
+    
+    // Double check note counts for debug purposes
+    const currentSequence = session.getCurrentSequence();
+    const sequenceNoteCount = currentSequence ? currentSequence.notes.length : 0;
     
     res.json({
       success: true,
       message: `Added ${notes.length} notes for ${patternType} drum pattern`,
-      sessionId: session._id || session.id,
-      currentSequenceId: track.id,
-      noteCount: track.notes.length
+      sessionId: session.id,
+      currentSequenceId: currentSequence.id,
+      noteCount: sequenceNoteCount
     });
   } catch (error) {
     console.error(`Error generating drum pattern: ${error.message}`);
+    console.error(error.stack);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -421,7 +318,7 @@ router.delete('/notes/:sessionId/:trackId', async (req, res) => {
     res.json({
       success: true,
       message: `Cleared ${previousNoteCount} notes from track ${trackId}`,
-      sessionId: session._id || session.id,
+      sessionId: session.id,
       trackId
     });
   } catch (error) {
