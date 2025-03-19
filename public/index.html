@@ -615,8 +615,14 @@
       
       log(`Deleting sequence: ${sequenceId}`);
       
-      // NOT IMPLEMENTED: The API doesn't have a direct way to delete sequences
-      // For now, we'll just create a new track with the same ID but empty notes
+      // Use the track deletion endpoint - tracks are the same as sequences in this app
+      const result = await callApi(`/patterns/notes/${state.sessionId}/${sequenceId}`, 'DELETE');
+      
+      if (!result) {
+        log('Failed to delete sequence', 'error');
+        sequenceError.textContent = 'Failed to delete sequence';
+        return;
+      }
       
       // First find a different sequence to make current if we're deleting the current one
       let newCurrentId = state.currentSequenceId;
@@ -624,23 +630,26 @@
         const otherSequence = state.sequences.find(s => s.id !== sequenceId);
         if (otherSequence) {
           newCurrentId = otherSequence.id;
+          
+          // Update session to point to the other sequence
+          await callApi(`/sessions/${state.sessionId}`, 'PUT', {
+            currentSequenceId: newCurrentId
+          });
+          
+          state.currentSequenceId = newCurrentId;
         }
       }
       
-      // Update session to point to the other sequence
-      await callApi(`/sessions/${state.sessionId}`, 'PUT', {
-        currentSequenceId: newCurrentId
-      });
+      // If we deleted the selected sequence, select the current one
+      if (sequenceId === state.selectedSequenceId) {
+        state.selectedSequenceId = newCurrentId;
+      }
       
       // Refresh data and UI
       await refreshSessionData();
+      await refreshPianoRoll();
       
-      // If we deleted the selected sequence, select the current one
-      if (sequenceId === state.selectedSequenceId) {
-        await selectSequence(newCurrentId);
-      }
-      
-      log(`Sequence ${sequenceId} deleted`, 'success');
+      log(`Sequence ${sequenceId} data cleared`, 'success');
     }
     
     // Generate chord progression
@@ -729,7 +738,7 @@
       exportStatus.textContent = `Ready to export`;
     }
     
-    // Generate drums
+    // Generate drums - FIXED: Changed 'drum' to 'drums' in the endpoint
     async function generateDrums() {
       if (!state.sessionId || !state.selectedSequenceId) {
         log('Select a sequence first', 'error');
@@ -738,7 +747,7 @@
       
       updateStatus('Generating drum pattern...');
       
-      const data = await callApi(`/patterns/drum/${state.sessionId}`, 'POST', {
+      const data = await callApi(`/patterns/drums/${state.sessionId}`, 'POST', {
         type: 'drum',
         style: 'basic',
         bars: 2,
@@ -807,8 +816,171 @@
       playStatus.textContent = hasNotes ? `${state.noteCount} notes ready to play` : 'Nothing to play';
     }
     
-    // Rest of the code remains largely the same as before
-    // ...
+    // Export MIDI file
+    async function exportMidiFile() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Exporting MIDI file...');
+      
+      try {
+        // Trigger file download using the export endpoint
+        const response = await callApi(`/export/midi/${state.sessionId}`);
+        
+        if (!response) {
+          throw new Error('Failed to get MIDI file from server');
+        }
+        
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'midi_song.mid';
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        updateStatus(`Exported MIDI file successfully`);
+        log(`Exported MIDI file`, 'success');
+      } catch (error) {
+        console.error(error);
+        log(`Error exporting MIDI: ${error.message}`, 'error');
+        updateStatus('Failed to export MIDI file');
+      }
+    }
+    
+    // Export JSON
+    async function exportJson() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      updateStatus('Exporting JSON data...');
+      
+      const data = await callApi(`/export/json/${state.sessionId}`, 'GET');
+      
+      if (!data) {
+        updateStatus('Failed to export JSON data');
+        return;
+      }
+      
+      // Show exported data in textarea
+      exportText.value = JSON.stringify(data, null, 2);
+      exportArea.classList.remove('hidden');
+      importArea.classList.add('hidden');
+      
+      updateStatus(`Exported data to JSON format`);
+      log(`Exported session data successfully`, 'success');
+    }
+    
+    // Copy JSON to clipboard
+    function copyJsonToClipboard() {
+      exportText.select();
+      document.execCommand('copy');
+      log('JSON data copied to clipboard', 'success');
+    }
+    
+    // Save JSON to file
+    function saveJsonToFile() {
+      const blob = new Blob([exportText.value], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'midi_sequence.json';
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      log('JSON data saved to file', 'success');
+    }
+    
+    // Show import area
+    function showImportArea() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      exportArea.classList.add('hidden');
+      importArea.classList.remove('hidden');
+      importText.value = '';
+      importText.focus();
+      
+      updateStatus('Ready to import data');
+    }
+    
+    // Process import
+    async function processImport() {
+      if (!state.sessionId) {
+        log('Set up session first', 'error');
+        return;
+      }
+      
+      const jsonData = importText.value.trim();
+      if (!jsonData) {
+        log('No data to import', 'error');
+        return;
+      }
+      
+      updateStatus('Importing data...');
+      
+      // Parse JSON to validate it first
+      let parsedData;
+      try {
+        parsedData = JSON.parse(jsonData);
+      } catch (e) {
+        log(`Invalid JSON data: ${e.message}`, 'error');
+        updateStatus('Invalid JSON data');
+        return;
+      }
+      
+      // Import the data - we use the session's import endpoint
+      const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', parsedData);
+      
+      if (!data) {
+        updateStatus('Failed to import data');
+        return;
+      }
+      
+      // Refresh session data
+      await refreshSessionData();
+      
+      // Refresh piano roll
+      await refreshPianoRoll();
+      
+      updateStatus(`Imported data successfully`);
+      log(`Imported sequence data`, 'success');
+      
+      // Hide import area
+      importArea.classList.add('hidden');
+    }
+    
+    // Handle file upload
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        importText.value = e.target.result;
+        log(`File loaded: ${file.name}`, 'success');
+      };
+      reader.onerror = function(e) {
+        log(`Error reading file: ${e.target.error}`, 'error');
+      };
+      reader.readAsText(file);
+    }
     
     // Initialize piano roll
     function initPianoRoll() {
@@ -1029,113 +1201,6 @@
     function midiToFrequency(note) {
       return 440 * Math.pow(2, (note - 69) / 12);
     }
-    
-    // Export MIDI file (implementation remains the same)
-    async function exportMidiFile() {
-      if (!state.sessionId) {
-        log('Set up session first', 'error');
-        return;
-      }
-      
-      updateStatus('Exporting MIDI file...');
-      
-      try {
-        // Trigger file download using the export endpoint
-        const response = await callApi(`/export/midi/${state.sessionId}`);
-        
-        if (!response) {
-          throw new Error('Failed to get MIDI file from server');
-        }
-        
-        // Get the blob from response
-        const blob = await response.blob();
-        
-        // Create a download link
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = 'midi_song.mid';
-        document.body.appendChild(a);
-        a.click();
-        
-        // Clean up
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        updateStatus(`Exported MIDI file successfully`);
-        log(`Exported MIDI file`, 'success');
-      } catch (error) {
-        console.error(error);
-        log(`Error exporting MIDI: ${error.message}`, 'error');
-        updateStatus('Failed to export MIDI file');
-      }
-    }
-    
-    // Export JSON (implementation remains similar)
-    async function exportJson() {
-      if (!state.sessionId) {
-        log('Set up session first', 'error');
-        return;
-      }
-      
-      updateStatus('Exporting JSON data...');
-      
-      const data = await callApi(`/export/json/${state.sessionId}`, 'GET');
-      
-      if (!data) {
-        updateStatus('Failed to export JSON data');
-        return;
-      }
-      
-      // Show exported data in textarea
-      exportText.value = JSON.stringify(data, null, 2);
-      exportArea.classList.remove('hidden');
-      importArea.classList.add('hidden');
-      
-      updateStatus(`Exported data to JSON format`);
-      log(`Exported session data successfully`, 'success');
-    }
-    
-    // Copy JSON to clipboard
-    function copyJsonToClipboard() {
-      exportText.select();
-      document.execCommand('copy');
-      log('JSON data copied to clipboard', 'success');
-    }
-    
-    // Save JSON to file
-    function saveJsonToFile() {
-      const blob = new Blob([exportText.value], {type: 'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = 'midi_sequence.json';
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      log('JSON data saved to file', 'success');
-    }
-    
-    // Show import area
-    function showImportArea() {
-      if (!state.sessionId) {
-        log('Set up session first', 'error');
-        return;
-      }
-      
-      exportArea.classList.add('hidden');
-      importArea.classList.remove('hidden');
-      importText.value = '';
-      importText.focus();
-      
-      updateStatus('Ready to import data');
-    }
-    
-    // Process import (implementation remains largely the same)
-    // ... (rest of the functions)
     
     // Event listeners
     setupBtn.addEventListener('click', setup);
