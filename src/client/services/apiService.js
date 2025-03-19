@@ -20,7 +20,8 @@ export async function generatePattern(sessionId, params, preview = false) {
       throw new Error('Session ID is required for pattern generation');
     }
 
-    // Use the API endpoint format that matches our server routes
+    // FIXED: Use the correct endpoint format matching server routes
+    // The patternRoutes.js expects POST /api/patterns/:patternType/:sessionId?
     const url = `/api/patterns/${params.type}/${sessionId}${preview ? '?preview=true' : ''}`;
     console.log(`DEBUG apiService - Making request to URL: ${url}`);
     
@@ -62,7 +63,8 @@ export async function generatePattern(sessionId, params, preview = false) {
     }
     
     const result = await response.json();
-    console.log(`DEBUG apiService - API call successful, received ${result.noteCount || 0} notes`);
+    console.log(`DEBUG apiService - API call successful, received ${result.notes ? result.notes.length : 0} notes`);
+    console.log(`DEBUG apiService - First few notes:`, result.notes ? result.notes.slice(0, 3) : 'No notes');
     return result;
   } catch (error) {
     console.error('DEBUG apiService - ERROR during API call:', error);
@@ -128,6 +130,15 @@ export async function getSession(sessionId) {
     
     const result = await response.json();
     console.log('DEBUG apiService - Session retrieved successfully');
+    console.log("DEBUG apiService - getSession response:", {
+      sessionId: result.session?.id,
+      currentSequenceId: result.session?.currentSequenceId,
+      tracks: result.session?.tracks?.map(t => ({
+        id: t.id, 
+        name: t.name, 
+        noteCount: t.notes?.length || 0
+      }))
+    });
     return result;
   } catch (error) {
     console.error('DEBUG apiService - ERROR during session retrieval:', error);
