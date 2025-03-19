@@ -62,37 +62,70 @@ router.all('/sessions/:sessionId/sequences/:sequenceId', (req, res, next) => {
   next('route');
 });
 
-// FIXED: Forward pattern routes with DIRECT handling of pattern API
-router.post('/sessions/:sessionId/patterns/:patternType', (req, res, next) => {
+// DIRECT APPROACH: Make a direct API call to pattern routes
+router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
   const { sessionId, patternType } = req.params;
   
-  logCompatRequest(`POST /sessions/${sessionId}/patterns/${patternType}`, req);
-  
-  // CRITICAL FIX: Don't create any custom logic here - just forward to standard API
-  console.log(`==== PATTERN REQUEST VIA COMPAT ROUTER ====`);
+  console.log(`\n=== DIRECT PATTERN HANDLING IN COMPAT ROUTER ===`);
   console.log(`Original URL: ${req.originalUrl}`);
   console.log(`Session ID from params: ${sessionId}`);
   console.log(`Pattern Type: ${patternType}`);
-
-  // Clone the request body to avoid mutation issues
-  const originalBody = { ...req.body };
   
-  // IMPORTANT: Ensure sessionId is in the body
-  if (!req.body) {
-    req.body = {};
+  // Import pattern handlers directly
+  const patternRoutes = require('./patternRoutes');
+  
+  // Create a completely new request object
+  const newReq = {
+    originalUrl: `/api/patterns/${patternType}/${sessionId}`,
+    path: `/api/patterns/${patternType}/${sessionId}`,
+    method: 'POST',
+    headers: req.headers,
+    params: { 
+      sessionId: sessionId,
+      patternType: patternType
+    },
+    body: {
+      ...req.body,
+      sessionId: sessionId  // Explicitly add sessionId
+    },
+    query: {
+      sessionId: sessionId  // Add to query params too for maximum compatibility
+    }
+  };
+  
+  console.log(`\n=== DIRECT CALL TO PATTERN HANDLER ===`);
+  console.log(`Request params: ${JSON.stringify(newReq.params)}`);
+  console.log(`Request body: ${JSON.stringify(newReq.body)}`);
+  
+  // Call the appropriate handler function directly
+  try {
+    switch (patternType) {
+      case 'chord-progression':
+        console.log('Calling chord progression handler directly');
+        return patternRoutes.handleChordProgression(newReq, res);
+      case 'bassline':
+        console.log('Calling bassline handler directly');
+        return patternRoutes.handleBassline(newReq, res);
+      case 'drums':
+        console.log('Calling drums handler directly');
+        return patternRoutes.handleDrums(newReq, res);
+      default:
+        console.error(`Unsupported pattern type: ${patternType}`);
+        return res.status(404).json({
+          success: false,
+          error: 'Unsupported pattern type',
+          message: `Pattern type '${patternType}' is not supported`
+        });
+    }
+  } catch (error) {
+    console.error(`ERROR direct calling pattern handler: ${error.message}`);
+    console.error(error.stack);
+    return res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message
+    });
   }
-  
-  // Explicitly add the sessionId to req.body 
-  req.body.sessionId = sessionId;
-  
-  console.log(`Updated body before forwarding: ${JSON.stringify(req.body)}`);
-  
-  // SIMPLE APPROACH: Simply rewrite the URL and forward to the standard API route
-  req.url = `/api/patterns/${patternType}/${sessionId}`;
-  console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
-  
-  // Continue routing to the next matching route handler
-  next('route');
 });
 
 // Forward export routes
