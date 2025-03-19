@@ -8,8 +8,21 @@ const { MidiNote } = require('../models/sequence');
 // Handler function for chord progression - can be called directly
 async function handleChordProgression(req, res) {
   try {
-    // Get sessionId from either params or body
-    const sessionId = req.params.sessionId || req.body.sessionId;
+    // Get sessionId from all possible places with verbose logging
+    const sessionIdFromParams = req.params.sessionId;
+    const sessionIdFromBody = req.body.sessionId;
+    const sessionIdFromQuery = req.query && req.query.sessionId;
+    
+    console.log('Session ID check in handleChordProgression:');
+    console.log(`- From params: ${sessionIdFromParams}`);
+    console.log(`- From body: ${sessionIdFromBody}`);
+    console.log(`- From query: ${sessionIdFromQuery}`);
+    console.log(`- Full params: ${JSON.stringify(req.params)}`);
+    console.log(`- Full body: ${JSON.stringify(req.body)}`);
+    
+    // Use any available session ID source
+    const sessionId = sessionIdFromParams || sessionIdFromBody || sessionIdFromQuery;
+    
     const { 
       key = 'C', 
       octave = 4, 
@@ -22,14 +35,16 @@ async function handleChordProgression(req, res) {
     
     // Find session
     if (!sessionId) {
+      console.error('No session ID found in request');
       // Creating a pattern without a session is not allowed
       return res.status(400).json({ 
         success: false,
         error: 'Session ID is required',
-        message: 'Session ID is required to create a pattern'
+        message: 'Session ID is required'
       });
     }
     
+    console.log(`Using session ID: ${sessionId}`);
     const session = await Session.findById(sessionId);
     if (!session) {
       return res.status(404).json({ 
@@ -96,8 +111,21 @@ async function handleChordProgression(req, res) {
 // Handler function for bassline - can be called directly
 async function handleBassline(req, res) {
   try {
-    // Get sessionId from either params or body
-    const sessionId = req.params.sessionId || req.body.sessionId;
+    // Get sessionId from all possible places with verbose logging
+    const sessionIdFromParams = req.params.sessionId;
+    const sessionIdFromBody = req.body.sessionId;
+    const sessionIdFromQuery = req.query && req.query.sessionId;
+    
+    console.log('Session ID check in handleBassline:');
+    console.log(`- From params: ${sessionIdFromParams}`);
+    console.log(`- From body: ${sessionIdFromBody}`);
+    console.log(`- From query: ${sessionIdFromQuery}`);
+    console.log(`- Full params: ${JSON.stringify(req.params)}`);
+    console.log(`- Full body: ${JSON.stringify(req.body)}`);
+    
+    // Use any available session ID source
+    const sessionId = sessionIdFromParams || sessionIdFromBody || sessionIdFromQuery;
+    
     const { 
       key = 'C', 
       octave = 3, 
@@ -110,13 +138,15 @@ async function handleBassline(req, res) {
     
     // Find session
     if (!sessionId) {
+      console.error('No session ID found in request');
       return res.status(400).json({ 
         success: false,
         error: 'Session ID is required',
-        message: 'Session ID is required to create a pattern'
+        message: 'Session ID is required'
       });
     }
     
+    console.log(`Using session ID: ${sessionId}`);
     const session = await Session.findById(sessionId);
     if (!session) {
       return res.status(404).json({ 
@@ -176,8 +206,21 @@ async function handleBassline(req, res) {
 // Handler function for drums - can be called directly
 async function handleDrums(req, res) {
   try {
-    // Get sessionId from either params or body
-    const sessionId = req.params.sessionId || req.body.sessionId;
+    // Get sessionId from all possible places with verbose logging
+    const sessionIdFromParams = req.params.sessionId;
+    const sessionIdFromBody = req.body.sessionId;
+    const sessionIdFromQuery = req.query && req.query.sessionId;
+    
+    console.log('Session ID check in handleDrums:');
+    console.log(`- From params: ${sessionIdFromParams}`);
+    console.log(`- From body: ${sessionIdFromBody}`);
+    console.log(`- From query: ${sessionIdFromQuery}`);
+    console.log(`- Full params: ${JSON.stringify(req.params)}`);
+    console.log(`- Full body: ${JSON.stringify(req.body)}`);
+    
+    // Use any available session ID source
+    const sessionId = sessionIdFromParams || sessionIdFromBody || sessionIdFromQuery;
+    
     const { 
       patternType = 'basic', 
       measures = 2 
@@ -187,13 +230,15 @@ async function handleDrums(req, res) {
     
     // Find session
     if (!sessionId) {
+      console.error('No session ID found in request');
       return res.status(400).json({ 
         success: false,
         error: 'Session ID is required',
-        message: 'Session ID is required to create a pattern'
+        message: 'Session ID is required'
       });
     }
     
+    console.log(`Using session ID: ${sessionId}`);
     const session = await Session.findById(sessionId);
     if (!session) {
       return res.status(404).json({ 
