@@ -85,11 +85,13 @@ export const SessionProvider = ({ children, initialSession }) => {
         console.log(`DEBUG SessionContext - Retrieved session details:`, sessionDetails);
         
         // Update with real session from server
-        setCurrentSession(prevSession => ({
-          ...prevSession,
-          ...sessionDetails,
-          id: result.sessionId // Ensure ID is set
-        }));
+        setCurrentSession(prevSession => (
+          sessionDetails.session || {
+            ...prevSession,
+            ...sessionDetails,
+            id: result.sessionId // Ensure ID is set
+          }
+        ));
       }
     } catch (err) {
       console.error(`DEBUG SessionContext - Error creating session:`, err);
@@ -111,7 +113,11 @@ export const SessionProvider = ({ children, initialSession }) => {
   // Add notes to a track
   const addNotesToTrack = async (trackId, notes) => {
     try {
-      console.log(`DEBUG SessionContext - Adding ${notes.length} notes to track ${trackId}`);
+      console.log(`DEBUG SessionContext - Adding ${notes?.length || 0} notes to track ${trackId}`);
+      if (!notes || notes.length === 0) {
+        console.warn(`DEBUG SessionContext - No notes provided to add to track ${trackId}`);
+        return true;
+      }
       
       // Find the track
       const trackIndex = currentSession.tracks.findIndex(track => track.id === trackId);
@@ -136,6 +142,7 @@ export const SessionProvider = ({ children, initialSession }) => {
         ];
         
         console.log(`DEBUG SessionContext - Track now has ${updatedTracks[trackIndex].notes.length} notes`);
+        console.log(`DEBUG SessionContext - First few notes in track:`, updatedTracks[trackIndex].notes.slice(0, 3));
         
         return {
           ...prevSession,
