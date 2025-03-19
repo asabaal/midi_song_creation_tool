@@ -15,6 +15,24 @@ const PianoRoll = () => {
     setSelectedTrackId 
   } = useSessionContext();
 
+  // DEBUG: Add detailed logging for component mounting and data flow
+  useEffect(() => {
+    console.log("PianoRoll DEBUG - Component rendering with props:", {
+      currentSession: currentSession?.id,
+      selectedTrackId,
+      tracksAvailable: currentSession?.tracks?.length || 0
+    });
+    
+    // Find the currently selected track
+    const currentTrack = currentSession?.tracks?.find(t => t.id === selectedTrackId);
+    console.log("PianoRoll DEBUG - Selected track:", {
+      id: currentTrack?.id,
+      name: currentTrack?.name,
+      noteCount: currentTrack?.notes?.length || 0,
+      firstFewNotes: currentTrack?.notes?.slice(0, 3)
+    });
+  }, [currentSession, selectedTrackId]);
+
   // Refs for canvas elements
   const pianoKeysRef = useRef(null);
   const noteGridRef = useRef(null);
@@ -31,6 +49,15 @@ const PianoRoll = () => {
   const currentTrack = currentSession.tracks.find(track => track.id === selectedTrackId) || 
                       currentSession.tracks[0] || 
                       { id: 0, name: 'Default', notes: [] };
+  
+  // DEBUG: Log whenever the current track changes
+  useEffect(() => {
+    console.log("PianoRoll DEBUG - Current track updated:", {
+      id: currentTrack?.id,
+      name: currentTrack?.name,
+      noteCount: currentTrack?.notes?.length || 0
+    });
+  }, [currentTrack]);
   
   // Constants for rendering
   const NOTE_HEIGHT = 20;
@@ -139,12 +166,28 @@ const PianoRoll = () => {
         context.stroke();
       }
       
+      // DEBUG: Log note rendering
+      console.log("PianoRoll DEBUG - Attempting to draw notes:", {
+        currentTrackExists: !!currentTrack,
+        notesExist: !!(currentTrack && currentTrack.notes),
+        noteCount: currentTrack?.notes?.length || 0
+      });
+      
       // Draw notes
       if (currentTrack && currentTrack.notes) {
         currentTrack.notes.forEach(note => {
           const x = note.startTime * PIXELS_PER_BEAT * zoomLevel;
           const width = note.duration * PIXELS_PER_BEAT * zoomLevel;
           const y = (108 - note.pitch) * NOTE_HEIGHT; // Convert MIDI pitch to y position
+          
+          // DEBUG: Log each note being drawn
+          console.log("PianoRoll DEBUG - Drawing note:", {
+            id: note.id,
+            pitch: note.pitch,
+            startTime: note.startTime,
+            duration: note.duration,
+            x, y, width, height: NOTE_HEIGHT
+          });
           
           // Draw note rectangle
           context.fillStyle = note.id === selectedNote?.id ? '#ff7700' : '#4285f4';
@@ -306,6 +349,26 @@ const PianoRoll = () => {
     setQuantizeValue(e.target.value);
   };
   
+  // DEBUG: Force select track with notes
+  const forceSelectTrackWithNotes = () => {
+    if (!currentSession?.tracks) return;
+    
+    const trackWithNotes = currentSession.tracks.find(track => 
+      track.notes && track.notes.length > 0
+    );
+    
+    if (trackWithNotes) {
+      console.log("PianoRoll DEBUG - Force selecting track with notes:", {
+        id: trackWithNotes.id,
+        name: trackWithNotes.name,
+        noteCount: trackWithNotes.notes.length
+      });
+      setSelectedTrackId(trackWithNotes.id);
+    } else {
+      console.log("PianoRoll DEBUG - No tracks with notes found");
+    }
+  };
+  
   return (
     <div className="piano-roll" data-testid="piano-roll-container">
       <div className="piano-roll-toolbar">
@@ -347,6 +410,14 @@ const PianoRoll = () => {
             </select>
           </label>
         </div>
+        
+        {/* DEBUG: Force select button */}
+        <button 
+          onClick={forceSelectTrackWithNotes}
+          style={{background: 'orange', padding: '5px', margin: '5px'}}
+        >
+          Force Select Track With Notes
+        </button>
       </div>
       
       <div className="piano-roll-content">
