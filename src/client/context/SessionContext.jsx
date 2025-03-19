@@ -37,6 +37,13 @@ export const SessionProvider = ({ children, initialSession }) => {
       selectedTrackId
     });
     
+    // Log details about each track
+    if (currentSession?.tracks) {
+      currentSession.tracks.forEach(track => {
+        console.log(`DEBUG SessionContext - Track ${track.id} (${track.name}) has ${track.notes?.length || 0} notes`);
+      });
+    }
+    
     // If this is a new session and we have no real session yet, try to create one
     if (currentSession.id === 'new-session') {
       console.log(`DEBUG SessionContext - Detected "new-session" ID, should create a real session`);
@@ -45,11 +52,17 @@ export const SessionProvider = ({ children, initialSession }) => {
     
     // Set default selected track
     if (currentSession.tracks && currentSession.tracks.length > 0 && !selectedTrackId) {
-      const firstTrackId = currentSession.tracks[0].id;
-      console.log(`DEBUG SessionContext - Setting default selected track to:`, firstTrackId);
-      setSelectedTrackId(firstTrackId);
+      // If currentSequenceId is set, use that as the selected track
+      if (currentSession.currentSequenceId) {
+        console.log(`DEBUG SessionContext - Setting selected track to match currentSequenceId: ${currentSession.currentSequenceId}`);
+        setSelectedTrackId(currentSession.currentSequenceId);
+      } else {
+        const firstTrackId = currentSession.tracks[0].id;
+        console.log(`DEBUG SessionContext - Setting default selected track to first track: ${firstTrackId}`);
+        setSelectedTrackId(firstTrackId);
+      }
     }
-  }, [currentSession]);
+  }, [currentSession, selectedTrackId]);
 
   // Create a new session on the server
   const createNewSession = async () => {
@@ -138,6 +151,76 @@ export const SessionProvider = ({ children, initialSession }) => {
     }
   };
 
+  // Add a single note to a track
+  const addNote = (trackId, note) => {
+    console.log(`DEBUG SessionContext - Adding single note to track ${trackId}:`, note);
+    return addNotesToTrack(trackId, [note]);
+  };
+
+  // Update a note in a track
+  const updateNote = (trackId, noteId, noteUpdates) => {
+    console.log(`DEBUG SessionContext - Updating note ${noteId} in track ${trackId}:`, noteUpdates);
+    
+    setCurrentSession(prevSession => {
+      const updatedTracks = [...prevSession.tracks];
+      const trackIndex = updatedTracks.findIndex(track => track.id === trackId);
+      
+      if (trackIndex === -1) {
+        console.error(`DEBUG SessionContext - Track ${trackId} not found for note update`);
+        return prevSession;
+      }
+      
+      const track = updatedTracks[trackIndex];
+      if (!track.notes) {
+        console.error(`DEBUG SessionContext - Track ${trackId} has no notes array`);
+        return prevSession;
+      }
+      
+      const noteIndex = track.notes.findIndex(note => note.id === noteId);
+      if (noteIndex === -1) {
+        console.error(`DEBUG SessionContext - Note ${noteId} not found in track ${trackId}`);
+        return prevSession;
+      }
+      
+      // Update the note
+      track.notes[noteIndex] = { ...track.notes[noteIndex], ...noteUpdates };
+      
+      return {
+        ...prevSession,
+        tracks: updatedTracks
+      };
+    });
+  };
+
+  // Delete a note from a track
+  const deleteNote = (trackId, noteId) => {
+    console.log(`DEBUG SessionContext - Deleting note ${noteId} from track ${trackId}`);
+    
+    setCurrentSession(prevSession => {
+      const updatedTracks = [...prevSession.tracks];
+      const trackIndex = updatedTracks.findIndex(track => track.id === trackId);
+      
+      if (trackIndex === -1) {
+        console.error(`DEBUG SessionContext - Track ${trackId} not found for note deletion`);
+        return prevSession;
+      }
+      
+      const track = updatedTracks[trackIndex];
+      if (!track.notes) {
+        console.error(`DEBUG SessionContext - Track ${trackId} has no notes array`);
+        return prevSession;
+      }
+      
+      // Filter out the note to delete
+      track.notes = track.notes.filter(note => note.id !== noteId);
+      
+      return {
+        ...prevSession,
+        tracks: updatedTracks
+      };
+    });
+  };
+
   // Create, update, or delete a track
   const updateTrack = (trackId, trackData) => {
     console.log(`DEBUG SessionContext - Updating track ${trackId} with data:`, trackData);
@@ -201,6 +284,12 @@ export const SessionProvider = ({ children, initialSession }) => {
     };
   };
 
+  // Force a UI refresh by making a shallow copy of the current session
+  const forceRefresh = () => {
+    console.log('DEBUG SessionContext - Forcing refresh of session data');
+    setCurrentSession({...currentSession});
+  };
+
   // Context value to be provided
   const contextValue = {
     currentSession,
@@ -213,7 +302,11 @@ export const SessionProvider = ({ children, initialSession }) => {
     updateTrack,
     deleteTrack,
     saveSession,
-    addNotesToTrack
+    addNotesToTrack,
+    addNote,
+    updateNote,
+    deleteNote,
+    forceRefresh
   };
 
   return (
