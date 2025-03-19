@@ -37,7 +37,7 @@ router.all('/sessions/:sessionId/sequences/:sequenceId', (req, res, next) => {
   next('route');
 });
 
-// Forward pattern routes - FIXED to directly call pattern routes with sessionId
+// Forward pattern routes - IMPROVED to handle session ID correctly
 router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
   const { sessionId, patternType } = req.params;
   
@@ -49,24 +49,37 @@ router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
     req.body = {};
   }
   
-  // Add sessionId to both req.params and req.body for maximum compatibility
-  req.params.sessionId = sessionId;
+  // Make sure sessionId is set in the body (this is critical)
   req.body.sessionId = sessionId;
   
-  console.log(`Manually forwarding ${req.originalUrl} to pattern route for ${patternType} with sessionId ${sessionId} in both params and body`);
+  console.log(`Manually forwarding ${req.originalUrl} to pattern route for ${patternType} with sessionId ${sessionId} in body`);
+  
+  // Log the full request state for debugging
+  console.log(`Request params: ${JSON.stringify(req.params)}`);
+  console.log(`Request body: ${JSON.stringify(req.body)}`);
   
   // Directly call the appropriate route handler based on pattern type
-  if (patternType === 'chord-progression') {
-    patternRoutes.handleChordProgression(req, res);
-  } else if (patternType === 'bassline') {
-    patternRoutes.handleBassline(req, res);
-  } else if (patternType === 'drums') {
-    patternRoutes.handleDrums(req, res);
-  } else {
-    res.status(404).json({
+  try {
+    if (patternType === 'chord-progression') {
+      patternRoutes.handleChordProgression(req, res);
+    } else if (patternType === 'bassline') {
+      patternRoutes.handleBassline(req, res);
+    } else if (patternType === 'drums') {
+      patternRoutes.handleDrums(req, res);
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Pattern type not found',
+        message: `Pattern type ${patternType} is not supported`
+      });
+    }
+  } catch (error) {
+    console.error(`Error in compat router for patterns: ${error.message}`);
+    console.error(error.stack);
+    res.status(500).json({
       success: false,
-      error: 'Pattern type not found',
-      message: `Pattern type ${patternType} is not supported`
+      error: 'Server error',
+      message: error.message
     });
   }
 });
