@@ -355,21 +355,50 @@ class Session {
     return this;
   }
 
-  // Static methods for finding/querying
+  // Static methods for finding/querying - ENHANCED findById
   static async findById(id) {
-    if (!id) return null; // Don't throw an error, just return null if ID is missing
+    console.log(`Session.findById called with id: ${id}`);
+    
+    if (!id) {
+      console.log('Session.findById: No ID provided, returning null');
+      return null; // Don't throw an error, just return null if ID is missing
+    }
     
     // Get the session from the map
     const sessionData = sessions.get(id);
-    if (!sessionData) return null;
+    
+    if (!sessionData) {
+      console.log(`Session.findById: No session found with ID ${id}`);
+      // Try alternate lookup - sometimes session IDs have different formats
+      const allSessionIds = Array.from(sessions.keys());
+      console.log(`Available sessions: ${allSessionIds.join(', ')}`);
+      
+      // Try to find session by partial match (in case of ID format differences)
+      const matchingId = allSessionIds.find(sessionId => 
+        sessionId.includes(id) || id.includes(sessionId)
+      );
+      
+      if (matchingId) {
+        console.log(`Found matching session with similar ID: ${matchingId}`);
+        const matchedSession = sessions.get(matchingId);
+        if (matchedSession instanceof Session) {
+          return matchedSession;
+        }
+        return new Session(matchedSession);
+      }
+      
+      return null;
+    }
     
     // CRITICAL: Ensure we return a Session instance with all prototype methods
     // If it's already a Session instance, return it directly
     if (sessionData instanceof Session) {
+      console.log(`Returning existing Session instance with ID ${id}`);
       return sessionData;
     }
     
     // Otherwise, wrap it in a new Session instance to ensure all methods are available
+    console.log(`Creating new Session instance from data with ID ${id}`);
     return new Session(sessionData);
   }
 
