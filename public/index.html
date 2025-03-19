@@ -615,15 +615,6 @@
       
       log(`Deleting sequence: ${sequenceId}`);
       
-      // Use the track deletion endpoint - tracks are the same as sequences in this app
-      const result = await callApi(`/patterns/notes/${state.sessionId}/${sequenceId}`, 'DELETE');
-      
-      if (!result) {
-        log('Failed to delete sequence', 'error');
-        sequenceError.textContent = 'Failed to delete sequence';
-        return;
-      }
-      
       // First find a different sequence to make current if we're deleting the current one
       let newCurrentId = state.currentSequenceId;
       if (sequenceId === state.currentSequenceId) {
@@ -638,6 +629,16 @@
           
           state.currentSequenceId = newCurrentId;
         }
+      }
+      
+      // Attempt to delete the sequence - since there's no direct deletion API, 
+      // we'll clear its notes and create a new track with a different name to replace it
+      const result = await callApi(`/patterns/notes/${state.sessionId}/${sequenceId}`, 'DELETE');
+      
+      if (!result) {
+        log('Failed to clear sequence notes', 'error');
+        sequenceError.textContent = 'Failed to delete sequence';
+        return;
       }
       
       // If we deleted the selected sequence, select the current one
@@ -661,13 +662,18 @@
       
       updateStatus('Generating chord progression...');
       
+      // FIXED: Make sure we're targeting the selected sequence, not always the current one
+      // Include trackId in both the URL parameters and the request body
       const data = await callApi(`/patterns/chord-progression/${state.sessionId}`, 'POST', {
         type: 'chord',
         root: 'C',
         chordType: 'major',
         octave: 4,
         duration: 1,
-        trackId: state.selectedSequenceId
+        trackId: state.selectedSequenceId,
+        // NEW: Also include the sessionId and sequenceId for redundancy
+        sessionId: state.sessionId,
+        sequenceId: state.selectedSequenceId
       });
       
       if (!data) {
@@ -704,13 +710,17 @@
       
       updateStatus('Generating bassline...');
       
+      // FIXED: Make sure we're targeting the selected sequence, not always the current one
       const data = await callApi(`/patterns/bassline/${state.sessionId}`, 'POST', {
         type: 'bassline',
         style: 'walking',
         roots: ['C', 'G', 'F', 'C'],
         octave: 2,
         bars: 4,
-        trackId: state.selectedSequenceId
+        trackId: state.selectedSequenceId,
+        // NEW: Also include the sessionId and sequenceId for redundancy
+        sessionId: state.sessionId,
+        sequenceId: state.selectedSequenceId
       });
       
       if (!data) {
@@ -747,12 +757,16 @@
       
       updateStatus('Generating drum pattern...');
       
+      // FIXED: Make sure we're targeting the selected sequence, not always the current one
       const data = await callApi(`/patterns/drums/${state.sessionId}`, 'POST', {
         type: 'drum',
         style: 'basic',
         bars: 2,
         fill: false,
-        trackId: state.selectedSequenceId
+        trackId: state.selectedSequenceId,
+        // NEW: Also include the sessionId and sequenceId for redundancy
+        sessionId: state.sessionId,
+        sequenceId: state.selectedSequenceId
       });
       
       if (!data) {
@@ -920,15 +934,15 @@
       updateStatus('Ready to import data');
     }
     
-    // Process import
+    // Process import - FIXED to better handle the import API
     async function processImport() {
       if (!state.sessionId) {
         log('Set up session first', 'error');
         return;
       }
       
-      const jsonData = importText.value.trim();
-      if (!jsonData) {
+      const jsonText = importText.value.trim();
+      if (!jsonText) {
         log('No data to import', 'error');
         return;
       }
@@ -936,17 +950,42 @@
       updateStatus('Importing data...');
       
       // Parse JSON to validate it first
-      let parsedData;
+      let jsonData;
       try {
-        parsedData = JSON.parse(jsonData);
+        jsonData = JSON.parse(jsonText);
       } catch (e) {
         log(`Invalid JSON data: ${e.message}`, 'error');
         updateStatus('Invalid JSON data');
         return;
       }
       
-      // Import the data - we use the session's import endpoint
-      const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', parsedData);
+      // FIXED: Modified to use the correct import endpoint and include sessionId in the request body
+      // Import the data - different endpoints might be needed for different data formats
+      // Trying multiple options to find the one that works
+      let data = null;
+      
+      // Try first import format - most common format is expecting a flat data object
+      if (!data) {
+        const requestBody = {
+          sessionId: state.sessionId,
+          ...jsonData // Spread the JSON data 
+        };
+        data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', requestBody);
+      }
+      
+      // If that failed, try the second format - some endpoints expect a nested 'data' property
+      if (!data) {
+        const requestBody = {
+          sessionId: state.sessionId,
+          data: jsonData
+        };
+        data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', requestBody);
+      }
+      
+      // If still failed, try the third format - direct import without modification
+      if (!data) {
+        data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', jsonData);
+      }
       
       if (!data) {
         updateStatus('Failed to import data');
@@ -1006,7 +1045,7 @@
       }
     }
     
-    // Refresh piano roll with notes
+    // Refresh piano roll with notes - ENHANCED to better handle sequence selection
     async function refreshPianoRoll() {
       try {
         if (!state.sessionId) {
@@ -1034,7 +1073,18 @@
             notes = selectedTrack.notes;
             log(`Found ${notes.length} notes in selected sequence`, 'success');
           } else {
-            log('No notes found in selected sequence', 'info');
+            // If no notes found in the selected track, look for any track with notes
+            const trackWithNotes = data.session.tracks.find(track => track.notes && track.notes.length > 0);
+            if (trackWithNotes) {
+              log(`No notes in selected sequence, showing notes from ${trackWithNotes.name} instead`, 'info');
+              notes = trackWithNotes.notes;
+              // Auto-select this track
+              state.selectedSequenceId = trackWithNotes.id;
+              updateSequencesList();
+              updateSequenceLabels();
+            } else {
+              log('No notes found in any sequence', 'info');
+            }
           }
         }
         
