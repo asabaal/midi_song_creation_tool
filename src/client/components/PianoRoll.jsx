@@ -21,7 +21,8 @@ const PianoRoll = () => {
     console.log("PianoRoll DEBUG - Component rendering with props:", {
       currentSession: currentSession?.id,
       selectedTrackId,
-      tracksAvailable: currentSession?.tracks?.length || 0
+      tracksAvailable: currentSession?.tracks?.length || 0,
+      currentSequenceId: currentSession?.currentSequenceId
     });
     
     // Find the currently selected track
@@ -32,6 +33,14 @@ const PianoRoll = () => {
       noteCount: currentTrack?.notes?.length || 0,
       firstFewNotes: currentTrack?.notes?.slice(0, 3)
     });
+    
+    // List all tracks and their note counts to help debug
+    if (currentSession?.tracks) {
+      console.log("PianoRoll DEBUG - All tracks and note counts:");
+      currentSession.tracks.forEach(track => {
+        console.log(`  - Track ${track.id} (${track.name}): ${track.notes?.length || 0} notes`);
+      });
+    }
   }, [currentSession, selectedTrackId]);
 
   // Refs for canvas elements
@@ -46,30 +55,57 @@ const PianoRoll = () => {
   const [quantizeValue, setQuantizeValue] = useState('0.25');
   const [zoomLevel, setZoomLevel] = useState(1);
   
-  // Get the current track - ENHANCED with fallback logic and error prevention
+  // Get the current track - ENHANCED with better sequence/track selection logic
   const getCurrentTrack = () => {
-    // First try to find the selected track
-    if (selectedTrackId && currentSession?.tracks) {
-      const track = currentSession.tracks.find(t => t.id === selectedTrackId);
-      if (track) return track;
+    // Check for current session and tracks
+    if (!currentSession || !currentSession.tracks || currentSession.tracks.length === 0) {
+      console.log("PianoRoll DEBUG - No tracks available in session");
+      return { id: 0, name: 'Default', notes: [] };
     }
     
-    // If no selected track or it doesn't exist, find any track with notes
-    if (currentSession?.tracks && currentSession.tracks.length > 0) {
-      const trackWithNotes = currentSession.tracks.find(t => t.notes && t.notes.length > 0);
-      if (trackWithNotes) {
-        // Auto-select this track
+    // First, if there's a selected track that has notes, use it
+    if (selectedTrackId) {
+      const selectedTrack = currentSession.tracks.find(t => t.id === selectedTrackId);
+      if (selectedTrack && selectedTrack.notes && selectedTrack.notes.length > 0) {
+        console.log(`PianoRoll DEBUG - Using selected track ${selectedTrack.id} with ${selectedTrack.notes.length} notes`);
+        return selectedTrack;
+      }
+    }
+    
+    // IMPROVED: If the selected track has no notes, find ANY track with notes regardless of ID
+    const trackWithNotes = currentSession.tracks.find(t => t.notes && t.notes.length > 0);
+    if (trackWithNotes) {
+      console.log(`PianoRoll DEBUG - Selected track has no notes, using track ${trackWithNotes.id} with ${trackWithNotes.notes.length} notes instead`);
+      
+      // Auto-select this track so UI stays consistent
+      if (trackWithNotes.id !== selectedTrackId) {
         console.log(`PianoRoll DEBUG - Auto-selecting track with notes: ${trackWithNotes.id}`);
         setSelectedTrackId(trackWithNotes.id);
-        return trackWithNotes;
       }
       
-      // If no track has notes, just return the first track
-      return currentSession.tracks[0];
+      return trackWithNotes;
     }
     
-    // Fallback to an empty track
-    return { id: 0, name: 'Default', notes: [] };
+    // If no track has notes, but there is a currentSequenceId, use the track matching that
+    if (currentSession.currentSequenceId) {
+      const currentSeqTrack = currentSession.tracks.find(t => t.id === currentSession.currentSequenceId);
+      if (currentSeqTrack) {
+        console.log(`PianoRoll DEBUG - Using track matching currentSequenceId: ${currentSeqTrack.id}`);
+        return currentSeqTrack;
+      }
+    }
+    
+    // Last resort: just return the selected track or first track
+    if (selectedTrackId) {
+      const fallbackTrack = currentSession.tracks.find(t => t.id === selectedTrackId);
+      if (fallbackTrack) {
+        console.log(`PianoRoll DEBUG - Using selected track as fallback: ${fallbackTrack.id}`);
+        return fallbackTrack;
+      }
+    }
+    
+    console.log(`PianoRoll DEBUG - Using first track as last resort: ${currentSession.tracks[0].id}`);
+    return currentSession.tracks[0];
   };
   
   const currentTrack = getCurrentTrack();
@@ -207,27 +243,32 @@ const PianoRoll = () => {
         
         // Draw notes
         currentTrack.notes.forEach(note => {
-          const x = note.startTime * PIXELS_PER_BEAT * zoomLevel;
-          const width = note.duration * PIXELS_PER_BEAT * zoomLevel;
-          const y = (108 - note.pitch) * NOTE_HEIGHT; // Convert MIDI pitch to y position
-          
-          // DEBUG: Log each note being drawn
-          console.log("PianoRoll DEBUG - Drawing note:", {
-            id: note.id,
-            pitch: note.pitch,
-            startTime: note.startTime,
-            duration: note.duration,
-            x, y, width, height: NOTE_HEIGHT
-          });
-          
-          // Draw note rectangle
-          context.fillStyle = note.id === selectedNote?.id ? '#ff7700' : '#4285f4';
-          context.fillRect(x, y, width, NOTE_HEIGHT);
-          
-          // Draw note border
-          context.strokeStyle = '#2c3e50';
-          context.lineWidth = 1;
-          context.strokeRect(x, y, width, NOTE_HEIGHT);
+          // IMPROVED: Add safety checks for note properties
+          if (note && typeof note.startTime === 'number' && typeof note.duration === 'number' && typeof note.pitch === 'number') {
+            const x = note.startTime * PIXELS_PER_BEAT * zoomLevel;
+            const width = note.duration * PIXELS_PER_BEAT * zoomLevel;
+            const y = (108 - note.pitch) * NOTE_HEIGHT; // Convert MIDI pitch to y position
+            
+            // DEBUG: Log each note being drawn
+            console.log("PianoRoll DEBUG - Drawing note:", {
+              id: note.id,
+              pitch: note.pitch,
+              startTime: note.startTime,
+              duration: note.duration,
+              x, y, width, height: NOTE_HEIGHT
+            });
+            
+            // Draw note rectangle
+            context.fillStyle = note.id === selectedNote?.id ? '#ff7700' : '#4285f4';
+            context.fillRect(x, y, width, NOTE_HEIGHT);
+            
+            // Draw note border
+            context.strokeStyle = '#2c3e50';
+            context.lineWidth = 1;
+            context.strokeRect(x, y, width, NOTE_HEIGHT);
+          } else {
+            console.warn("PianoRoll DEBUG - Found invalid note:", note);
+          }
         });
       } else {
         console.log("PianoRoll DEBUG - No notes found to draw in the current track");
@@ -279,7 +320,7 @@ const PianoRoll = () => {
         velocity: 100
       };
       
-      addNote(selectedTrackId, newNote);
+      addNote(currentTrack.id, newNote);
       setSelectedNote(newNote);
     }
   };
@@ -305,7 +346,7 @@ const PianoRoll = () => {
         Math.round(rawDuration / parseFloat(quantizeValue)) * parseFloat(quantizeValue)
       );
       
-      updateNote(selectedTrackId, selectedNote.id, {
+      updateNote(currentTrack.id, selectedNote.id, {
         ...selectedNote,
         duration: quantizedDuration
       });
@@ -320,7 +361,7 @@ const PianoRoll = () => {
         Math.round((selectedNote.startTime + deltaBeat) / parseFloat(quantizeValue)) * parseFloat(quantizeValue)
       );
       
-      updateNote(selectedTrackId, selectedNote.id, {
+      updateNote(currentTrack.id, selectedNote.id, {
         ...selectedNote,
         startTime: newStartTime
       });
@@ -339,7 +380,7 @@ const PianoRoll = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (selectedNote && (e.key === 'Delete' || e.key === 'Backspace')) {
-        deleteNote(selectedTrackId, selectedNote.id);
+        deleteNote(currentTrack.id, selectedNote.id);
         setSelectedNote(null);
       }
     };
@@ -348,13 +389,18 @@ const PianoRoll = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNote, deleteNote, selectedTrackId]);
+  }, [selectedNote, deleteNote, currentTrack.id]);
   
   // Helper function to find a note at a specific position
   const findNoteAtPosition = (x, y) => {
     if (!currentTrack || !currentTrack.notes) return null;
     
     return currentTrack.notes.find(note => {
+      // Add safety checks
+      if (!note || typeof note.startTime !== 'number' || typeof note.pitch !== 'number' || typeof note.duration !== 'number') {
+        return false;
+      }
+      
       const noteX = note.startTime * PIXELS_PER_BEAT * zoomLevel;
       const noteWidth = note.duration * PIXELS_PER_BEAT * zoomLevel;
       const noteY = (108 - note.pitch) * NOTE_HEIGHT;
@@ -408,6 +454,19 @@ const PianoRoll = () => {
     }
   };
   
+  // IMPROVED: Show note count in UI for each track
+  const renderTrackOptions = () => {
+    if (!currentSession.tracks || currentSession.tracks.length === 0) {
+      return <option value="">No tracks available</option>;
+    }
+    
+    return currentSession.tracks.map(track => (
+      <option key={track.id} value={track.id}>
+        {track.name} {track.notes && track.notes.length > 0 ? `(${track.notes.length} notes)` : '(empty)'}
+      </option>
+    ));
+  };
+  
   return (
     <div className="piano-roll" data-testid="piano-roll-container">
       <div className="piano-roll-toolbar">
@@ -418,16 +477,7 @@ const PianoRoll = () => {
               value={selectedTrackId || ''}
               onChange={(e) => setSelectedTrackId(parseInt(e.target.value))}
             >
-              {/* ENHANCED: Add message if no tracks available */}
-              {currentSession.tracks.length === 0 ? (
-                <option value="">No tracks available</option>
-              ) : (
-                currentSession.tracks.map(track => (
-                  <option key={track.id} value={track.id}>
-                    {track.name} {track.notes?.length ? `(${track.notes.length} notes)` : ''}
-                  </option>
-                ))
-              )}
+              {renderTrackOptions()}
             </select>
           </label>
         </div>
@@ -475,6 +525,14 @@ const PianoRoll = () => {
         >
           Refresh Display
         </button>
+        
+        {/* NEW: Display current track info */}
+        <div style={{background: '#f0f0f0', padding: '5px', margin: '5px', borderRadius: '4px'}}>
+          <small>
+            Current: {currentTrack.name} - {currentTrack.notes?.length || 0} notes
+            {currentTrack.id === currentSession.currentSequenceId ? ' (matches currentSequenceId)' : ''}
+          </small>
+        </div>
       </div>
       
       <div className="piano-roll-content">
