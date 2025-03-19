@@ -151,6 +151,30 @@ app.post('/api/sessions/:sessionId/sequences', (req, res) => {
   sessionRoutes.handle(req, res);
 });
 
+// NEW: Special compatibility route for pattern creation
+app.post('/api/sessions/:sessionId/patterns/:patternType', (req, res) => {
+  console.log(`DIRECT PATTERN HANDLER in app.js for: ${req.params.sessionId}/patterns/${req.params.patternType}`);
+  
+  // Make sure sessionId is in both params and body
+  req.body.sessionId = req.params.sessionId;
+  
+  // Call the appropriate pattern handler based on pattern type
+  switch(req.params.patternType) {
+    case 'chord-progression':
+      return patternRoutes.handleChordProgression(req, res);
+    case 'bassline':
+      return patternRoutes.handleBassline(req, res);
+    case 'drums':
+      return patternRoutes.handleDrums(req, res);
+    default:
+      return res.status(404).json({
+        success: false,
+        error: 'Pattern type not found',
+        message: `Pattern type '${req.params.patternType}' is not supported`
+      });
+  }
+});
+
 // API routes - these must come AFTER any special route handlers
 app.use('/api/debug', debugRoutes);
 app.use('/api/music-theory', musicTheoryRoutes);
