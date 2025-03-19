@@ -62,86 +62,37 @@ router.all('/sessions/:sessionId/sequences/:sequenceId', (req, res, next) => {
   next('route');
 });
 
-// Forward pattern routes - COMPLETELY REWRITTEN with explicit context handling
-router.post('/sessions/:sessionId/patterns/:patternType', (req, res) => {
+// FIXED: Forward pattern routes with DIRECT handling of pattern API
+router.post('/sessions/:sessionId/patterns/:patternType', (req, res, next) => {
   const { sessionId, patternType } = req.params;
   
   logCompatRequest(`POST /sessions/${sessionId}/patterns/${patternType}`, req);
   
-  // Get the pattern routes module
-  const patternRoutes = require('./patternRoutes');
-  
-  console.log(`==== PATTERN REQUEST HANDLING ====`);
+  // CRITICAL FIX: Don't create any custom logic here - just forward to standard API
+  console.log(`==== PATTERN REQUEST VIA COMPAT ROUTER ====`);
   console.log(`Original URL: ${req.originalUrl}`);
-  console.log(`Session ID: ${sessionId}`);
+  console.log(`Session ID from params: ${sessionId}`);
   console.log(`Pattern Type: ${patternType}`);
+
+  // Clone the request body to avoid mutation issues
+  const originalBody = { ...req.body };
   
-  // Use a direct method call with explicit parameters instead of the req/res forwarding
-  // This creates a new context that's completely controlled by us
-  try {
-    // Create a copy of req.body to ensure we don't lose data in forwarding
-    const requestData = {
-      ...(req.body || {}),
-      sessionId: sessionId  // Explicitly add sessionId again
-    };
-    
-    console.log(`Calling pattern handler with data:`, requestData);
-    
-    // Call the appropriate route handler with explicit session ID
-    if (patternType === 'chord-progression') {
-      // Create a completely new request object with sessionId guaranteed
-      const patternReq = {
-        body: requestData,
-        params: { sessionId },
-        query: { sessionId },
-        path: `/api/patterns/chord-progression/${sessionId}`,
-        originalUrl: `/api/patterns/chord-progression/${sessionId}`,
-        method: 'POST',
-        headers: req.headers
-      };
-      console.log(`DEBUG: Explicit patternReq for chord-progression:`, patternReq);
-      patternRoutes.handleChordProgression(patternReq, res);
-    } else if (patternType === 'bassline') {
-      const patternReq = {
-        body: requestData,
-        params: { sessionId },
-        query: { sessionId },
-        path: `/api/patterns/bassline/${sessionId}`,
-        originalUrl: `/api/patterns/bassline/${sessionId}`,
-        method: 'POST',
-        headers: req.headers
-      };
-      console.log(`DEBUG: Explicit patternReq for bassline:`, patternReq);
-      patternRoutes.handleBassline(patternReq, res);
-    } else if (patternType === 'drums') {
-      const patternReq = {
-        body: requestData,
-        params: { sessionId },
-        query: { sessionId },
-        path: `/api/patterns/drums/${sessionId}`,
-        originalUrl: `/api/patterns/drums/${sessionId}`,
-        method: 'POST',
-        headers: req.headers
-      };
-      console.log(`DEBUG: Explicit patternReq for drums:`, patternReq);
-      patternRoutes.handleDrums(patternReq, res);
-    } else {
-      console.error(`DEBUG: Pattern type not supported: ${patternType}`);
-      res.status(404).json({
-        success: false,
-        error: 'Pattern type not found',
-        message: `Pattern type ${patternType} is not supported`
-      });
-    }
-  } catch (error) {
-    console.error(`ERROR in compat router for patterns: ${error.message}`);
-    console.error(error.stack);
-    res.status(500).json({
-      success: false,
-      error: 'Server error',
-      message: error.message
-    });
+  // IMPORTANT: Ensure sessionId is in the body
+  if (!req.body) {
+    req.body = {};
   }
+  
+  // Explicitly add the sessionId to req.body 
+  req.body.sessionId = sessionId;
+  
+  console.log(`Updated body before forwarding: ${JSON.stringify(req.body)}`);
+  
+  // SIMPLE APPROACH: Simply rewrite the URL and forward to the standard API route
+  req.url = `/api/patterns/${patternType}/${sessionId}`;
+  console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
+  
+  // Continue routing to the next matching route handler
+  next('route');
 });
 
 // Forward export routes
@@ -220,15 +171,16 @@ router.delete('/sessions/:sessionId/notes', (req, res) => {
 
 // Forward import route
 router.post('/sessions/:sessionId/import', (req, res, next) => {
+  const { sessionId } = req.params;
   logCompatRequest(`POST /sessions/${sessionId}/import`, req);
   
   // Add sessionId to the body
   if (!req.body) {
     req.body = {};
   }
-  req.body.sessionId = req.params.sessionId;
+  req.body.sessionId = sessionId;
   
-  req.url = `/api/sessions/${req.params.sessionId}/import`;
+  req.url = `/api/sessions/${sessionId}/import`;
   console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
   next('route');
 });
