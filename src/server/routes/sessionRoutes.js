@@ -104,6 +104,67 @@ async function createSequence(req, res) {
 }
 
 /**
+ * NEW: Delete a sequence
+ * DELETE /api/sessions/:sessionId/sequences/:sequenceId
+ */
+router.delete('/:sessionId/sequences/:sequenceId', async (req, res) => {
+  try {
+    const { sessionId, sequenceId } = req.params;
+    
+    console.log(`Deleting sequence ${sequenceId} from session ${sessionId}`);
+    
+    // Check if session exists
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    try {
+      // Use the Session model's deleteSequence method
+      const result = session.deleteSequence(sequenceId);
+      
+      // Save the session
+      await session.save();
+      
+      res.json({
+        success: true,
+        message: `Sequence ${sequenceId} deleted successfully`,
+        currentSequenceId: session.currentSequenceId,
+        remainingSequences: Object.keys(session.sequences).length
+      });
+    } catch (error) {
+      // Handle specific errors
+      if (error.message.includes('not found')) {
+        return res.status(404).json({
+          success: false,
+          error: 'Sequence not found',
+          message: error.message
+        });
+      } else if (error.message.includes('Cannot delete the last sequence')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot delete the last sequence',
+          message: error.message
+        });
+      } else {
+        throw error; // Re-throw for general error handling
+      }
+    }
+  } catch (error) {
+    console.error(`Error deleting sequence: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+/**
  * Get all sessions
  * GET /api/sessions
  */
@@ -288,12 +349,15 @@ router.put('/:id', async (req, res) => {
     }
     
     // Update session properties
-    const { name, bpm, timeSignature, loop } = req.body;
+    const { name, bpm, timeSignature, loop, currentSequenceId } = req.body;
     
     if (name) session.name = name;
     if (bpm) session.bpm = bpm;
     if (timeSignature) session.timeSignature = timeSignature;
     if (loop) session.loop = loop;
+    if (currentSequenceId && session.sequences[currentSequenceId]) {
+      session.currentSequenceId = currentSequenceId;
+    }
     
     await session.save();
     
