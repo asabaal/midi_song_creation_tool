@@ -524,23 +524,38 @@
         `${currentSequence.name} (${currentSequence.noteCount} notes)` : 'None';
     }
     
-    // Select a sequence
+    // Select a sequence - FIXED to use direct fetch for proper parameter handling
     async function selectSequence(sequenceId) {
       if (!state.sessionId || !sequenceId) return;
       
       log(`Selecting sequence: ${sequenceId}`);
       
-      // Update state
-      state.currentSequenceId = sequenceId;
-      
-      // Set it as the current sequence in the session
-      await callApi(`/sessions/${state.sessionId}`, 'PUT', {
-        currentSequenceId: sequenceId
-      });
-      
-      // Refresh data and UI
-      await refreshSessionData();
-      await refreshPianoRoll();
+      try {
+        // Use direct fetch with proper URL and body structure
+        const response = await fetch(`/api/sessions/${state.sessionId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentSequenceId: sequenceId })
+        });
+        
+        log(`Direct PUT request to: /api/sessions/${state.sessionId}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          log(`API error (${response.status}): ${errorText}`, 'error');
+          return;
+        }
+        
+        // Set the current sequence
+        state.currentSequenceId = sequenceId;
+        log(`Current sequence set to: ${sequenceId}`, 'success');
+        
+        // Refresh data and UI
+        await refreshSessionData();
+        await refreshPianoRoll();
+      } catch (error) {
+        log(`Error selecting sequence: ${error.message}`, 'error');
+      }
     }
     
     // Create a new sequence
@@ -585,7 +600,7 @@
       await selectSequence(sequenceId);
     }
     
-    // Delete a sequence - using a simpler approach that is known to work
+    // Delete a sequence (clear its notes) - FIXED to use direct fetch for sequence selection
     async function deleteSequence(sequenceId) {
       if (!state.sessionId || !sequenceId) {
         log('Missing session ID or sequence ID', 'error');
@@ -608,19 +623,35 @@
           newCurrentId = otherSequence.id;
           
           // Update session to point to the other sequence
-          const updateResult = await callApi(`/sessions/${state.sessionId}`, 'PUT', {
-            currentSequenceId: newCurrentId
-          });
-          
-          if (updateResult) {
+          try {
+            // Use direct fetch for proper URL structure
+            const response = await fetch(`/api/sessions/${state.sessionId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ currentSequenceId: newCurrentId })
+            });
+            
+            log(`Direct PUT request to: /api/sessions/${state.sessionId}`);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              log(`API error (${response.status}): ${errorText}`, 'error');
+              sequenceError.textContent = 'Failed to change current sequence';
+              return;
+            }
+            
+            // Update state if successful
             state.currentSequenceId = newCurrentId;
-            log(`Changed current sequence to: ${newCurrentId}`);
+            log(`Changed current sequence to: ${newCurrentId}`, 'success');
+          } catch (error) {
+            log(`Error updating current sequence: ${error.message}`, 'error');
+            sequenceError.textContent = 'Failed to change current sequence';
+            return;
           }
         }
       }
       
-      // Instead of using the delete sequence endpoint, just clear its notes
-      // This effectively makes the sequence empty but doesn't delete it
+      // Now delete the sequence's notes
       const result = await callApi(`/patterns/notes/${state.sessionId}/${sequenceId}`, 'DELETE');
       
       if (!result) {
