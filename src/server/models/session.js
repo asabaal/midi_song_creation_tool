@@ -63,6 +63,47 @@ class Session {
     return sequence;
   }
 
+  // NEW: Delete a sequence
+  deleteSequence(sequenceId) {
+    console.log(`Attempting to delete sequence ${sequenceId}`);
+    
+    // Check if sequence exists
+    if (!this.sequences[sequenceId]) {
+      throw new Error(`Sequence with ID ${sequenceId} not found`);
+    }
+    
+    // Don't allow deleting the last sequence
+    if (Object.keys(this.sequences).length <= 1) {
+      throw new Error(`Cannot delete the last sequence in the session`);
+    }
+    
+    // Find the corresponding track
+    const trackIndex = this.tracks.findIndex(t => t.id === sequenceId);
+    
+    // If it's the current sequence, select another one
+    if (this.currentSequenceId === sequenceId) {
+      // Find a different sequence to make current
+      const otherSequenceId = Object.keys(this.sequences).find(id => id !== sequenceId);
+      if (otherSequenceId) {
+        this.currentSequenceId = otherSequenceId;
+        console.log(`Changed current sequence from ${sequenceId} to ${otherSequenceId}`);
+      }
+    }
+    
+    // Delete the sequence and track
+    delete this.sequences[sequenceId];
+    
+    if (trackIndex !== -1) {
+      this.tracks.splice(trackIndex, 1);
+      console.log(`Removed track at index ${trackIndex}`);
+    } else {
+      console.warn(`No track found for sequence ${sequenceId}`);
+    }
+    
+    console.log(`Deleted sequence ${sequenceId}, remaining sequences: ${Object.keys(this.sequences).length}`);
+    return true;
+  }
+
   // Get a sequence by ID
   getSequence(sequenceId) {
     if (!this.sequences[sequenceId]) {
