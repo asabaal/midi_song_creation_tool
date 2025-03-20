@@ -524,7 +524,7 @@
         `${currentSequence.name} (${currentSequence.noteCount} notes)` : 'None';
     }
     
-    // Select a sequence - FIXED to use direct fetch for proper parameter handling
+    // Select a sequence - FIXED to use direct fetch for proper parameter handling and response parsing
     async function selectSequence(sequenceId) {
       if (!state.sessionId || !sequenceId) return;
       
@@ -543,6 +543,13 @@
         if (!response.ok) {
           const errorText = await response.text();
           log(`API error (${response.status}): ${errorText}`, 'error');
+          return;
+        }
+        
+        // Parse the response to get the updated session
+        const data = await response.json();
+        if (!data.success) {
+          log(`Failed to select sequence: ${data.message || 'Unknown error'}`, 'error');
           return;
         }
         
