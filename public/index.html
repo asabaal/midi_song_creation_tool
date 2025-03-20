@@ -603,7 +603,7 @@
       await selectSequence(sequenceId);
     }
     
-    // Delete a sequence
+    // Delete a sequence - using direct fetch to avoid route issues
     async function deleteSequence(sequenceId) {
       if (!state.sessionId || !sequenceId) {
         log('Missing session ID or sequence ID', 'error');
@@ -619,28 +619,39 @@
       log(`Deleting sequence: ${sequenceId}`);
       log(`Using session ID: ${state.sessionId}`);
       
-      // FIXED: Use the proper path format for the delete endpoint
-      // The endpoint is /:sessionId/sequences/:sequenceId but is mounted at /api/sessions
-      // So the full path should be just: 
-      const result = await callApi(`/${state.sessionId}/sequences/${sequenceId}`, 'DELETE');
-      
-      if (!result) {
-        log('Failed to delete sequence', 'error');
+      // Try using direct fetch instead of callApi to see if it resolves the routing issue
+      try {
+        // Directly use fetch with the full URL
+        const response = await fetch(`/api/sessions/${state.sessionId}/sequences/${sequenceId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        log(`DELETE request to: /api/sessions/${state.sessionId}/sequences/${sequenceId}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          log(`API error (${response.status}): ${errorText}`, 'error');
+          sequenceError.textContent = 'Failed to delete sequence';
+          return;
+        }
+        
+        const result = await response.json();
+        log(`Sequence ${sequenceId} deleted successfully`, 'success');
+        
+        // Update our state with the new current sequence ID from the response
+        if (result.currentSequenceId) {
+          state.currentSequenceId = result.currentSequenceId;
+          state.selectedSequenceId = result.currentSequenceId;
+        }
+        
+        // Refresh data and UI
+        await refreshSessionData();
+        await refreshPianoRoll();
+      } catch (error) {
+        log(`Error: ${error.message}`, 'error');
         sequenceError.textContent = 'Failed to delete sequence';
-        return;
       }
-      
-      log(`Sequence ${sequenceId} deleted successfully`, 'success');
-      
-      // Update our state with the new current sequence ID from the response
-      if (result.currentSequenceId) {
-        state.currentSequenceId = result.currentSequenceId;
-        state.selectedSequenceId = result.currentSequenceId;
-      }
-      
-      // Refresh data and UI
-      await refreshSessionData();
-      await refreshPianoRoll();
     }
     
     // Generate chord progression
