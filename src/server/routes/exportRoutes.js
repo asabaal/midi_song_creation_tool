@@ -114,4 +114,51 @@ router.post('/import', async (req, res) => {
   }
 });
 
+/**
+ * Import session from JSON
+ * POST /api/sessions/:sessionId/import
+ */
+router.post('/:sessionId/import', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const importData = req.body;
+    
+    // Find the session
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found' 
+      });
+    }
+    
+    // Import the data into the existing session
+    if (importData.data && importData.data.sequences) {
+      // Handle case where sequences are in a nested data property
+      session.importSequence(importData.data);
+    } else if (importData.sequences) {
+      // Handle case where sequences are directly in the importData
+      session.importSequence(importData);
+    } else {
+      // Try to import whatever we have
+      session.importSequence(importData);
+    }
+    
+    await session.save();
+    
+    res.json({
+      success: true,
+      message: 'Data imported successfully',
+      sessionId: session.id,
+      currentSequenceId: session.currentSequenceId
+    });
+  } catch (error) {
+    console.error(`Error importing data: ${error.message}`);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;

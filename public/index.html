@@ -623,72 +623,42 @@
       await selectSequenceDirectly(sequenceId);
     }
     
-    // Delete a sequence (clear its notes) - FIXED to use direct fetch for sequence selection
-    async function deleteSequence(sequenceId) {
-      if (!state.sessionId || !sequenceId) {
-        log('Missing session ID or sequence ID', 'error');
-        return;
-      }
-      
-      // Don't allow deleting the last sequence
-      if (state.sequences.length <= 1) {
-        sequenceError.textContent = "Cannot delete the only sequence. Create a new one first.";
-        return;
-      }
-      
-      log(`Deleting sequence: ${sequenceId}`);
-      
-      // First find another sequence to make current if we're deleting the current one
-      let newCurrentId = state.currentSequenceId;
-      if (sequenceId === state.currentSequenceId) {
-        const otherSequence = state.sequences.find(s => s.id !== sequenceId);
-        if (otherSequence) {
-          newCurrentId = otherSequence.id;
-          
-          // Update session to point to the other sequence
-          try {
-            // Use direct fetch for proper URL structure
-            const response = await fetch(`/api/sessions/${state.sessionId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ currentSequenceId: newCurrentId })
-            });
-            
-            log(`Direct PUT request to: /api/sessions/${state.sessionId}`);
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              log(`API error (${response.status}): ${errorText}`, 'error');
-              sequenceError.textContent = 'Failed to change current sequence';
-              return;
-            }
-            
-            // Update state if successful
-            state.currentSequenceId = newCurrentId;
-            log(`Changed current sequence to: ${newCurrentId}`, 'success');
-          } catch (error) {
-            log(`Error updating current sequence: ${error.message}`, 'error');
-            sequenceError.textContent = 'Failed to change current sequence';
-            return;
-          }
-        }
-      }
-      
-      // Now delete the sequence's notes
-      const result = await callApi(`/patterns/notes/${state.sessionId}/${sequenceId}`, 'DELETE');
-      
-      if (!result) {
-        log('Failed to clear sequence notes', 'error');
-        sequenceError.textContent = 'Failed to delete sequence';
-        return;
-      }
-      
-      log(`Successfully deleted sequence ${sequenceId} (cleared its notes)`, 'success');
-      
-      // Refresh data and UI
-      await refreshSessionData();
-      await refreshPianoRoll();
+  // Delete a sequence (properly call the sequence deletion endpoint)
+  async function deleteSequence(sequenceId) {
+    if (!state.sessionId || !sequenceId) {
+      log('Missing session ID or sequence ID', 'error');
+      return;
     }
+    
+    // Don't allow deleting the last sequence
+    if (state.sequences.length <= 1) {
+      sequenceError.textContent = "Cannot delete the only sequence. Create a new one first.";
+      return;
+    }
+    
+    log(`Deleting sequence: ${sequenceId}`);
+    
+    // Call the sequence deletion endpoint
+    const result = await callApi(`/sessions/${state.sessionId}/sequences/${sequenceId}`, 'DELETE');
+    
+    if (!result) {
+      log('Failed to delete sequence', 'error');
+      sequenceError.textContent = 'Failed to delete sequence';
+      return;
+    }
+    
+    log(`Successfully deleted sequence ${sequenceId}`, 'success');
+    
+    // If current sequence was deleted, update to the new current sequence
+    if (sequenceId === state.currentSequenceId) {
+      state.currentSequenceId = result.currentSequenceId;
+      log(`Changed current sequence to: ${state.currentSequenceId}`, 'success');
+    }
+    
+    // Refresh data and UI
+    await refreshSessionData();
+    await refreshPianoRoll();
+  }
     
     // Generate chord progression
     async function generateChords() {
@@ -964,76 +934,51 @@
       updateStatus('Ready to import data');
     }
     
-    // Process import - FIXED to better handle the import API
-    async function processImport() {
-      if (!state.sessionId) {
-        log('Set up session first', 'error');
-        return;
-      }
-      
-      const jsonText = importText.value.trim();
-      if (!jsonText) {
-        log('No data to import', 'error');
-        return;
-      }
-      
-      updateStatus('Importing data...');
-      
-      // Parse JSON to validate it first
-      let jsonData;
-      try {
-        jsonData = JSON.parse(jsonText);
-      } catch (e) {
-        log(`Invalid JSON data: ${e.message}`, 'error');
-        updateStatus('Invalid JSON data');
-        return;
-      }
-      
-      // FIXED: Modified to use the correct import endpoint and include sessionId in the request body
-      // Import the data - different endpoints might be needed for different data formats
-      // Trying multiple options to find the one that works
-      let data = null;
-      
-      // Try first import format - most common format is expecting a flat data object
-      if (!data) {
-        const requestBody = {
-          sessionId: state.sessionId,
-          ...jsonData // Spread the JSON data 
-        };
-        data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', requestBody);
-      }
-      
-      // If that failed, try the second format - some endpoints expect a nested 'data' property
-      if (!data) {
-        const requestBody = {
-          sessionId: state.sessionId,
-          data: jsonData
-        };
-        data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', requestBody);
-      }
-      
-      // If still failed, try the third format - direct import without modification
-      if (!data) {
-        data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', jsonData);
-      }
-      
-      if (!data) {
-        updateStatus('Failed to import data');
-        return;
-      }
-      
-      // Refresh session data
-      await refreshSessionData();
-      
-      // Refresh piano roll
-      await refreshPianoRoll();
-      
-      updateStatus(`Imported data successfully`);
-      log(`Imported sequence data`, 'success');
-      
-      // Hide import area
-      importArea.classList.add('hidden');
+  // Process import
+  async function processImport() {
+    if (!state.sessionId) {
+      log('Set up session first', 'error');
+      return;
     }
+    
+    const jsonText = importText.value.trim();
+    if (!jsonText) {
+      log('No data to import', 'error');
+      return;
+    }
+    
+    updateStatus('Importing data...');
+    
+    // Parse JSON to validate it first
+    let jsonData;
+    try {
+      jsonData = JSON.parse(jsonText);
+    } catch (e) {
+      log(`Invalid JSON data: ${e.message}`, 'error');
+      updateStatus('Invalid JSON data');
+      return;
+    }
+    
+    // Import the data using the correct endpoint
+    const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', jsonData);
+    
+    if (!data) {
+      updateStatus('Failed to import data');
+      return;
+    }
+    
+    // Refresh session data
+    await refreshSessionData();
+    
+    // Refresh piano roll
+    await refreshPianoRoll();
+    
+    updateStatus(`Imported data successfully`);
+    log(`Imported sequence data`, 'success');
+    
+    // Hide import area
+    importArea.classList.add('hidden');
+  }
     
     // Handle file upload
     function handleFileUpload(event) {
@@ -1075,98 +1020,83 @@
       }
     }
     
-    // Refresh piano roll with notes - ENHANCED to better handle sequence selection
-    async function refreshPianoRoll() {
-      try {
-        if (!state.sessionId) {
-          return;
-        }
-        
-        // Get session data
-        const data = await callApi(`/sessions/${state.sessionId}`);
-        if (!data) {
-          log('Failed to get session data', 'error');
-          return;
-        }
-        
-        // Clear existing notes
-        document.querySelectorAll('.piano-note').forEach(note => note.remove());
-        
-        // Extract notes for the current track
-        let notes = [];
-        
-        if (data.session && data.session.tracks) {
-          // Find the current track
-          const currentTrack = data.session.tracks.find(track => track.id === state.currentSequenceId);
-          
-          if (currentTrack && currentTrack.notes) {
-            notes = currentTrack.notes;
-            log(`Found ${notes.length} notes in current sequence`, 'success');
-          } else {
-            // If no notes found in the current track, look for any track with notes
-            const trackWithNotes = data.session.tracks.find(track => track.notes && track.notes.length > 0);
-            if (trackWithNotes) {
-              log(`No notes in current sequence, showing notes from ${trackWithNotes.name} instead`, 'info');
-              notes = trackWithNotes.notes;
-              // Auto-select this track
-              await selectSequenceDirectly(trackWithNotes.id);
-            } else {
-              log('No notes found in any sequence', 'info');
-            }
-          }
-        }
-        
-        if (notes.length > 0) {
-          notes.forEach(note => {
-            const noteElement = document.createElement('div');
-            
-            // Select class based on channel or instrument
-            const channel = note.channel || note.instrument || 0;
-            if (channel === 9) {
-              noteElement.className = 'piano-note drum-note';
-            } else if (channel === 1 || channel === 32) {
-              noteElement.className = 'piano-note bassline-note';
-            } else {
-              noteElement.className = 'piano-note';
-            }
-            
-            // Position and size
-            noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
-            noteElement.style.left = `${note.startTime * 30 + 100}px`;
-            noteElement.style.width = `${note.duration * 30}px`;
-            
-            // Add data for playback
-            noteElement.dataset.pitch = note.pitch;
-            noteElement.dataset.start = note.startTime;
-            noteElement.dataset.duration = note.duration;
-            noteElement.dataset.velocity = note.velocity || 100;
-            noteElement.dataset.channel = note.channel || note.instrument || 0;
-            
-            // Add note name for better visibility
-            noteElement.textContent = note.pitch;
-            
-            pianoRoll.appendChild(noteElement);
-          });
-          
-          log(`Displayed ${notes.length} notes in piano roll`, 'success');
-          
-          // Update player status
-          playBtn.disabled = false;
-          stopBtn.disabled = false;
-          playStatus.textContent = `${notes.length} notes ready to play`;
-        } else {
-          log('No notes to display', 'info');
-          
-          // Update player status
-          playBtn.disabled = true;
-          stopBtn.disabled = true;
-          playStatus.textContent = 'Nothing to play';
-        }
-      } catch (error) {
-        console.error('Error refreshing piano roll:', error);
-        log(`Error refreshing piano roll: ${error.message}`, 'error');
+  // Refresh piano roll with notes
+  async function refreshPianoRoll() {
+    try {
+      if (!state.sessionId || !state.currentSequenceId) {
+        log('No session or sequence selected', 'error');
+        return;
       }
+      
+      // Explicitly fetch the current sequence data
+      const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences/${state.currentSequenceId}`);
+      if (!sequenceData || !sequenceData.sequence) {
+        log('Failed to get sequence data', 'error');
+        return;
+      }
+      
+      // Clear existing notes
+      document.querySelectorAll('.piano-note').forEach(note => note.remove());
+      
+      // Extract notes from the sequence
+      const notes = sequenceData.sequence.notes || [];
+      
+      if (notes.length > 0) {
+        log(`Found ${notes.length} notes in sequence`, 'success');
+        
+        notes.forEach(note => {
+          const noteElement = document.createElement('div');
+          
+          // Select class based on channel or instrument
+          const channel = note.channel || note.instrument || 0;
+          if (channel === 9) {
+            noteElement.className = 'piano-note drum-note';
+          } else if (channel === 1 || channel === 32) {
+            noteElement.className = 'piano-note bassline-note';
+          } else {
+            noteElement.className = 'piano-note';
+          }
+          
+          // Position and size
+          noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
+          noteElement.style.left = `${note.startTime * 30 + 100}px`;
+          noteElement.style.width = `${note.duration * 30}px`;
+          
+          // Add data for playback
+          noteElement.dataset.pitch = note.pitch;
+          noteElement.dataset.start = note.startTime;
+          noteElement.dataset.duration = note.duration;
+          noteElement.dataset.velocity = note.velocity || 100;
+          noteElement.dataset.channel = note.channel || note.instrument || 0;
+          
+          // Add note name for better visibility
+          noteElement.textContent = note.pitch;
+          
+          pianoRoll.appendChild(noteElement);
+        });
+        
+        // Update state and UI
+        state.noteCount = notes.length;
+        
+        // Update player status
+        playBtn.disabled = false;
+        stopBtn.disabled = false;
+        playStatus.textContent = `${notes.length} notes ready to play`;
+        exportStatus.textContent = 'Ready to export';
+      } else {
+        log('No notes to display', 'info');
+        state.noteCount = 0;
+        
+        // Update player status
+        playBtn.disabled = true;
+        stopBtn.disabled = true;
+        playStatus.textContent = 'Nothing to play';
+      }
+    } catch (error) {
+      console.error('Error refreshing piano roll:', error);
+      log(`Error refreshing piano roll: ${error.message}`, 'error');
     }
+  }
     
     // Play the sequence
     function playSequence() {
