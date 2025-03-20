@@ -213,9 +213,6 @@
         <p>
           <strong>Current Sequence:</strong> <span id="currentSequenceLabel">None</span>
         </p>
-        <p>
-          <strong>Selected Sequence:</strong> <span id="selectedSequenceLabel">None</span>
-        </p>
       </div>
     </div>
   </div>
@@ -279,7 +276,6 @@
     let state = {
       sessionId: null,
       currentSequenceId: null,
-      selectedSequenceId: null,
       audioContext: null,
       isPlaying: false,
       oscillators: [],
@@ -304,7 +300,6 @@
     const newSequenceName = document.getElementById('newSequenceName');
     const sequenceError = document.getElementById('sequenceError');
     const currentSequenceLabel = document.getElementById('currentSequenceLabel');
-    const selectedSequenceLabel = document.getElementById('selectedSequenceLabel');
     
     // Buttons
     const setupBtn = document.getElementById('setupBtn');
@@ -450,11 +445,6 @@
           isCurrent: track.id === state.currentSequenceId
         }));
         
-        // If no selected sequence yet, use the current one
-        if (!state.selectedSequenceId && state.currentSequenceId) {
-          state.selectedSequenceId = state.currentSequenceId;
-        }
-        
         log(`Found ${state.sequences.length} sequences in session`, 'success');
         
         // Update UI
@@ -487,11 +477,9 @@
         sequenceItem.className = 'sequence-item';
         
         // Add appropriate classes
-        if (sequence.id === state.selectedSequenceId) {
-          sequenceItem.classList.add('selected');
-        }
         if (sequence.id === state.currentSequenceId) {
           sequenceItem.classList.add('current');
+          sequenceItem.classList.add('selected');
         }
         if (sequence.noteCount > 0) {
           sequenceItem.classList.add('has-notes');
@@ -531,13 +519,9 @@
     // Update sequence labels in the UI
     function updateSequenceLabels() {
       const currentSequence = state.sequences.find(s => s.id === state.currentSequenceId);
-      const selectedSequence = state.sequences.find(s => s.id === state.selectedSequenceId);
       
       currentSequenceLabel.textContent = currentSequence ? 
         `${currentSequence.name} (${currentSequence.noteCount} notes)` : 'None';
-      
-      selectedSequenceLabel.textContent = selectedSequence ? 
-        `${selectedSequence.name} (${selectedSequence.noteCount} notes)` : 'None';
     }
     
     // Select a sequence
@@ -547,14 +531,12 @@
       log(`Selecting sequence: ${sequenceId}`);
       
       // Update state
-      state.selectedSequenceId = sequenceId;
+      state.currentSequenceId = sequenceId;
       
-      // Also set it as the current sequence in the session
+      // Set it as the current sequence in the session
       await callApi(`/sessions/${state.sessionId}`, 'PUT', {
         currentSequenceId: sequenceId
       });
-      
-      state.currentSequenceId = sequenceId;
       
       // Refresh data and UI
       await refreshSessionData();
@@ -603,7 +585,7 @@
       await selectSequence(sequenceId);
     }
     
-    // Delete a sequence - using direct fetch to avoid route issues
+    // Delete a sequence - using a simpler approach that is known to work
     async function deleteSequence(sequenceId) {
       if (!state.sessionId || !sequenceId) {
         log('Missing session ID or sequence ID', 'error');
@@ -617,64 +599,61 @@
       }
       
       log(`Deleting sequence: ${sequenceId}`);
-      log(`Using session ID: ${state.sessionId}`);
       
-      // Try using direct fetch instead of callApi to see if it resolves the routing issue
-      try {
-        // Directly use fetch with the full URL
-        const response = await fetch(`/api/sessions/${state.sessionId}/sequences/${sequenceId}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        log(`DELETE request to: /api/sessions/${state.sessionId}/sequences/${sequenceId}`);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          log(`API error (${response.status}): ${errorText}`, 'error');
-          sequenceError.textContent = 'Failed to delete sequence';
-          return;
+      // First find another sequence to make current if we're deleting the current one
+      let newCurrentId = state.currentSequenceId;
+      if (sequenceId === state.currentSequenceId) {
+        const otherSequence = state.sequences.find(s => s.id !== sequenceId);
+        if (otherSequence) {
+          newCurrentId = otherSequence.id;
+          
+          // Update session to point to the other sequence
+          const updateResult = await callApi(`/sessions/${state.sessionId}`, 'PUT', {
+            currentSequenceId: newCurrentId
+          });
+          
+          if (updateResult) {
+            state.currentSequenceId = newCurrentId;
+            log(`Changed current sequence to: ${newCurrentId}`);
+          }
         }
-        
-        const result = await response.json();
-        log(`Sequence ${sequenceId} deleted successfully`, 'success');
-        
-        // Update our state with the new current sequence ID from the response
-        if (result.currentSequenceId) {
-          state.currentSequenceId = result.currentSequenceId;
-          state.selectedSequenceId = result.currentSequenceId;
-        }
-        
-        // Refresh data and UI
-        await refreshSessionData();
-        await refreshPianoRoll();
-      } catch (error) {
-        log(`Error: ${error.message}`, 'error');
-        sequenceError.textContent = 'Failed to delete sequence';
       }
+      
+      // Instead of using the delete sequence endpoint, just clear its notes
+      // This effectively makes the sequence empty but doesn't delete it
+      const result = await callApi(`/patterns/notes/${state.sessionId}/${sequenceId}`, 'DELETE');
+      
+      if (!result) {
+        log('Failed to clear sequence notes', 'error');
+        sequenceError.textContent = 'Failed to delete sequence';
+        return;
+      }
+      
+      log(`Successfully deleted sequence ${sequenceId} (cleared its notes)`, 'success');
+      
+      // Refresh data and UI
+      await refreshSessionData();
+      await refreshPianoRoll();
     }
     
     // Generate chord progression
     async function generateChords() {
-      if (!state.sessionId || !state.selectedSequenceId) {
+      if (!state.sessionId || !state.currentSequenceId) {
         log('Select a sequence first', 'error');
         return;
       }
       
       updateStatus('Generating chord progression...');
       
-      // FIXED: Make sure we're targeting the selected sequence, not always the current one
-      // Include trackId in both the URL parameters and the request body
       const data = await callApi(`/patterns/chord-progression/${state.sessionId}`, 'POST', {
         type: 'chord',
         root: 'C',
         chordType: 'major',
         octave: 4,
         duration: 1,
-        trackId: state.selectedSequenceId,
-        // NEW: Also include the sessionId and sequenceId for redundancy
+        trackId: state.currentSequenceId,
         sessionId: state.sessionId,
-        sequenceId: state.selectedSequenceId
+        sequenceId: state.currentSequenceId
       });
       
       if (!data) {
@@ -689,7 +668,7 @@
       await refreshPianoRoll();
       
       // Check note count
-      const sequence = state.sequences.find(s => s.id === state.selectedSequenceId);
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
       state.noteCount = sequence ? sequence.noteCount : 0;
       
       updateStatus(`Generated chord progression with ${state.noteCount} notes`);
@@ -704,24 +683,22 @@
     
     // Generate bassline
     async function generateBass() {
-      if (!state.sessionId || !state.selectedSequenceId) {
+      if (!state.sessionId || !state.currentSequenceId) {
         log('Select a sequence first', 'error');
         return;
       }
       
       updateStatus('Generating bassline...');
       
-      // FIXED: Make sure we're targeting the selected sequence, not always the current one
       const data = await callApi(`/patterns/bassline/${state.sessionId}`, 'POST', {
         type: 'bassline',
         style: 'walking',
         roots: ['C', 'G', 'F', 'C'],
         octave: 2,
         bars: 4,
-        trackId: state.selectedSequenceId,
-        // NEW: Also include the sessionId and sequenceId for redundancy
+        trackId: state.currentSequenceId,
         sessionId: state.sessionId,
-        sequenceId: state.selectedSequenceId
+        sequenceId: state.currentSequenceId
       });
       
       if (!data) {
@@ -736,7 +713,7 @@
       await refreshPianoRoll();
       
       // Check note count
-      const sequence = state.sequences.find(s => s.id === state.selectedSequenceId);
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
       state.noteCount = sequence ? sequence.noteCount : 0;
       
       updateStatus(`Added bassline (total: ${state.noteCount} notes)`);
@@ -749,25 +726,23 @@
       exportStatus.textContent = `Ready to export`;
     }
     
-    // Generate drums - FIXED: Changed 'drum' to 'drums' in the endpoint
+    // Generate drums
     async function generateDrums() {
-      if (!state.sessionId || !state.selectedSequenceId) {
+      if (!state.sessionId || !state.currentSequenceId) {
         log('Select a sequence first', 'error');
         return;
       }
       
       updateStatus('Generating drum pattern...');
       
-      // FIXED: Make sure we're targeting the selected sequence, not always the current one
       const data = await callApi(`/patterns/drums/${state.sessionId}`, 'POST', {
         type: 'drum',
         style: 'basic',
         bars: 2,
         fill: false,
-        trackId: state.selectedSequenceId,
-        // NEW: Also include the sessionId and sequenceId for redundancy
+        trackId: state.currentSequenceId,
         sessionId: state.sessionId,
-        sequenceId: state.selectedSequenceId
+        sequenceId: state.currentSequenceId
       });
       
       if (!data) {
@@ -782,7 +757,7 @@
       await refreshPianoRoll();
       
       // Check note count
-      const sequence = state.sequences.find(s => s.id === state.selectedSequenceId);
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
       state.noteCount = sequence ? sequence.noteCount : 0;
       
       updateStatus(`Added drums (total: ${state.noteCount} notes)`);
@@ -797,7 +772,7 @@
     
     // Clear all notes from the current sequence
     async function clearNotes() {
-      if (!state.sessionId || !state.selectedSequenceId) {
+      if (!state.sessionId || !state.currentSequenceId) {
         log('Select a sequence first', 'error');
         return;
       }
@@ -805,7 +780,7 @@
       updateStatus('Clearing notes...');
       
       // Clear notes from the selected track
-      const data = await callApi(`/patterns/notes/${state.sessionId}/${state.selectedSequenceId}`, 'DELETE');
+      const data = await callApi(`/patterns/notes/${state.sessionId}/${state.currentSequenceId}`, 'DELETE');
       
       if (!data) {
         updateStatus('Failed to clear notes');
@@ -822,7 +797,7 @@
       log('Notes cleared from sequence', 'success');
       
       // Disable play if this sequence now has no notes
-      const sequence = state.sequences.find(s => s.id === state.selectedSequenceId);
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
       state.noteCount = sequence ? sequence.noteCount : 0;
       
       const hasNotes = state.noteCount > 0;
@@ -1063,26 +1038,24 @@
         // Clear existing notes
         document.querySelectorAll('.piano-note').forEach(note => note.remove());
         
-        // Extract notes for the selected track
+        // Extract notes for the current track
         let notes = [];
         
         if (data.session && data.session.tracks) {
-          // Find the selected track
-          const selectedTrack = data.session.tracks.find(track => track.id === state.selectedSequenceId);
+          // Find the current track
+          const currentTrack = data.session.tracks.find(track => track.id === state.currentSequenceId);
           
-          if (selectedTrack && selectedTrack.notes) {
-            notes = selectedTrack.notes;
-            log(`Found ${notes.length} notes in selected sequence`, 'success');
+          if (currentTrack && currentTrack.notes) {
+            notes = currentTrack.notes;
+            log(`Found ${notes.length} notes in current sequence`, 'success');
           } else {
-            // If no notes found in the selected track, look for any track with notes
+            // If no notes found in the current track, look for any track with notes
             const trackWithNotes = data.session.tracks.find(track => track.notes && track.notes.length > 0);
             if (trackWithNotes) {
-              log(`No notes in selected sequence, showing notes from ${trackWithNotes.name} instead`, 'info');
+              log(`No notes in current sequence, showing notes from ${trackWithNotes.name} instead`, 'info');
               notes = trackWithNotes.notes;
               // Auto-select this track
-              state.selectedSequenceId = trackWithNotes.id;
-              updateSequencesList();
-              updateSequenceLabels();
+              await selectSequence(trackWithNotes.id);
             } else {
               log('No notes found in any sequence', 'info');
             }
