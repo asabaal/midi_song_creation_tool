@@ -615,42 +615,26 @@
       
       log(`Deleting sequence: ${sequenceId}`);
       
-      // First find a different sequence to make current if we're deleting the current one
-      let newCurrentId = state.currentSequenceId;
-      if (sequenceId === state.currentSequenceId) {
-        const otherSequence = state.sequences.find(s => s.id !== sequenceId);
-        if (otherSequence) {
-          newCurrentId = otherSequence.id;
-          
-          // Update session to point to the other sequence
-          await callApi(`/sessions/${state.sessionId}`, 'PUT', {
-            currentSequenceId: newCurrentId
-          });
-          
-          state.currentSequenceId = newCurrentId;
-        }
-      }
-      
-      // Attempt to delete the sequence - since there's no direct deletion API, 
-      // we'll clear its notes and create a new track with a different name to replace it
-      const result = await callApi(`/patterns/notes/${state.sessionId}/${sequenceId}`, 'DELETE');
+      // Call the DELETE endpoint for the sequence
+      const result = await callApi(`/sessions/${state.sessionId}/sequences/${sequenceId}`, 'DELETE');
       
       if (!result) {
-        log('Failed to clear sequence notes', 'error');
+        log('Failed to delete sequence', 'error');
         sequenceError.textContent = 'Failed to delete sequence';
         return;
       }
       
-      // If we deleted the selected sequence, select the current one
-      if (sequenceId === state.selectedSequenceId) {
-        state.selectedSequenceId = newCurrentId;
+      log(`Sequence ${sequenceId} deleted successfully`, 'success');
+      
+      // Update our state with the new current sequence ID from the response
+      if (result.currentSequenceId) {
+        state.currentSequenceId = result.currentSequenceId;
+        state.selectedSequenceId = result.currentSequenceId;
       }
       
       // Refresh data and UI
       await refreshSessionData();
       await refreshPianoRoll();
-      
-      log(`Sequence ${sequenceId} data cleared`, 'success');
     }
     
     // Generate chord progression
