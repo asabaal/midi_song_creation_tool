@@ -475,6 +475,7 @@
       state.sequences.forEach(sequence => {
         const sequenceItem = document.createElement('div');
         sequenceItem.className = 'sequence-item';
+        sequenceItem.dataset.id = sequence.id;
         
         // Add appropriate classes
         if (sequence.id === state.currentSequenceId) {
@@ -500,25 +501,22 @@
         `;
         
         sequencesList.appendChild(sequenceItem);
-      });
-      
-      // Add event listeners
-      document.querySelectorAll('.sequence-name').forEach(item => {
-        item.addEventListener('click', function(event) {
-          // DEBUG: Check if the click event is firing
-          console.log('Sequence name clicked!', this.dataset.id);
-          log(`Sequence name clicked: ${this.dataset.id}`);
-          
-          // Call the selectSequence function with the clicked sequence ID
-          selectSequence(this.dataset.id);
-          
-          // Prevent event propagation
-          event.stopPropagation();
+        
+        // Add direct click handler to the entire sequence item
+        sequenceItem.addEventListener('click', function(event) {
+          // Only handle clicks on the sequence name, not the delete button
+          if (!event.target.closest('.delete-btn')) {
+            const seqId = this.dataset.id;
+            log(`Sequence item clicked: ${seqId}`, 'info');
+            selectSequenceDirectly(seqId);
+          }
         });
       });
       
+      // Add event listeners for delete buttons
       document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(event) {
+          event.stopPropagation(); // Prevent triggering the parent's click event
           deleteSequence(this.dataset.id);
         });
       });
@@ -532,58 +530,54 @@
         `${currentSequence.name} (${currentSequence.noteCount} notes)` : 'None';
     }
     
-    // Select a sequence - ENHANCED DEBUG VERSION
-    async function selectSequence(sequenceId) {
-      console.log(`selectSequence called with ID: ${sequenceId}`);
-      log(`DEBUG: selectSequence called with sequenceId=${sequenceId}`, 'info');
-      
+    // COMPLETELY NEW APPROACH: Direct sequence selection
+    async function selectSequenceDirectly(sequenceId) {
       if (!state.sessionId || !sequenceId) {
-        console.error('Missing sessionId or sequenceId!', { 
-          sessionId: state.sessionId, 
-          sequenceId: sequenceId 
-        });
-        log(`ERROR: Missing sessionId (${state.sessionId}) or sequenceId (${sequenceId})`, 'error');
+        log('Missing session or sequence ID', 'error');
         return;
       }
       
-      // Show which sequence we're currently on vs which one we're switching to
-      log(`Current sequence: ${state.currentSequenceId}, switching to: ${sequenceId}`, 'info');
+      log(`Selecting sequence directly: ${sequenceId}`, 'info');
       
       try {
-        // Prepare the request URL and body
-        const url = `/api/sessions/${state.sessionId}`;
-        const body = JSON.stringify({ currentSequenceId: sequenceId });
+        // Use XMLHttpRequest for better debugging
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', `/api/sessions/${state.sessionId}`, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
         
-        log(`Making PUT request to: ${url} with body: ${body}`, 'info');
-        console.log(`Making PUT request to: ${url}`, { body });
+        xhr.onload = async function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            log(`Server responded with status ${xhr.status}`, 'success');
+            log(`Response text: ${xhr.responseText.substring(0, 50)}...`, 'info');
+            
+            // Update the current sequence ID
+            state.currentSequenceId = sequenceId;
+            log(`Current sequence ID set to: ${state.currentSequenceId}`, 'success');
+            
+            // Refresh data and UI
+            await refreshSessionData();
+            await refreshPianoRoll();
+            
+            log('Sequence switch completed successfully', 'success');
+          } else {
+            log(`Error: Server returned status ${xhr.status}`, 'error');
+            log(`Response: ${xhr.responseText}`, 'error');
+          }
+        };
         
-        // Use callApi instead of direct fetch for consistent handling
-        const data = await callApi(`/sessions/${state.sessionId}`, 'PUT', { 
+        xhr.onerror = function() {
+          log('Error: Network request failed', 'error');
+        };
+        
+        // Prepare the request body
+        const requestData = JSON.stringify({ 
           currentSequenceId: sequenceId 
         });
         
-        if (!data) {
-          console.error('Failed to update sequence - null response from callApi');
-          log(`Failed to update sequence - null response from API`, 'error');
-          return;
-        }
-        
-        console.log('Response from server:', data);
-        log(`Server response: ${JSON.stringify(data).substring(0, 100)}...`, 'success');
-        
-        // Set the current sequence
-        state.currentSequenceId = sequenceId;
-        log(`Current sequence set to: ${sequenceId}`, 'success');
-        
-        // Refresh data and UI
-        await refreshSessionData();
-        await refreshPianoRoll();
-        
-        // Final verification
-        log(`Sequence switch complete. Current sequence is now: ${state.currentSequenceId}`, 'success');
+        log(`Sending request: ${requestData}`, 'info');
+        xhr.send(requestData);
       } catch (error) {
-        console.error('Error selecting sequence:', error);
-        log(`Error selecting sequence: ${error.message}`, 'error');
+        log(`Error in selectSequenceDirectly: ${error.message}`, 'error');
       }
     }
     
@@ -626,7 +620,7 @@
       await refreshSessionData();
       
       // Select the new sequence
-      await selectSequence(sequenceId);
+      await selectSequenceDirectly(sequenceId);
     }
     
     // Delete a sequence (clear its notes) - FIXED to use direct fetch for sequence selection
@@ -1115,7 +1109,7 @@
               log(`No notes in current sequence, showing notes from ${trackWithNotes.name} instead`, 'info');
               notes = trackWithNotes.notes;
               // Auto-select this track
-              await selectSequence(trackWithNotes.id);
+              await selectSequenceDirectly(trackWithNotes.id);
             } else {
               log('No notes found in any sequence', 'info');
             }
