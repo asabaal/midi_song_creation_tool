@@ -555,13 +555,17 @@ async function debugSessionState() {
       return true;
     }
     
-  async function refreshSessionData() {
+    async function refreshSessionData() {
   log("Starting refreshSessionData...", 'info');
   
   if (!state.sessionId) {
     log('No session ID available', 'error');
     return false;
   }
+  
+  // Store the current sequence ID before making the API call
+  const previousSequenceId = state.currentSequenceId;
+  log(`Previous sequence ID: ${previousSequenceId}`, 'info');
   
   const data = await callApi(`/sessions/${state.sessionId}`);
   if (!data || !data.session) {
@@ -571,10 +575,18 @@ async function debugSessionState() {
   
   console.log('Session data:', data);
   
-  // Store session data
-  state.currentSequenceId = data.session.currentSequenceId;
+  // IMPORTANT: Only update the currentSequenceId if we don't already have one
+  // or if the server is returning a different one than what we set
+  if (!state.currentSequenceId || 
+      (data.session.currentSequenceId !== state.currentSequenceId && 
+       previousSequenceId !== state.currentSequenceId)) {
+    state.currentSequenceId = data.session.currentSequenceId;
+    log(`Updated state.currentSequenceId from server: ${state.currentSequenceId}`, 'info');
+  } else {
+    log(`Keeping current sequence ID: ${state.currentSequenceId}`, 'info');
+  }
   
-  // Extract sequences from tracks (in this app, tracks are used as sequences)
+  // Extract sequences from tracks
   if (data.session.tracks) {
     state.sequences = data.session.tracks.map(track => ({
       id: track.id,
@@ -585,7 +597,7 @@ async function debugSessionState() {
     
     log(`Found ${state.sequences.length} sequences in session`, 'success');
     
-    // Explicitly force a UI update
+    // Force UI updates
     updateSequencesList();
     updateSequenceLabels();
     
@@ -688,32 +700,30 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
   }
   
   log(`Selecting sequence directly: ${sequenceId}`, 'info');
-  debugSessionState(); // Log the current state
   
   try {
-    // Use callApi helper function
+    // IMPORTANT: Update the state immediately before any API calls
+    state.currentSequenceId = sequenceId;
+    log(`Set state.currentSequenceId to: ${sequenceId}`, 'success');
+    
+    // Make the API call to update the server
     const result = await callApi(`/sessions/${state.sessionId}`, 'PUT', {
       currentSequenceId: sequenceId
     });
     
     if (!result) {
-      log('Failed to update current sequence', 'error');
+      log('Failed to update current sequence on server', 'error');
       return;
     }
     
-    // Update the current sequence ID
-    state.currentSequenceId = sequenceId;
-    log(`Current sequence ID set to: ${state.currentSequenceId}`, 'success');
+    log(`Server updated with sequence ID: ${sequenceId}`, 'success');
     
-    // DIRECT UI UPDATE - Force the UI to reflect the current sequence
-    log('Directly updating UI...', 'info');
-    
-    // 1. Update all sequence items to remove 'current' and 'selected' classes
+    // Update UI elements directly
+    // 1. Clear current/selected states from all sequences
     document.querySelectorAll('.sequence-item').forEach(item => {
       item.classList.remove('current');
       item.classList.remove('selected');
       
-      // Also update any current-indicator spans
       const currentIndicator = item.querySelector('.current-indicator');
       if (currentIndicator) {
         currentIndicator.remove();
@@ -726,7 +736,7 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
       selectedItem.classList.add('current');
       selectedItem.classList.add('selected');
       
-      // Add the current indicator back
+      // Add the current indicator
       const nameElement = selectedItem.querySelector('.sequence-name');
       if (nameElement) {
         const indicator = document.createElement('span');
@@ -741,14 +751,10 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
       log(`Warning: Could not find sequence element with ID ${sequenceId}`, 'error');
     }
     
-    // 3. Update the current sequence label
-    const currentSequence = state.sequences.find(s => s.id === sequenceId);
-    if (currentSequence) {
-      currentSequenceLabel.textContent = `${currentSequence.name} (${currentSequence.noteCount} notes)`;
-    }
+    // Update the current sequence label directly
+    updateCurrentSequenceLabel();
     
-    // 4. Still call the regular refresh functions
-    await refreshSessionData();
+    // Finally refresh the piano roll
     await refreshPianoRoll();
     
     log('Sequence switch completed successfully', 'success');
@@ -757,8 +763,7 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
   }
 }
 
-    // Create a new sequence
-    async function createSequence() {
+async function createSequence() {
   if (!state.sessionId) {
     log('Set up session first', 'error');
     return;
@@ -772,9 +777,6 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
   
   sequenceError.textContent = '';
   log(`Creating new sequence: ${name}`);
-  
-  // Debug current state before creation
-  await debugSessionState();
   
   // Create a new sequence
   const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences`, 'POST', {
@@ -792,20 +794,13 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
   const sequenceId = sequenceData.sequenceId || sequenceData.id;
   log(`Sequence created: ${sequenceId}`, 'success');
   
-  // Debug state after creation
-  await debugSessionState();
-  
   // Clear input
   newSequenceName.value = '';
   
-  // Refresh data first
+  // Refresh data first to get updated sequences list
   await refreshSessionData();
   
-  // Debug state after refresh
-  await debugSessionState();
-  
-  // Then select the new sequence
-  //await selectSequenceDirectly(sequenceId);
+  // Then select the new sequence using our improved function
   await selectSequenceDirectly(sequenceId);
 }
     
@@ -1206,111 +1201,124 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
       }
     }
     
-  // Refresh piano roll with notes - simpler version to just make it work again
-  async function refreshPianoRoll() {
-    try {
-      if (!state.sessionId) {
-        log('No session ID available', 'info');
-        return;
-      }
-      
-      log(`Refreshing piano roll for session ${state.sessionId}`, 'info');
-      
-      // Get session data through /api/sessions/:id endpoint which we know works
-      const data = await callApi(`/sessions/${state.sessionId}`, 'GET');
-      
-      if (!data || !data.session) {
-        log('Failed to get session data', 'error');
-        return;
-      }
-      
-      // Clear existing notes
-      document.querySelectorAll('.piano-note').forEach(note => note.remove());
-      
-      // Extract notes from any tracks in the session
-      let notes = [];
-      let sourceName = "";
-      
-      if (data.session && data.session.tracks) {
-        // First try to find the current track/sequence
-        if (state.currentSequenceId) {
-          const currentTrack = data.session.tracks.find(t => t.id === state.currentSequenceId);
-          if (currentTrack && currentTrack.notes && currentTrack.notes.length > 0) {
-            notes = currentTrack.notes;
-            sourceName = currentTrack.name || "current sequence";
-            log(`Found ${notes.length} notes in ${sourceName}`, 'success');
-          }
-        }
-        
-        // If no notes found in current sequence, look for any track with notes
-        if (notes.length === 0) {
-          for (const track of data.session.tracks) {
-            if (track.notes && track.notes.length > 0) {
-              notes = track.notes;
-              sourceName = track.name || "alternate sequence";
-              log(`No notes in current sequence, using ${notes.length} notes from ${sourceName}`, 'info');
-              break;
-            }
-          }
-        }
-      }
-      
-      // Display the notes
-      if (notes.length > 0) {
-        notes.forEach(note => {
-          const noteElement = document.createElement('div');
-          
-          // Select class based on channel or instrument
-          const channel = note.channel || note.instrument || 0;
-          if (channel === 9) {
-            noteElement.className = 'piano-note drum-note';
-          } else if (channel === 1 || channel === 32) {
-            noteElement.className = 'piano-note bassline-note';
-          } else {
-            noteElement.className = 'piano-note';
-          }
-          
-          // Position and size
-          noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
-          noteElement.style.left = `${note.startTime * 30 + 100}px`;
-          noteElement.style.width = `${note.duration * 30}px`;
-          
-          // Add data for playback
-          noteElement.dataset.pitch = note.pitch;
-          noteElement.dataset.start = note.startTime;
-          noteElement.dataset.duration = note.duration;
-          noteElement.dataset.velocity = note.velocity || 100;
-          noteElement.dataset.channel = note.channel || note.instrument || 0;
-          
-          // Add note name for better visibility
-          noteElement.textContent = note.pitch;
-          
-          pianoRoll.appendChild(noteElement);
-        });
-        
-        // Update state and UI
-        state.noteCount = notes.length;
-        
-        // Update player status
-        playBtn.disabled = false;
-        stopBtn.disabled = false;
-        playStatus.textContent = `${notes.length} notes ready to play`;
-        exportStatus.textContent = 'Ready to export';
-      } else {
-        log('No notes to display', 'info');
-        state.noteCount = 0;
-        
-        // Update player status
-        playBtn.disabled = true;
-        stopBtn.disabled = true;
-        playStatus.textContent = 'Nothing to play';
-      }
-    } catch (error) {
-      console.error('Error refreshing piano roll:', error);
-      log(`Error refreshing piano roll: ${error.message}`, 'error');
-    }
-  }
+    async function refreshPianoRoll() {
+  try {
+    log(`Starting piano roll refresh...`, 'info');
+    log(`Current state - sessionId: ${state.sessionId}, sequenceId: ${state.currentSequenceId}`, 'info');
     
+    if (!state.sessionId) {
+      log('No session ID available', 'info');
+      return;
+    }
+    
+    // Clear existing notes first
+    document.querySelectorAll('.piano-note').forEach(note => note.remove());
+    
+    // IMPORTANT: Make a direct fetch for the session data
+    // This is to avoid any issues with refreshSessionData changing the currentSequenceId
+    const response = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const data = await response.json();
+    
+    if (!data || !data.session) {
+      log('Failed to get session data', 'error');
+      return;
+    }
+    
+    // DO NOT update state.currentSequenceId here - use the one we already have
+    log(`Got session data but keeping sequence ID: ${state.currentSequenceId}`, 'info');
+    
+    // Find the requested track by ID, NOT by using the server's currentSequenceId
+    const currentTrack = data.session.tracks.find(t => t.id === state.currentSequenceId);
+    
+    if (!currentTrack) {
+      log(`No track found with ID ${state.currentSequenceId}`, 'error');
+      return;
+    }
+    
+    log(`Found track: ${currentTrack.name} with ${currentTrack.notes ? currentTrack.notes.length : 0} notes`, 'success');
+    
+    // Display notes from the current track
+    if (currentTrack.notes && currentTrack.notes.length > 0) {
+      currentTrack.notes.forEach(note => {
+        // [Rest of the note display code remains the same]
+        const noteElement = document.createElement('div');
+        
+        // Select class based on channel or instrument
+        const channel = note.channel || note.instrument || 0;
+        if (channel === 9) {
+          noteElement.className = 'piano-note drum-note';
+        } else if (channel === 1 || channel === 32) {
+          noteElement.className = 'piano-note bassline-note';
+        } else {
+          noteElement.className = 'piano-note';
+        }
+        
+        // Position and size
+        noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
+        noteElement.style.left = `${note.startTime * 30 + 100}px`;
+        noteElement.style.width = `${note.duration * 30}px`;
+        
+        // Add data for playback
+        noteElement.dataset.pitch = note.pitch;
+        noteElement.dataset.start = note.startTime;
+        noteElement.dataset.duration = note.duration;
+        noteElement.dataset.velocity = note.velocity || 100;
+        noteElement.dataset.channel = note.channel || 0;
+        
+        // Add note name for better visibility
+        noteElement.textContent = note.pitch;
+        
+        pianoRoll.appendChild(noteElement);
+      });
+      
+      // Update state and UI
+      state.noteCount = currentTrack.notes.length;
+      
+      // Update player status
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      playStatus.textContent = `${currentTrack.notes.length} notes ready to play`;
+      exportStatus.textContent = 'Ready to export';
+    } else {
+      log('Current track has no notes to display', 'info');
+      state.noteCount = 0;
+      
+      // Update player status
+      playBtn.disabled = true;
+      stopBtn.disabled = true;
+      playStatus.textContent = 'Nothing to play';
+    }
+    
+    // Update the sequence label directly
+    updateCurrentSequenceLabel();
+  } catch (error) {
+    console.error('Error refreshing piano roll:', error);
+    log(`Error refreshing piano roll: ${error.message}`, 'error');
+  }
+}
+
+// New utility function to directly update current sequence label
+function updateCurrentSequenceLabel() {
+  // Find the current sequence in our sequence list
+  const currentSequence = state.sequences.find(s => s.id === state.currentSequenceId);
+  
+  if (currentSequence) {
+    const track = state.sequences.find(s => s.id === state.currentSequenceId);
+    const noteCount = track ? track.noteCount : 0;
+    
+    // Update the label directly
+    currentSequenceLabel.textContent = `${currentSequence.name} (${noteCount} notes)`;
+    log(`Updated sequence label to: ${currentSequence.name}`, 'info');
+  } else {
+    currentSequenceLabel.textContent = 'None';
+    log('No current sequence found for label update', 'warning');
+  }
+}
+
     // Play the sequence
     function playSequence() {
       if (!state.audioContext) {
