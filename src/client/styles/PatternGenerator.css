@@ -1,0 +1,226 @@
+/* src/client/styles/PatternGenerator.css */
+
+.pattern-generator {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  font-family: Arial, sans-serif;
+  color: #333;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  overflow: hidden;
+}
+
+.pattern-tabs {
+  display: flex;
+  background-color: #2c3e50;
+}
+
+.pattern-tabs button {
+  flex: 1;
+  padding: 12px;
+  background-color: transparent;
+  border: none;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.pattern-tabs button:hover {
+  background-color: #34495e;
+}
+
+.pattern-tabs button.active {
+  background-color: #3498db;
+  color: white;
+}
+
+.pattern-content {
+  padding: 20px;
+}
+
+.pattern-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+}
+
+.form-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.form-row label.full-width {
+  flex-basis: 100%;
+}
+
+.checkbox-label {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.pattern-form select,
+.pattern-form input[type="text"] {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.pattern-form input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.form-buttons button {
+  flex: 1;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.form-buttons button:first-child {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.form-buttons button:last-child {
+  background-color: #3498db;
+  color: white;
+}
+
+.form-buttons button:hover {
+  filter: brightness(0.9);
+}
+
+.form-buttons button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.loading {
+  margin-top: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.error {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+}
+
+.pattern-preview {
+  margin-top: 25px;
+  padding: 15px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.pattern-preview h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #333;
+}
+
+.preview-beats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.beat {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+}
+
+.beat-number {
+  font-weight: 500;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #555;
+}
+
+.beat-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.note {
+  font-size: 13px;
+  color: #333;
+}
+
+.pattern-preview button {
+  padding: 8px 15px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.pattern-preview button:hover {
+  background-color: #45a049;
+}
+
+.pattern-preview button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.track-selector {
+  margin-bottom: 15px;
+}
+
+.track-selector label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.track-selector select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 150px;
+}

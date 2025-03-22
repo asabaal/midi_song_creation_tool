@@ -2,6 +2,8 @@
 
 A simple web-based tool for creating and experimenting with MIDI music. Create chord progressions, basslines, and drum patterns, then export them for use in your favorite DAW.
 
+This framework provides a robust set of tools for working with MIDI data programmatically, including core modules for music theory, note manipulation, pattern generation, and sequence operations.
+
 ## Features
 
 - **Easy-to-use web interface** - Create music with just a few clicks
@@ -12,6 +14,16 @@ A simple web-based tool for creating and experimenting with MIDI music. Create c
 - **Export as JSON** - Export your sequences as JSON for sharing or importing later
 - **Import functionality** - Import previously exported sequences to continue editing
 
+## Project Structure
+
+This project is organized with a clean directory structure:
+
+1. **Core Library** (`src/core`): Handles note creation, manipulation and basic music theory
+2. **Server** (`src/server`): Provides structured API endpoints
+3. **Web Interface** (`public`): Simple UI for testing and visualization
+
+> **Note:** If you're migrating from the previous version, please see the [Migration Guide](MIGRATION.md) for details on the new structure and API changes.
+
 ## Requirements
 
 - Node.js (v14 or higher)
@@ -21,16 +33,11 @@ A simple web-based tool for creating and experimenting with MIDI music. Create c
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/asabaal/midi_song_creation_tool.git
-   cd midi_song_creation_tool
+   git clone https://github.com/asabaal/midi-song-creation-tool.git
+   cd midi-song-creation-tool
    ```
 
-2. Checkout the `develop` branch (this contains the most recent code):
-   ```bash
-   git checkout develop
-   ```
-
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
@@ -42,12 +49,17 @@ A simple web-based tool for creating and experimenting with MIDI music. Create c
    npm start
    ```
 
-2. Open your browser and go to:
-   ```
-   http://localhost:3003
+2. For development mode with auto-restart:
+   ```bash
+   npm run dev
    ```
 
-3. Use the interface to create music:
+3. Open your browser and go to:
+   ```
+   http://localhost:3000
+   ```
+
+4. Use the interface to create music:
    - Click "Set Up" to create a session and sequence
    - Add chord progressions, basslines, and drum patterns
    - Use the Play button to hear your creation
@@ -80,11 +92,11 @@ To export:
 ### Importing Music
 
 To import previously exported JSON data:
-- Click "Import"
-- Either:
-  - Paste the JSON data into the text area, or
-  - Use the file input to upload a JSON file
-- Click "Process Import"
+1. Click "Import"
+2. Either:
+   - Paste the JSON data into the text area, or
+   - Use the file input to upload a JSON file
+3. Click "Process Import"
 
 ## API Endpoints
 
@@ -114,10 +126,9 @@ The tool exposes a RESTful API for programmatic access. Here are the key endpoin
 ## Debugging
 
 If you encounter issues:
-
-1. Check the server console for error messages
-2. Try the debug interface: `http://localhost:3003/debug.html`
-3. Review the error.log file for detailed error information
+- Check the server console for error messages
+- Try the debug interface: http://localhost:3000/debug.html
+- Review the error.log file for detailed error information
 
 ## Next Steps for Development
 
@@ -129,4 +140,4 @@ If you encounter issues:
 
 ## License
 
-ISC
+MIT

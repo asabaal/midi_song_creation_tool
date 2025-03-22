@@ -1,11 +1,13 @@
 {
-  "name": "midi_song_creation_tool",
+  "name": "midi-song-creation-tool",
   "version": "1.0.0",
-  "description": "An agentic framework for creating, editing, and analyzing MIDI files for songwriting and music production.",
-  "main": "midi-api.js",
+  "description": "MIDI Song Creation Tool - An agentic framework for creating, manipulating and analyzing MIDI music",
+  "main": "src/server/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node midi-api.js"
+    "start": "node src/server/server.js",
+    "dev": "nodemon src/server/server.js",
+    "build": "echo \"No build step required for now\" && exit 0",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +17,13 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "midi-writer-js": "^2.1.4",
-    "node-fetch": "^3.3.2"
+    "mongoose": "^7.5.0",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
+    "prop-types": "^15.8.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIDI Tool - Piano Roll Debugger</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    h1, h2 { color: #333; }
+    button { background: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin: 5px; }
+    .card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
+    #session-info { font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow: auto; background: #f5f5f5; padding: 10px; }
+    #api-response { font-family: monospace; white-space: pre-wrap; max-height: 500px; overflow: auto; background: #f5f5f5; padding: 10px; }
+    .error { color: red; font-weight: bold; }
+    .success { color: green; }
+    .note-counter { font-weight: bold; color: blue; }
+    input[type="text"] { padding: 8px; width: 300px; }
+  </style>
+</head>
+<body>
+  <h1>MIDI Tool - Piano Roll Debugger</h1>
+  
+  <div class="card">
+    <h2>Session Loader</h2>
+    <p>Enter session ID to inspect:</p>
+    <input type="text" id="session-id" placeholder="Enter session ID">
+    <button id="load-session">Load Session</button>
+    <p>Or create a new session:</p>
+    <button id="create-session">Create New Session</button>
+  </div>
+  
+  <div class="card">
+    <h2>Pattern Generator</h2>
+    <p>Create patterns to test note display:</p>
+    <button id="add-chords" disabled>Add Chord Progression</button>
+    <button id="add-bass" disabled>Add Bassline</button>
+    <button id="add-drums" disabled>Add Drums</button>
+    <button id="clear-notes" disabled>Clear Notes</button>
+  </div>
+  
+  <div class="card">
+    <h2>Session Info</h2>
+    <div id="session-info">No session loaded</div>
+  </div>
+  
+  <div class="card">
+    <h2>API Response</h2>
+    <div id="api-response">No API calls made yet</div>
+  </div>
+  
+  <script>
+    // DOM elements
+    const sessionIdInput = document.getElementById('session-id');
+    const loadSessionBtn = document.getElementById('load-session');
+    const createSessionBtn = document.getElementById('create-session');
+    const addChordsBtn = document.getElementById('add-chords');
+    const addBassBtn = document.getElementById('add-bass');
+    const addDrumsBtn = document.getElementById('add-drums');
+    const clearNotesBtn = document.getElementById('clear-notes');
+    const sessionInfo = document.getElementById('session-info');
+    const apiResponse = document.getElementById('api-response');
+    
+    // Current session state
+    let state = {
+      sessionId: null,
+      currentSequenceId: null
+    };
+    
+    // Helper to make API calls
+    async function callApi(endpoint, method = 'GET', body = null) {
+      try {
+        const options = {
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        };
+        
+        if (body) {
+          options.body = JSON.stringify(body);
+        }
+        
+        updateApiResponse(`Calling ${method} ${endpoint}...`);
+        const response = await fetch(endpoint, options);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          updateApiResponse(`Error ${response.status}: ${errorText}`, true);
+          return null;
+        }
+        
+        const data = await response.json();
+        updateApiResponse(`Response from ${method} ${endpoint}:\n${JSON.stringify(data, null, 2)}`);
+        return data;
+      } catch (error) {
+        updateApiResponse(`Error: ${error.message}`, true);
+        return null;
+      }
+    }
+    
+    // Update API response display
+    function updateApiResponse(text, isError = false) {
+      apiResponse.innerHTML = isError ? 
+        `<div class="error">${text}</div>` : 
+        `<div>${text}</div>`;
+    }
+    
+    // Update session info display
+    function updateSessionInfo(session) {
+      if (!session) {
+        sessionInfo.textContent = "No session loaded";
+        return;
+      }
+      
+      // Count notes in all tracks
+      const totalNotes = session.tracks 
+        ? session.tracks.reduce((sum, track) => sum + (track.notes ? track.notes.length : 0), 0) 
+        : 0;
+      
+      // Format track info
+      const tracksInfo = session.tracks
+        ? session.tracks.map(track => ({
+            id: track.id,
+            name: track.name,
+            instrument: track.instrument,
+            noteCount: track.notes ? track.notes.length : 0,
+            firstFewNotes: track.notes && track.notes.length > 0 
+              ? track.notes.slice(0, 2).map(note => ({
+                  pitch: note.pitch,
+                  startTime: note.startTime,
+                  duration: note.duration,
+                  channel: note.channel
+                }))
+              : []
+          }))
+        : [];
+      
+      // Create summary
+      const summary = {
+        id: session.id,
+        currentSequenceId: session.currentSequenceId,
+        tracks: tracksInfo,
+        totalNotes
+      };
+      
+      // Display with highlighted note count
+      const formattedSummary = JSON.stringify(summary, null, 2)
+        .replace(/"noteCount": (\d+)/g, '"noteCount": <span class="note-counter">$1</span>');
+      
+      sessionInfo.innerHTML = `
+        <div>${formattedSummary}</div>
+        <div class="success">Total Notes: ${totalNotes}</div>
+      `;
+    }
+    
+    // Enable/disable buttons based on session state
+    function updateButtonState() {
+      const hasSession = !!state.sessionId;
+      
+      addChordsBtn.disabled = !hasSession;
+      addBassBtn.disabled = !hasSession;
+      addDrumsBtn.disabled = !hasSession;
+      clearNotesBtn.disabled = !hasSession;
+    }
+    
+    // Load session
+    async function loadSession(sessionId) {
+      if (!sessionId) {
+        alert('Please enter a session ID');
+        return;
+      }
+      
+      const data = await callApi(`/api/sessions/${sessionId}`);
+      
+      if (data && data.success && data.session) {
+        state.sessionId = data.session.id;
+        state.currentSequenceId = data.session.currentSequenceId;
+        
+        updateSessionInfo(data.session);
+        updateButtonState();
+      } else {
+        state.sessionId = null;
+        state.currentSequenceId = null;
+        updateButtonState();
+      }
+    }
+    
+    // Create new session
+    async function createNewSession() {
+      const data = await callApi('/api/sessions', 'POST', {
+        name: 'Debug Session',
+        bpm: 120,
+        timeSignature: [4, 4]
+      });
+      
+      if (data && data.success && data.sessionId) {
+        state.sessionId = data.sessionId;
+        sessionIdInput.value = data.sessionId;
+        
+        // Load the new session to get full details
+        await loadSession(data.sessionId);
+      }
+    }
+    
+    // Add chord progression
+    async function addChordProgression() {
+      if (!state.sessionId) return;
+      
+      const data = await callApi(`/api/sessions/${state.sessionId}/patterns/chord-progression`, 'POST', {
+        key: 'C',
+        progressionName: 'I-IV-V-I',
+        scaleType: 'major',
+        octave: 4,
+        rhythmPattern: [4]
+      });
+      
+      if (data && data.success) {
+        await loadSession(state.sessionId);
+      }
+    }
+    
+    // Add bassline
+    async function addBassline() {
+      if (!state.sessionId) return;
+      
+      const data = await callApi(`/api/sessions/${state.sessionId}/patterns/bassline`, 'POST', {
+        key: 'C',
+        progressionName: 'I-IV-V-I',
+        scaleType: 'major',
+        octave: 3,
+        rhythmPattern: [1, 0.5, 0.5]
+      });
+      
+      if (data && data.success) {
+        await loadSession(state.sessionId);
+      }
+    }
+    
+    // Add drums
+    async function addDrums() {
+      if (!state.sessionId) return;
+      
+      const data = await callApi(`/api/sessions/${state.sessionId}/patterns/drums`, 'POST', {
+        patternType: 'basic',
+        measures: 2
+      });
+      
+      if (data && data.success) {
+        await loadSession(state.sessionId);
+      }
+    }
+    
+    // Clear notes
+    async function clearNotes() {
+      if (!state.sessionId) return;
+      
+      const data = await callApi(`/api/sessions/${state.sessionId}/notes`, 'DELETE');
+      
+      if (data && data.success) {
+        await loadSession(state.sessionId);
+      }
+    }
+    
+    // Event listeners
+    loadSessionBtn.addEventListener('click', () => loadSession(sessionIdInput.value));
+    createSessionBtn.addEventListener('click', createNewSession);
+    addChordsBtn.addEventListener('click', addChordProgression);
+    addBassBtn.addEventListener('click', addBassline);
+    addDrumsBtn.addEventListener('click', addDrums);
+    clearNotesBtn.addEventListener('click', clearNotes);
+    
+    // Check for session ID in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionIdFromUrl = urlParams.get('sessionId');
+    if (sessionIdFromUrl) {
+      sessionIdInput.value = sessionIdFromUrl;
+      loadSession(sessionIdFromUrl);
+    }
+  </script>
+</body>
+</html>

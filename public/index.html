@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Simple MIDI Player</title>
+  <title>MIDI Song Creation Tool</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
     h1, h2 { color: #333; }
@@ -34,22 +34,191 @@
     textarea { width: 100%; height: 100px; margin-top: 10px; font-family: monospace; }
     .hidden { display: none; }
     .info-text { font-size: 0.9em; color: #666; margin: 5px 0; }
+    
+    /* New styles for sequence management */
+    .sequence-manager {
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #dee2e6;
+    }
+    
+    .sequence-manager h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #333;
+    }
+    
+    .sequences-list {
+      margin-bottom: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+    }
+    
+    .sequence-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .sequence-item:last-child {
+      border-bottom: none;
+    }
+    
+    .sequence-item:hover {
+      background-color: #f0f0f0;
+    }
+    
+    .sequence-item.selected {
+      background-color: #e9ecef;
+    }
+    
+    .sequence-item.current {
+      border-left: 3px solid #007bff;
+    }
+    
+    .sequence-item.has-notes {
+      font-weight: 600;
+    }
+    
+    .sequence-name {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .note-count {
+      font-size: 12px;
+      color: #6c757d;
+      margin-left: 8px;
+    }
+    
+    .current-indicator {
+      font-size: 12px;
+      color: #007bff;
+      margin-left: 5px;
+    }
+    
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #dc3545;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 5px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    
+    .delete-btn:hover {
+      opacity: 1;
+    }
+    
+    .delete-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    
+    .sequence-controls {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    
+    .sequence-controls input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 4px 0 0 4px;
+      font-size: 14px;
+    }
+    
+    .sequence-controls button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 0 4px 4px 0;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+    
+    .sequence-controls button:hover {
+      background-color: #0069d9;
+    }
+    
+    .sequence-controls button:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+    }
+    
+    .error-message {
+      color: #dc3545;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    
+    .sequence-info {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #6c757d;
+      border-top: 1px solid #eee;
+      padding-top: 8px;
+    }
   </style>
 </head>
 <body>
-  <h1>Super Simple MIDI Player</h1>
+  <h1>MIDI Song Creation Tool</h1>
   <p>Create music with just a few clicks:</p>
   
   <div class="card">
     <h2>1. Create a Session and Sequence</h2>
     <div class="controls">
-      <button id="setupBtn">Set Up (Create Session + Sequence)</button>
+      <button id="setupBtn">Set Up (Create Session)</button>
       <span id="setupStatus">Not set up yet</span>
     </div>
   </div>
   
+  <!-- New Sequence Manager UI -->
+  <div class="card" id="sequenceManagerCard" style="display: none;">
+    <h2>2. Manage Sequences</h2>
+    <div class="sequence-manager">
+      <h3>Sequences</h3>
+      
+      <div class="sequences-list" id="sequencesList">
+        <!-- Sequences will be inserted here by JavaScript -->
+      </div>
+      
+      <div class="sequence-controls">
+        <input
+          type="text"
+          id="newSequenceName"
+          placeholder="New Sequence Name"
+        />
+        <button id="createSequenceBtn">Create Sequence</button>
+      </div>
+      
+      <div class="error-message" id="sequenceError"></div>
+      
+      <div class="sequence-info">
+        <p>
+          <strong>Current Sequence:</strong> <span id="currentSequenceLabel">None</span>
+        </p>
+      </div>
+    </div>
+  </div>
+  
   <div class="card">
-    <h2>2. Generate Music</h2>
+    <h2>3. Generate Music</h2>
     <div class="controls">
       <button id="chordBtn" disabled>Add Chord Progression</button>
       <button id="bassBtn" class="blue" disabled>Add Bassline</button>
@@ -59,7 +228,7 @@
   </div>
   
   <div class="card">
-    <h2>3. Play Music</h2>
+    <h2>4. Play Music</h2>
     <div class="controls">
       <button id="playBtn" disabled>▶️ Play</button>
       <button id="stopBtn" disabled>⏹️ Stop</button>
@@ -68,7 +237,7 @@
   </div>
 
   <div class="card">
-    <h2>4. Import/Export</h2>
+    <h2>5. Import/Export</h2>
     <div class="controls">
       <button id="exportMidiBtn" class="purple" disabled>💾 Export to MIDI File</button>
       <button id="exportJsonBtn" class="purple" disabled>📄 Export as JSON</button>
@@ -106,13 +275,151 @@
     // Global state
     let state = {
       sessionId: null,
-      sequenceId: null,
+      currentSequenceId: null,
       audioContext: null,
       isPlaying: false,
       oscillators: [],
-      noteCount: 0
+      noteCount: 0,
+      sequences: [] // New: store all sequences
+    };
+
+// Simple test function to diagnose session switching issues
+async function testSessionSwitch() {
+  log("DIAGNOSTIC TEST: Session Switching", "info");
+  
+  // Log the session ID stored in state
+  log(`Session ID in state: ${state.sessionId || 'NONE'}`, "info");
+  
+  if (!state.sessionId) {
+    log("No session ID available - cannot perform test", "error");
+    return;
+  }
+  
+  // Test 1: Try to get session info (known working path)
+  log("Test 1: GET session info", "info");
+  try {
+    const getResponse = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const getStatus = getResponse.status;
+    log(`GET status: ${getStatus}`, getStatus >= 200 && getStatus < 300 ? "success" : "error");
+    
+    if (getStatus >= 200 && getStatus < 300) {
+      const getData = await getResponse.json();
+      log(`GET success: Found session with ID ${getData.session.id}`, "success");
+      log(`Current sequence ID: ${getData.session.currentSequenceId || 'NONE'}`, "info");
+    } else {
+      const errorText = await getResponse.text();
+      log(`GET error response: ${errorText}`, "error");
+    }
+  } catch (error) {
+    log(`GET exception: ${error.message}`, "error");
+  }
+  
+  // Test 2: Try a direct fetch with PUT
+  log("Test 2: PUT session update with fetch", "info");
+  try {
+    // Pick a sequence ID to test with
+    const testSequenceId = state.sequences && state.sequences.length > 0 ? 
+                          state.sequences[0].id : null;
+    
+    if (!testSequenceId) {
+      log("No sequence ID available for testing", "error");
+      return;
+    }
+    
+    log(`Testing with sequence ID: ${testSequenceId}`, "info");
+    
+    const putBody = JSON.stringify({ currentSequenceId: testSequenceId });
+    log(`PUT request body: ${putBody}`, "info");
+    
+    const putResponse = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'PUT', 
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: putBody
+    });
+    
+    const putStatus = putResponse.status;
+    log(`PUT status: ${putStatus}`, putStatus >= 200 && putStatus < 300 ? "success" : "error");
+    
+    const responseText = await putResponse.text();
+    log(`PUT response: ${responseText}`, "info");
+  } catch (error) {
+    log(`PUT exception: ${error.message}`, "error");
+  }
+  
+  // Test 3: Try the original XMLHttpRequest approach but with verbose logging
+  log("Test 3: PUT session update with XMLHttpRequest", "info");
+  try {
+    const testSequenceId = state.sequences && state.sequences.length > 0 ? 
+                          state.sequences[0].id : null;
+    
+    if (!testSequenceId) {
+      log("No sequence ID available for testing", "error");
+      return;
+    }
+    
+    const xhr = new XMLHttpRequest();
+    const url = `/api/sessions/${state.sessionId}`;
+    log(`XHR URL: ${url}`, "info");
+    
+    xhr.open('PUT', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+      log(`XHR status: ${xhr.status}`, xhr.status >= 200 && xhr.status < 300 ? "success" : "error");
+      log(`XHR response: ${xhr.responseText}`, "info");
     };
     
+    xhr.onerror = function() {
+      log(`XHR error occurred`, "error");
+    };
+    
+    const requestData = JSON.stringify({ currentSequenceId: testSequenceId });
+    log(`XHR request data: ${requestData}`, "info");
+    xhr.send(requestData);
+  } catch (error) {
+    log(`XHR exception: ${error.message}`, "error");
+  }
+  
+  log("DIAGNOSTIC TEST COMPLETE", "info");
+}
+
+    // Debug helper function
+async function debugSessionState() {
+  log("--- DEBUG SESSION STATE ---", "info");
+  log(`Current session ID: ${state.sessionId || 'NONE'}`, "info");
+  log(`Current sequence ID: ${state.currentSequenceId || 'NONE'}`, "info");
+  
+  try {
+    // Try to fetch session data directly
+    const response = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const result = await response.text();
+    log(`Response from session fetch: ${result.substring(0, 100)}...`, "info");
+    
+    // Check what sequences are available
+    if (state.sequences && state.sequences.length > 0) {
+      log(`Available sequences: ${state.sequences.map(s => s.id).join(', ')}`, "info");
+    } else {
+      log("No sequences in client state", "info");
+    }
+  } catch (error) {
+    log(`Debug error: ${error.message}`, "error");
+  }
+  
+  log("--- END DEBUG ---", "info");
+}
+
     // DOM elements
     const setupStatus = document.getElementById('setupStatus');
     const playStatus = document.getElementById('playStatus');
@@ -125,9 +432,15 @@
     const exportArea = document.getElementById('exportArea');
     const importArea = document.getElementById('importArea');
     const fileInput = document.getElementById('fileInput');
+    const sequenceManagerCard = document.getElementById('sequenceManagerCard');
+    const sequencesList = document.getElementById('sequencesList');
+    const newSequenceName = document.getElementById('newSequenceName');
+    const sequenceError = document.getElementById('sequenceError');
+    const currentSequenceLabel = document.getElementById('currentSequenceLabel');
     
     // Buttons
     const setupBtn = document.getElementById('setupBtn');
+    const createSequenceBtn = document.getElementById('createSequenceBtn');
     const chordBtn = document.getElementById('chordBtn');
     const bassBtn = document.getElementById('bassBtn');
     const drumBtn = document.getElementById('drumBtn');
@@ -156,46 +469,59 @@
       statusBar.textContent = 'Status: ' + message;
     }
     
-    // API helper
-    async function callApi(endpoint, method = 'GET', body = null) {
-      try {
-        const options = {
-          method,
-          headers: { 'Content-Type': 'application/json' }
-        };
+// Enhanced API helper with better debugging
+async function callApi(endpoint, method = 'GET', body = null) {
+  try {
+    const options = {
+      method,
+      headers: { 'Content-Type': 'application/json' }
+    };
 
-        if (body) {
-          options.body = JSON.stringify(body);
-        }
-
-        log(`API Call: ${method} ${endpoint}`);
-        const response = await fetch(`/api${endpoint}`, options);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          log(`API error (${response.status}): ${errorText}`, 'error');
-          return null;
-        }
-        
-        // For binary responses (like MIDI files), return the Response object
-        if (response.headers.get('Content-Type') === 'audio/midi') {
-          return response;
-        }
-        
-        const data = await response.json();
-
-        if (!data.success) {
-          log(`API Error: ${data.message}`, 'error');
-          return null;
-        }
-
-        return data;
-      } catch (error) {
-        log(`Error: ${error.message}`, 'error');
-        return null;
+    if (body) {
+      // When making pattern-related calls, ensure the current sequence ID is included
+      if (endpoint.includes('patterns') && state.currentSequenceId) {
+        // Add or update sequenceId and trackId in the request body
+        body.sequenceId = state.currentSequenceId;
+        body.trackId = state.currentSequenceId;
+        log(`Enforcing current sequence ID in API call: ${state.currentSequenceId}`, 'info');
       }
+      
+      options.body = JSON.stringify(body);
+    }
+
+    log(`API Call: ${method} ${endpoint}`);
+    if (body) {
+      log(`Request body: ${JSON.stringify(body)}`, 'info');
     }
     
+    const response = await fetch(`/api${endpoint}`, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      log(`API error (${response.status}): ${errorText}`, 'error');
+      return null;
+    }
+    
+    // For binary responses (like MIDI files), return the Response object
+    if (response.headers.get('Content-Type') === 'audio/midi') {
+      return response;
+    }
+    
+    const data = await response.json();
+
+    // Handle both error formats for compatibility
+    if (data.error || (data.success === false)) {
+      log(`API Error: ${data.error || data.message}`, 'error');
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    log(`Error: ${error.message}`, 'error');
+    return null;
+  }
+}
+
     // Initialize audio context
     function initAudio() {
       try {
@@ -208,64 +534,360 @@
       }
     }
     
-    // Setup (create session and sequence)
+    // Setup (create session only, sequences are now managed separately)
     async function setup() {
       // Create session
-      const sessionData = await callApi('/sessions', 'POST', {});
+      const sessionData = await callApi('/sessions', 'POST', {
+        name: 'MIDI Song Project',
+        bpm: 120,
+        timeSignature: [4, 4]
+      });
+      
       if (!sessionData) {
         log('Failed to create session', 'error');
         return false;
       }
       
-      state.sessionId = sessionData.sessionId;
+      state.sessionId = sessionData.sessionId || sessionData._id || sessionData.id;
       log(`Session created: ${state.sessionId}`, 'success');
       
-      // Create sequence
-      const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences`, 'POST', {
-        name: 'My Music',
-        tempo: 120,
-        key: 'C major'
-      });
-      
-      if (!sequenceData) {
-        log('Failed to create sequence', 'error');
-        return false;
-      }
-      
-      state.sequenceId = sequenceData.sequenceId;
-      log(`Sequence created: ${state.sequenceId}`, 'success');
-      
       // Update UI
-      setupStatus.textContent = `Ready (Session: ${state.sessionId.substring(0, 8)}...)`;
-      chordBtn.disabled = false;
-      bassBtn.disabled = false;
-      drumBtn.disabled = false;
-      clearBtn.disabled = false;
-      exportMidiBtn.disabled = false;
-      exportJsonBtn.disabled = false;
+      setupStatus.textContent = `Ready (Session: ${state.sessionId.substring(0, 8)}...)`; 
+      
+      // Show sequence manager and enable other buttons
+      sequenceManagerCard.style.display = 'block';
       importBtn.disabled = false;
       
       // Get piano roll ready
       initPianoRoll();
       
+      // Get the session details to see what sequences exist
+      await refreshSessionData();
+      
       return true;
     }
     
+    async function refreshSessionData() {
+  log("Starting refreshSessionData...", 'info');
+  
+  if (!state.sessionId) {
+    log('No session ID available', 'error');
+    return false;
+  }
+  
+  // Store the current sequence ID before making the API call
+  const previousSequenceId = state.currentSequenceId;
+  log(`Previous sequence ID: ${previousSequenceId}`, 'info');
+  
+  const data = await callApi(`/sessions/${state.sessionId}`);
+  if (!data || !data.session) {
+    log('Failed to get session data', 'error');
+    return false;
+  }
+  
+  console.log('Session data:', data);
+  
+  // IMPORTANT: Only update the currentSequenceId if we don't already have one
+  // or if the server is returning a different one than what we set
+  if (!state.currentSequenceId || 
+      (data.session.currentSequenceId !== state.currentSequenceId && 
+       previousSequenceId !== state.currentSequenceId)) {
+    state.currentSequenceId = data.session.currentSequenceId;
+    log(`Updated state.currentSequenceId from server: ${state.currentSequenceId}`, 'info');
+  } else {
+    log(`Keeping current sequence ID: ${state.currentSequenceId}`, 'info');
+  }
+  
+  // Extract sequences from tracks
+  if (data.session.tracks) {
+    state.sequences = data.session.tracks.map(track => ({
+      id: track.id,
+      name: track.name,
+      noteCount: track.notes ? track.notes.length : 0,
+      isCurrent: track.id === state.currentSequenceId
+    }));
+    
+    log(`Found ${state.sequences.length} sequences in session`, 'success');
+    
+    // Force UI updates
+    updateSequencesList();
+    updateSequenceLabels();
+    
+    // Enable buttons if we have at least one sequence
+    const hasSequences = state.sequences.length > 0;
+    chordBtn.disabled = !hasSequences;
+    bassBtn.disabled = !hasSequences;
+    drumBtn.disabled = !hasSequences;
+    clearBtn.disabled = !hasSequences;
+    exportMidiBtn.disabled = !hasSequences;
+    exportJsonBtn.disabled = !hasSequences;
+  } else {
+    log('No sequences found in session', 'warning');
+  }
+  
+  log("Completed refreshSessionData", 'info');
+  return true;
+}
+    
+// Complete replacement for the updateSequencesList function
+function updateSequencesList() {
+  // Clear existing list
+  sequencesList.innerHTML = '';
+  
+  // Add each sequence
+  state.sequences.forEach(sequence => {
+    const sequenceItem = document.createElement('div');
+    sequenceItem.className = 'sequence-item';
+    sequenceItem.dataset.id = sequence.id;
+    
+    // Add appropriate classes
+    if (sequence.id === state.currentSequenceId) {
+      sequenceItem.classList.add('current');
+      sequenceItem.classList.add('selected');
+    }
+    if (sequence.noteCount > 0) {
+      sequenceItem.classList.add('has-notes');
+    }
+    
+    sequenceItem.innerHTML = `
+      <div class="sequence-name">
+        ${sequence.name}
+        ${sequence.id === state.currentSequenceId ? 
+          '<span class="current-indicator" title="Current Sequence"> (current)</span>' : ''}
+        <span class="note-count">
+          ${sequence.noteCount} notes
+        </span>
+      </div>
+      <button class="delete-btn" data-id="${sequence.id}" title="Delete Sequence"${state.sequences.length <= 1 ? ' disabled' : ''}>
+        &times;
+      </button>
+    `;
+    
+    sequencesList.appendChild(sequenceItem);
+  });
+  
+  // IMPORTANT: Add click handlers AFTER all items are added to DOM
+  document.querySelectorAll('.sequence-item').forEach(item => {
+    // Remove any existing event listeners to prevent duplicates
+    const newItem = item.cloneNode(true);
+    item.parentNode.replaceChild(newItem, item);
+    
+    // Add the click handler to the new element
+    newItem.addEventListener('click', function(event) {
+      // Only handle clicks on the sequence item or sequence name, not delete button
+      if (!event.target.closest('.delete-btn')) {
+        const seqId = this.dataset.id;
+        log(`Sequence item clicked: ${seqId}`, 'info');
+        selectSequenceDirectly(seqId);
+      }
+    });
+  });
+  
+  // Add delete button handlers separately
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function(event) {
+      event.stopPropagation(); // Prevent triggering the parent's click
+      const seqId = this.dataset.id;
+      log(`Delete button clicked for sequence: ${seqId}`, 'info');
+      deleteSequence(seqId);
+    });
+  });
+  
+  // Optional - add a diagnostic test button
+  sequencesList.insertAdjacentHTML('beforeend', `
+    <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; text-align: center;">
+      <button id="testSequenceSwitchBtn" style="background: #ff9800;">Test Sequence Switch</button>
+    </div>
+  `);
+  
+  // Add event listener for the test button
+  document.getElementById('testSequenceSwitchBtn')?.addEventListener('click', function() {
+    log("Testing sequence switching functionality", 'info');
+    // Try to switch to the first sequence that's not the current one
+    const otherSequence = state.sequences.find(s => s.id !== state.currentSequenceId);
+    if (otherSequence) {
+      log(`Test switching to: ${otherSequence.id} (${otherSequence.name})`, 'info');
+      selectSequenceDirectly(otherSequence.id);
+    } else {
+      log("No other sequence to switch to", 'warning');
+    }
+  });
+}
+    
+    // Update sequence labels in the UI
+    function updateSequenceLabels() {
+      const currentSequence = state.sequences.find(s => s.id === state.currentSequenceId);
+      
+      currentSequenceLabel.textContent = currentSequence ? 
+        `${currentSequence.name} (${currentSequence.noteCount} notes)` : 'None';
+    }
+    
+    async function selectSequenceDirectly(sequenceId) {
+  if (!state.sessionId || !sequenceId) {
+    log('Missing session or sequence ID', 'error');
+    return;
+  }
+  
+  log(`Selecting sequence directly: ${sequenceId}`, 'info');
+  
+  try {
+    // IMPORTANT: Update the state immediately before any API calls
+    state.currentSequenceId = sequenceId;
+    log(`Set state.currentSequenceId to: ${sequenceId}`, 'success');
+    
+    // Make the API call to update the server
+    const result = await callApi(`/sessions/${state.sessionId}`, 'PUT', {
+      currentSequenceId: sequenceId
+    });
+    
+    if (!result) {
+      log('Failed to update current sequence on server', 'error');
+      return;
+    }
+    
+    log(`Server updated with sequence ID: ${sequenceId}`, 'success');
+    
+    // Update UI elements directly
+    // 1. Clear current/selected states from all sequences
+    document.querySelectorAll('.sequence-item').forEach(item => {
+      item.classList.remove('current');
+      item.classList.remove('selected');
+      
+      const currentIndicator = item.querySelector('.current-indicator');
+      if (currentIndicator) {
+        currentIndicator.remove();
+      }
+    });
+    
+    // 2. Add 'current' and 'selected' classes to the selected sequence
+    const selectedItem = document.querySelector(`.sequence-item[data-id="${sequenceId}"]`);
+    if (selectedItem) {
+      selectedItem.classList.add('current');
+      selectedItem.classList.add('selected');
+      
+      // Add the current indicator
+      const nameElement = selectedItem.querySelector('.sequence-name');
+      if (nameElement) {
+        const indicator = document.createElement('span');
+        indicator.className = 'current-indicator';
+        indicator.title = 'Current Sequence';
+        indicator.textContent = ' (current)';
+        nameElement.appendChild(indicator);
+      }
+      
+      log(`UI updated: Marked sequence ${sequenceId} as current`, 'success');
+    } else {
+      log(`Warning: Could not find sequence element with ID ${sequenceId}`, 'error');
+    }
+    
+    // Update the current sequence label directly
+    updateCurrentSequenceLabel();
+    
+    // Finally refresh the piano roll
+    await refreshPianoRoll();
+    
+    log('Sequence switch completed successfully', 'success');
+  } catch (error) {
+    log(`Error in selectSequenceDirectly: ${error.message}`, 'error');
+  }
+}
+
+async function createSequence() {
+  if (!state.sessionId) {
+    log('Set up session first', 'error');
+    return;
+  }
+  
+  const name = newSequenceName.value.trim();
+  if (!name) {
+    sequenceError.textContent = 'Sequence name cannot be empty';
+    return;
+  }
+  
+  sequenceError.textContent = '';
+  log(`Creating new sequence: ${name}`);
+  
+  // Create a new sequence
+  const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences`, 'POST', {
+    name: name,
+    tempo: 120,
+    key: 'C major'
+  });
+  
+  if (!sequenceData) {
+    log('Failed to create sequence', 'error');
+    sequenceError.textContent = 'Failed to create sequence';
+    return;
+  }
+  
+  const sequenceId = sequenceData.sequenceId || sequenceData.id;
+  log(`Sequence created: ${sequenceId}`, 'success');
+  
+  // Clear input
+  newSequenceName.value = '';
+  
+  // Refresh data first to get updated sequences list
+  await refreshSessionData();
+  
+  // Then select the new sequence using our improved function
+  await selectSequenceDirectly(sequenceId);
+}
+    
+  // Delete a sequence (properly call the sequence deletion endpoint)
+  async function deleteSequence(sequenceId) {
+    if (!state.sessionId || !sequenceId) {
+      log('Missing session ID or sequence ID', 'error');
+      return;
+    }
+    
+    // Don't allow deleting the last sequence
+    if (state.sequences.length <= 1) {
+      sequenceError.textContent = "Cannot delete the only sequence. Create a new one first.";
+      return;
+    }
+    
+    log(`Deleting sequence: ${sequenceId}`);
+    
+    // Call the sequence deletion endpoint
+    const result = await callApi(`/sessions/${state.sessionId}/sequences/${sequenceId}`, 'DELETE');
+    
+    if (!result) {
+      log('Failed to delete sequence', 'error');
+      sequenceError.textContent = 'Failed to delete sequence';
+      return;
+    }
+    
+    log(`Successfully deleted sequence ${sequenceId}`, 'success');
+    
+    // If current sequence was deleted, update to the new current sequence
+    if (sequenceId === state.currentSequenceId) {
+      state.currentSequenceId = result.currentSequenceId;
+      log(`Changed current sequence to: ${state.currentSequenceId}`, 'success');
+    }
+    
+    // Refresh data and UI
+    await refreshSessionData();
+    await refreshPianoRoll();
+  }
+    
     // Generate chord progression
     async function generateChords() {
-      if (!state.sessionId || !state.sequenceId) {
-        log('Set up session first', 'error');
+      if (!state.sessionId || !state.currentSequenceId) {
+        log('Select a sequence first', 'error');
         return;
       }
       
       updateStatus('Generating chord progression...');
       
-      const data = await callApi(`/sessions/${state.sessionId}/patterns/chord-progression`, 'POST', {
-        key: 'C',
-        progressionName: '1-4-5',
-        scaleType: 'major',
+      const data = await callApi(`/patterns/chord-progression/${state.sessionId}`, 'POST', {
+        type: 'chord',
+        root: 'C',
+        chordType: 'major',
         octave: 4,
-        rhythmPattern: [4]
+        duration: 1,
+        trackId: state.currentSequenceId,
+        sessionId: state.sessionId,
+        sequenceId: state.currentSequenceId
       });
       
       if (!data) {
@@ -273,37 +895,44 @@
         return;
       }
       
-      state.noteCount = data.noteCount;
-      updateStatus(`Generated chord progression with ${data.noteCount} notes`);
-      log(`Added ${data.noteCount} notes`, 'success');
+      // Refresh data
+      await refreshSessionData();
       
-      // Refresh piano roll
-      refreshPianoRoll();
+      // Update piano roll
+      await refreshPianoRoll();
+      
+      // Check note count
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
+      state.noteCount = sequence ? sequence.noteCount : 0;
+      
+      updateStatus(`Generated chord progression with ${state.noteCount} notes`);
+      log(`Added chord progression, sequence now has ${state.noteCount} notes`, 'success');
       
       // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
-      exportMidiBtn.disabled = false;
-      exportJsonBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
       exportStatus.textContent = `Ready to export`;
     }
     
     // Generate bassline
     async function generateBass() {
-      if (!state.sessionId || !state.sequenceId) {
-        log('Set up session first', 'error');
+      if (!state.sessionId || !state.currentSequenceId) {
+        log('Select a sequence first', 'error');
         return;
       }
       
       updateStatus('Generating bassline...');
       
-      const data = await callApi(`/sessions/${state.sessionId}/patterns/bassline`, 'POST', {
-        key: 'C',
-        progressionName: '1-4-5',
-        scaleType: 'major',
-        octave: 3,
-        rhythmPattern: [1, 0.5, 0.5]
+      const data = await callApi(`/patterns/bassline/${state.sessionId}`, 'POST', {
+        type: 'bassline',
+        style: 'walking',
+        roots: ['C', 'G', 'F', 'C'],
+        octave: 2,
+        bars: 4,
+        trackId: state.currentSequenceId,
+        sessionId: state.sessionId,
+        sequenceId: state.currentSequenceId
       });
       
       if (!data) {
@@ -311,34 +940,43 @@
         return;
       }
       
-      state.noteCount = data.noteCount;
-      updateStatus(`Added bassline (total: ${data.noteCount} notes)`);
-      log(`Sequence now has ${data.noteCount} notes`, 'success');
+      // Refresh data
+      await refreshSessionData();
       
-      // Refresh piano roll
-      refreshPianoRoll();
+      // Update piano roll
+      await refreshPianoRoll();
+      
+      // Check note count
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
+      state.noteCount = sequence ? sequence.noteCount : 0;
+      
+      updateStatus(`Added bassline (total: ${state.noteCount} notes)`);
+      log(`Added bassline, sequence now has ${state.noteCount} notes`, 'success');
       
       // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
-      exportMidiBtn.disabled = false;
-      exportJsonBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
       exportStatus.textContent = `Ready to export`;
     }
     
     // Generate drums
     async function generateDrums() {
-      if (!state.sessionId || !state.sequenceId) {
-        log('Set up session first', 'error');
+      if (!state.sessionId || !state.currentSequenceId) {
+        log('Select a sequence first', 'error');
         return;
       }
       
       updateStatus('Generating drum pattern...');
       
-      const data = await callApi(`/sessions/${state.sessionId}/patterns/drums`, 'POST', {
-        patternType: 'basic',
-        measures: 2
+      const data = await callApi(`/patterns/drums/${state.sessionId}`, 'POST', {
+        type: 'drum',
+        style: 'basic',
+        bars: 2,
+        fill: false,
+        trackId: state.currentSequenceId,
+        sessionId: state.sessionId,
+        sequenceId: state.currentSequenceId
       });
       
       if (!data) {
@@ -346,64 +984,66 @@
         return;
       }
       
-      state.noteCount = data.noteCount;
-      updateStatus(`Added drums (total: ${data.noteCount} notes)`);
-      log(`Sequence now has ${data.noteCount} notes`, 'success');
+      // Refresh data
+      await refreshSessionData();
       
-      // Refresh piano roll
-      refreshPianoRoll();
+      // Update piano roll
+      await refreshPianoRoll();
+      
+      // Check note count
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
+      state.noteCount = sequence ? sequence.noteCount : 0;
+      
+      updateStatus(`Added drums (total: ${state.noteCount} notes)`);
+      log(`Added drums, sequence now has ${state.noteCount} notes`, 'success');
       
       // Enable play and export buttons
       playBtn.disabled = false;
       stopBtn.disabled = false;
-      exportMidiBtn.disabled = false;
-      exportJsonBtn.disabled = false;
       playStatus.textContent = `${state.noteCount} notes ready to play`;
       exportStatus.textContent = `Ready to export`;
     }
     
-    // Clear all notes
+    // Clear all notes from the current sequence
     async function clearNotes() {
-      if (!state.sessionId || !state.sequenceId) {
-        log('Set up session first', 'error');
+      if (!state.sessionId || !state.currentSequenceId) {
+        log('Select a sequence first', 'error');
         return;
       }
       
       updateStatus('Clearing notes...');
       
-      const data = await callApi(`/sessions/${state.sessionId}/notes`, 'DELETE');
+      // Clear notes from the selected track
+      const data = await callApi(`/patterns/notes/${state.sessionId}/${state.currentSequenceId}`, 'DELETE');
       
       if (!data) {
         updateStatus('Failed to clear notes');
         return;
       }
       
-      state.noteCount = 0;
-      updateStatus('All notes cleared');
-      log('Notes cleared', 'success');
+      // Refresh data
+      await refreshSessionData();
       
-      // Refresh piano roll
-      refreshPianoRoll();
+      // Update piano roll
+      await refreshPianoRoll();
       
-      // Disable play and export buttons
-      playBtn.disabled = true;
-      stopBtn.disabled = true;
-      exportMidiBtn.disabled = true;
-      exportJsonBtn.disabled = true;
-      playStatus.textContent = 'Nothing to play';
-      exportStatus.textContent = 'Create music to export';
+      updateStatus('All notes cleared from sequence');
+      log('Notes cleared from sequence', 'success');
+      
+      // Disable play if this sequence now has no notes
+      const sequence = state.sequences.find(s => s.id === state.currentSequenceId);
+      state.noteCount = sequence ? sequence.noteCount : 0;
+      
+      const hasNotes = state.noteCount > 0;
+      playBtn.disabled = !hasNotes;
+      stopBtn.disabled = !hasNotes;
+      playStatus.textContent = hasNotes ? `${state.noteCount} notes ready to play` : 'Nothing to play';
     }
     
     // Export MIDI file
     async function exportMidiFile() {
-      if (!state.sessionId || !state.sequenceId) {
+      if (!state.sessionId) {
         log('Set up session first', 'error');
-        return;
-      }
-      
-      if (state.noteCount === 0) {
-        log('No notes to export', 'error');
-        updateStatus('No notes to export');
         return;
       }
       
@@ -411,7 +1051,7 @@
       
       try {
         // Trigger file download using the export endpoint
-        const response = await callApi(`/sessions/${state.sessionId}/export/midi`);
+        const response = await callApi(`/export/midi/${state.sessionId}`);
         
         if (!response) {
           throw new Error('Failed to get MIDI file from server');
@@ -425,19 +1065,7 @@
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        
-        // Extract filename from the Content-Disposition header if possible
-        const disposition = response.headers.get('Content-Disposition');
-        let filename = 'my_music.mid';
-        if (disposition && disposition.indexOf('attachment') !== -1) {
-          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-          const matches = filenameRegex.exec(disposition);
-          if (matches != null && matches[1]) { 
-            filename = matches[1].replace(/['"]/g, '');
-          }
-        }
-        
-        a.download = filename;
+        a.download = 'midi_song.mid';
         document.body.appendChild(a);
         a.click();
         
@@ -445,9 +1073,8 @@
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        updateStatus(`Exported MIDI file successfully: ${filename}`);
-        log(`Exported MIDI file: ${filename}`, 'success');
-        exportStatus.textContent = `MIDI file exported successfully`;
+        updateStatus(`Exported MIDI file successfully`);
+        log(`Exported MIDI file`, 'success');
       } catch (error) {
         console.error(error);
         log(`Error exporting MIDI: ${error.message}`, 'error');
@@ -455,16 +1082,16 @@
       }
     }
     
-    // Export as JSON
+    // Export JSON
     async function exportJson() {
-      if (!state.sessionId || !state.sequenceId) {
+      if (!state.sessionId) {
         log('Set up session first', 'error');
         return;
       }
       
       updateStatus('Exporting JSON data...');
       
-      const data = await callApi(`/sessions/${state.sessionId}/export/json`, 'GET');
+      const data = await callApi(`/export/json/${state.sessionId}`, 'GET');
       
       if (!data) {
         updateStatus('Failed to export JSON data');
@@ -472,12 +1099,12 @@
       }
       
       // Show exported data in textarea
-      exportText.value = JSON.stringify(data.data, null, 2);
+      exportText.value = JSON.stringify(data, null, 2);
       exportArea.classList.remove('hidden');
       importArea.classList.add('hidden');
       
-      updateStatus(`Exported ${data.noteCount} notes to JSON format`);
-      log(`Exported sequence ${data.sequenceId}`, 'success');
+      updateStatus(`Exported data to JSON format`);
+      log(`Exported session data successfully`, 'success');
     }
     
     // Copy JSON to clipboard
@@ -517,61 +1144,51 @@
       updateStatus('Ready to import data');
     }
     
-    // Process import
-    async function processImport() {
-      if (!state.sessionId) {
-        log('Set up session first', 'error');
-        return;
-      }
-      
-      const jsonData = importText.value.trim();
-      if (!jsonData) {
-        log('No data to import', 'error');
-        return;
-      }
-      
-      updateStatus('Importing data...');
-      
-      // Parse JSON to validate it first
-      try {
-        JSON.parse(jsonData);
-      } catch (e) {
-        log(`Invalid JSON data: ${e.message}`, 'error');
-        updateStatus('Invalid JSON data');
-        return;
-      }
-      
-      const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', {
-        data: jsonData
-      });
-      
-      if (!data) {
-        updateStatus('Failed to import data');
-        return;
-      }
-      
-      state.sequenceId = data.sequenceId;
-      state.noteCount = data.sequence.noteCount;
-      
-      updateStatus(`Imported ${data.sequence.noteCount} notes successfully`);
-      log(`Imported sequence ${data.sequenceId}`, 'success');
-      
-      // Hide import area
-      importArea.classList.add('hidden');
-      
-      // Refresh piano roll and update UI
-      refreshPianoRoll();
-      
-      // Enable play button if notes were imported
-      playBtn.disabled = data.sequence.noteCount === 0;
-      stopBtn.disabled = data.sequence.noteCount === 0;
-      exportMidiBtn.disabled = data.sequence.noteCount === 0;
-      exportJsonBtn.disabled = data.sequence.noteCount === 0;
-      playStatus.textContent = data.sequence.noteCount > 0 ? 
-        `${data.sequence.noteCount} notes ready to play` : 'Nothing to play';
-      exportStatus.textContent = data.sequence.noteCount > 0 ?
-        `Ready to export` : 'Create music to export';
+  // Process import
+  async function processImport() {
+    if (!state.sessionId) {
+      log('Set up session first', 'error');
+      return;
     }
+    
+    const jsonText = importText.value.trim();
+    if (!jsonText) {
+      log('No data to import', 'error');
+      return;
+    }
+    
+    updateStatus('Importing data...');
+    
+    // Parse JSON to validate it first
+    let jsonData;
+    try {
+      jsonData = JSON.parse(jsonText);
+    } catch (e) {
+      log(`Invalid JSON data: ${e.message}`, 'error');
+      updateStatus('Invalid JSON data');
+      return;
+    }
+    
+    // Import the data using the correct endpoint
+    const data = await callApi(`/sessions/${state.sessionId}/import`, 'POST', jsonData);
+    
+    if (!data) {
+      updateStatus('Failed to import data');
+      return;
+    }
+    
+    // Refresh session data
+    await refreshSessionData();
+    
+    // Refresh piano roll
+    await refreshPianoRoll();
+    
+    updateStatus(`Imported data successfully`);
+    log(`Imported sequence data`, 'success');
+    
+    // Hide import area
+    importArea.classList.add('hidden');
+  }
     
     // Handle file upload
     function handleFileUpload(event) {
@@ -613,54 +1230,124 @@
       }
     }
     
-    // Refresh piano roll with notes
     async function refreshPianoRoll() {
-      // Get sequence data
-      const data = await callApi(`/sessions/${state.sessionId}/sequences/${state.sequenceId}`);
-      if (!data) {
-        log('Failed to get sequence data', 'error');
-        return;
-      }
-      
-      // Clear existing notes
-      document.querySelectorAll('.piano-note').forEach(note => note.remove());
-      
-      // Add notes
-      if (data.sequence.notes && data.sequence.notes.length > 0) {
-        data.sequence.notes.forEach(note => {
-          const noteElement = document.createElement('div');
-          
-          // Select class based on channel
-          if (note.channel === 9) {
-            noteElement.className = 'piano-note drum-note';
-          } else if (note.channel === 1) {
-            noteElement.className = 'piano-note bassline-note';
-          } else {
-            noteElement.className = 'piano-note';
-          }
-          
-          // Position and size
-          noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
-          noteElement.style.left = `${note.startTime * 30 + 100}px`;
-          noteElement.style.width = `${note.duration * 30}px`;
-          
-          // Add data for playback
-          noteElement.dataset.pitch = note.pitch;
-          noteElement.dataset.start = note.startTime;
-          noteElement.dataset.duration = note.duration;
-          noteElement.dataset.velocity = note.velocity;
-          noteElement.dataset.channel = note.channel;
-          
-          // Add note name for better visibility
-          noteElement.textContent = note.pitch;
-          
-          pianoRoll.appendChild(noteElement);
-        });
-        
-        log(`Displayed ${data.sequence.notes.length} notes in piano roll`, 'success');
-      }
+  try {
+    log(`Starting piano roll refresh...`, 'info');
+    log(`Current state - sessionId: ${state.sessionId}, sequenceId: ${state.currentSequenceId}`, 'info');
+    
+    if (!state.sessionId) {
+      log('No session ID available', 'info');
+      return;
     }
     
+    // Clear existing notes first
+    document.querySelectorAll('.piano-note').forEach(note => note.remove());
+    
+    // IMPORTANT: Make a direct fetch for the session data
+    // This is to avoid any issues with refreshSessionData changing the currentSequenceId
+    const response = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const data = await response.json();
+    
+    if (!data || !data.session) {
+      log('Failed to get session data', 'error');
+      return;
+    }
+    
+    // DO NOT update state.currentSequenceId here - use the one we already have
+    log(`Got session data but keeping sequence ID: ${state.currentSequenceId}`, 'info');
+    
+    // Find the requested track by ID, NOT by using the server's currentSequenceId
+    const currentTrack = data.session.tracks.find(t => t.id === state.currentSequenceId);
+    
+    if (!currentTrack) {
+      log(`No track found with ID ${state.currentSequenceId}`, 'error');
+      return;
+    }
+    
+    log(`Found track: ${currentTrack.name} with ${currentTrack.notes ? currentTrack.notes.length : 0} notes`, 'success');
+    
+    // Display notes from the current track
+    if (currentTrack.notes && currentTrack.notes.length > 0) {
+      currentTrack.notes.forEach(note => {
+        // [Rest of the note display code remains the same]
+        const noteElement = document.createElement('div');
+        
+        // Select class based on channel or instrument
+        const channel = note.channel || note.instrument || 0;
+        if (channel === 9) {
+          noteElement.className = 'piano-note drum-note';
+        } else if (channel === 1 || channel === 32) {
+          noteElement.className = 'piano-note bassline-note';
+        } else {
+          noteElement.className = 'piano-note';
+        }
+        
+        // Position and size
+        noteElement.style.top = `${(127 - note.pitch) * 20 + 1}px`;
+        noteElement.style.left = `${note.startTime * 30 + 100}px`;
+        noteElement.style.width = `${note.duration * 30}px`;
+        
+        // Add data for playback
+        noteElement.dataset.pitch = note.pitch;
+        noteElement.dataset.start = note.startTime;
+        noteElement.dataset.duration = note.duration;
+        noteElement.dataset.velocity = note.velocity || 100;
+        noteElement.dataset.channel = note.channel || 0;
+        
+        // Add note name for better visibility
+        noteElement.textContent = note.pitch;
+        
+        pianoRoll.appendChild(noteElement);
+      });
+      
+      // Update state and UI
+      state.noteCount = currentTrack.notes.length;
+      
+      // Update player status
+      playBtn.disabled = false;
+      stopBtn.disabled = false;
+      playStatus.textContent = `${currentTrack.notes.length} notes ready to play`;
+      exportStatus.textContent = 'Ready to export';
+    } else {
+      log('Current track has no notes to display', 'info');
+      state.noteCount = 0;
+      
+      // Update player status
+      playBtn.disabled = true;
+      stopBtn.disabled = true;
+      playStatus.textContent = 'Nothing to play';
+    }
+    
+    // Update the sequence label directly
+    updateCurrentSequenceLabel();
+  } catch (error) {
+    console.error('Error refreshing piano roll:', error);
+    log(`Error refreshing piano roll: ${error.message}`, 'error');
+  }
+}
+
+// New utility function to directly update current sequence label
+function updateCurrentSequenceLabel() {
+  // Find the current sequence in our sequence list
+  const currentSequence = state.sequences.find(s => s.id === state.currentSequenceId);
+  
+  if (currentSequence) {
+    const track = state.sequences.find(s => s.id === state.currentSequenceId);
+    const noteCount = track ? track.noteCount : 0;
+    
+    // Update the label directly
+    currentSequenceLabel.textContent = `${currentSequence.name} (${noteCount} notes)`;
+    log(`Updated sequence label to: ${currentSequence.name}`, 'info');
+  } else {
+    currentSequenceLabel.textContent = 'None';
+    log('No current sequence found for label update', 'warning');
+  }
+}
+
     // Play the sequence
     function playSequence() {
       if (!state.audioContext) {
@@ -671,82 +1358,81 @@
         stopPlayback();
       }
       
-      // Refresh notes to make sure we have the latest
-      refreshPianoRoll().then(() => {
-        const notes = document.querySelectorAll('.piano-note');
-        if (notes.length === 0) {
-          updateStatus('No notes to play');
+      const notes = document.querySelectorAll('.piano-note');
+      if (notes.length === 0) {
+        updateStatus('No notes to play');
+        return;
+      }
+      
+      state.isPlaying = true;
+      updateStatus('Playing...');
+      playStatus.textContent = 'Playing...';
+      
+      const startTime = state.audioContext.currentTime;
+      const tempo = 120; // beats per minute
+      const secondsPerBeat = 60 / tempo;
+      
+      notes.forEach(noteElement => {
+        // Skip drum notes for now (they sound strange)
+        if (parseInt(noteElement.dataset.channel) === 9) {
           return;
         }
         
-        state.isPlaying = true;
-        updateStatus('Playing...');
-        playStatus.textContent = 'Playing...';
+        const pitch = parseInt(noteElement.dataset.pitch);
+        const noteStartTime = startTime + (parseFloat(noteElement.dataset.start) * secondsPerBeat);
+        const noteDuration = parseFloat(noteElement.dataset.duration) * secondsPerBeat;
+        const velocity = parseInt(noteElement.dataset.velocity) / 127;
         
-        const startTime = state.audioContext.currentTime;
-        const tempo = 120; // beats per minute
-        const secondsPerBeat = 60 / tempo;
+        // Create oscillator
+        const oscillator = state.audioContext.createOscillator();
+        const gainNode = state.audioContext.createGain();
         
-        notes.forEach(noteElement => {
-          // Skip drum notes for now (they sound strange)
-          if (parseInt(noteElement.dataset.channel) === 9) {
-            return;
-          }
-          
-          const pitch = parseInt(noteElement.dataset.pitch);
-          const noteStartTime = startTime + (parseFloat(noteElement.dataset.start) * secondsPerBeat);
-          const noteDuration = parseFloat(noteElement.dataset.duration) * secondsPerBeat;
-          const velocity = parseInt(noteElement.dataset.velocity) / 127;
-          
-          // Create oscillator
-          const oscillator = state.audioContext.createOscillator();
-          const gainNode = state.audioContext.createGain();
-          
-          // Configure oscillator
-          oscillator.type = parseInt(noteElement.dataset.channel) === 1 ? 'triangle' : 'sine';
-          oscillator.frequency.value = midiToFrequency(pitch);
-          
-          // Connect
-          oscillator.connect(gainNode);
-          gainNode.connect(state.audioContext.destination);
-          
-          // Set volume
-          gainNode.gain.value = velocity * 0.2;
-          
-          // Schedule note
-          oscillator.start(noteStartTime);
-          oscillator.stop(noteStartTime + noteDuration);
-          
-          // Add visual feedback
-          setTimeout(() => {
-            noteElement.style.backgroundColor = 'yellow';
-            setTimeout(() => {
-              if (noteElement.dataset.channel === '9') {
-                noteElement.style.backgroundColor = '#db4437';
-              } else if (noteElement.dataset.channel === '1') {
-                noteElement.style.backgroundColor = '#0f9d58';
-              } else {
-                noteElement.style.backgroundColor = '#4285f4';
-              }
-            }, noteDuration * 1000);
-          }, (noteStartTime - startTime) * 1000);
-          
-          // Save for cleanup
-          state.oscillators.push(oscillator);
-        });
+        // Configure oscillator based on channel
+        const channel = parseInt(noteElement.dataset.channel);
+        oscillator.type = (channel === 1 || channel === 32) ? 'triangle' : 'sine';
+        oscillator.frequency.value = midiToFrequency(pitch);
         
-        // Find the longest note to stop playback
-        const longestDuration = Math.max(...Array.from(notes).map(note => 
-          parseFloat(note.dataset.start) + parseFloat(note.dataset.duration)
-        ));
+        // Connect
+        oscillator.connect(gainNode);
+        gainNode.connect(state.audioContext.destination);
         
-        // Auto-stop at end
+        // Set volume
+        gainNode.gain.value = velocity * 0.2;
+        
+        // Schedule note
+        oscillator.start(noteStartTime);
+        oscillator.stop(noteStartTime + noteDuration);
+        
+        // Add visual feedback
         setTimeout(() => {
-          if (state.isPlaying) {
-            stopPlayback();
-          }
-        }, longestDuration * secondsPerBeat * 1000);
+          noteElement.style.backgroundColor = 'yellow';
+          setTimeout(() => {
+            const channel = noteElement.dataset.channel;
+            if (channel === '9') {
+              noteElement.style.backgroundColor = '#db4437';
+            } else if (channel === '1' || channel === '32') {
+              noteElement.style.backgroundColor = '#0f9d58';
+            } else {
+              noteElement.style.backgroundColor = '#4285f4';
+            }
+          }, noteDuration * 1000);
+        }, (noteStartTime - startTime) * 1000);
+        
+        // Save for cleanup
+        state.oscillators.push(oscillator);
       });
+      
+      // Find the longest note to stop playback
+      const longestDuration = Math.max(...Array.from(notes).map(note => 
+        parseFloat(note.dataset.start) + parseFloat(note.dataset.duration)
+      ));
+      
+      // Auto-stop at end
+      setTimeout(() => {
+        if (state.isPlaying) {
+          stopPlayback();
+        }
+      }, longestDuration * secondsPerBeat * 1000);
     }
     
     // Stop playback
@@ -776,6 +1462,12 @@
     
     // Event listeners
     setupBtn.addEventListener('click', setup);
+    createSequenceBtn.addEventListener('click', createSequence);
+    newSequenceName.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        createSequence();
+      }
+    });
     chordBtn.addEventListener('click', generateChords);
     bassBtn.addEventListener('click', generateBass);
     drumBtn.addEventListener('click', generateDrums);

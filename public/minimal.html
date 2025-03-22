@@ -3,76 +3,115 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Minimal MIDI Tool Interface</title>
+  <title>MIDI Tool - Minimal</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-    .container { max-width: 800px; margin: 0 auto; }
-    .card { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
-    .btn { background: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-    .btn-secondary { background: #2196F3; }
-    .btn-danger { background: #F44336; }
-    .note-display { height: 300px; overflow: auto; padding: 10px; background: #f5f5f5; border-radius: 5px; margin-top: 10px; font-family: monospace; }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+    h1, h2 { color: #333; }
+    button { background: #2196F3; color: white; border: none; padding: 10px 15px; 
+             border-radius: 4px; cursor: pointer; margin: 5px; }
+    button.red { background: #F44336; }
+    button.green { background: #4CAF50; }
+    button:disabled { background: #cccccc; cursor: not-allowed; }
+    .container { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
     .steps { background: #ffffcc; padding: 10px; border-left: 4px solid #ffeb3b; margin-bottom: 20px; }
-    .log { background: #f1f1f1; height: 100px; overflow: auto; padding: 10px; font-family: monospace; margin-top: 20px; }
+    .status { padding: 10px; background: #f1f1f1; margin-top: 20px; border-radius: 4px; }
+    .note-container { height: 300px; overflow: auto; background: #f5f5f5; padding: 10px; margin-top: 10px; font-family: monospace; }
+    .note { margin-bottom: 5px; padding: 5px; background: #e0e0e0; border-radius: 3px; }
+    .note.chord { background: #bbdefb; }
+    .note.bass { background: #c8e6c9; }
+    .note.drum { background: #ffcdd2; }
+    .log { height: 100px; overflow: auto; background: #f1f1f1; padding: 10px; 
+          font-family: monospace; margin-top: 10px; }
     .success { color: green; }
     .error { color: red; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Minimal MIDI Tool Interface</h1>
-    <p>This is a simplified interface to test the core functionality.</p>
-    
-    <div class="steps">
-      <h3>Simple Steps:</h3>
-      <ol>
-        <li>Click "Create Session" button</li>
-        <li>Click "Create Sequence" button</li>
-        <li>Click "Generate Chord Progression" button</li>
-        <li>View the notes that were created below</li>
-      </ol>
-    </div>
-    
-    <div class="card">
-      <h2>1. Session Management</h2>
-      <button id="createSessionBtn" class="btn">Create Session</button>
-      <span id="sessionStatus">No active session</span>
-    </div>
-    
-    <div class="card">
-      <h2>2. Sequence Management</h2>
-      <button id="createSequenceBtn" class="btn">Create Sequence</button>
-      <span id="sequenceStatus">No sequence created</span>
-    </div>
-    
-    <div class="card">
-      <h2>3. Pattern Generation</h2>
-      <button id="generateChordBtn" class="btn">Generate Chord Progression</button>
-      <button id="generateBasslineBtn" class="btn btn-secondary">Generate Bassline</button>
-      <button id="generateDrumBtn" class="btn btn-secondary">Generate Drum Pattern</button>
-      <p>Note Count: <span id="noteCount">0</span></p>
-    </div>
-    
-    <div class="card">
-      <h2>4. View Notes</h2>
-      <button id="viewNotesBtn" class="btn btn-secondary">Refresh Notes</button>
-      <div class="note-display" id="noteDisplay">No notes to display</div>
-    </div>
-    
-    <div class="log" id="log"></div>
+  <h1>MIDI Tool - Minimal UI</h1>
+  
+  <div class="steps">
+    <h3>Simple Steps:</h3>
+    <ol>
+      <li>Click "Create Session" button</li>
+      <li>Click "Create Sequence" button</li>
+      <li>Generate music with the chord progression, bassline or drum buttons</li>
+      <li>View or export your creation</li>
+    </ol>
   </div>
   
+  <div class="container">
+    <h2>1. Session Management</h2>
+    <button id="createBtn" class="green">Create Session</button>
+    <span id="sessionStatus">No active session</span>
+    <div id="sessionInfo"></div>
+  </div>
+  
+  <div class="container">
+    <h2>2. Sequence Management</h2>
+    <button id="createSequenceBtn" class="green">Create Sequence</button>
+    <span id="sequenceStatus">No sequence created</span>
+  </div>
+  
+  <div class="container">
+    <h2>3. Generate Music</h2>
+    <button id="chordBtn" disabled>Add Chord Progression</button>
+    <button id="bassBtn" disabled>Add Bassline</button>
+    <button id="drumBtn" disabled>Add Drums</button>
+    <button id="clearBtn" class="red" disabled>Clear All</button>
+    <p>Note Count: <span id="noteCount">0</span></p>
+  </div>
+  
+  <div class="container">
+    <h2>4. Export & View</h2>
+    <button id="exportBtn" disabled>Export MIDI</button>
+    <button id="viewBtn" disabled>View Data</button>
+    <button id="viewNotesBtn" disabled>View Notes</button>
+    <div id="exportData" style="display: none;">
+      <pre id="dataDisplay"></pre>
+    </div>
+  </div>
+  
+  <div class="container">
+    <h2>Notes</h2>
+    <div class="note-container" id="noteContainer"></div>
+  </div>
+  
+  <div class="status" id="status">Ready to create a session</div>
+  <div class="log" id="log"></div>
+  
   <script>
+    // DOM elements
+    const sessionInfo = document.getElementById('sessionInfo');
+    const sessionStatus = document.getElementById('sessionStatus');
+    const sequenceStatus = document.getElementById('sequenceStatus');
+    const noteContainer = document.getElementById('noteContainer');
+    const status = document.getElementById('status');
+    const dataDisplay = document.getElementById('dataDisplay');
+    const exportData = document.getElementById('exportData');
+    const noteCount = document.getElementById('noteCount');
+    const logElement = document.getElementById('log');
+    
+    // Buttons
+    const createBtn = document.getElementById('createBtn');
+    const createSequenceBtn = document.getElementById('createSequenceBtn');
+    const chordBtn = document.getElementById('chordBtn');
+    const bassBtn = document.getElementById('bassBtn');
+    const drumBtn = document.getElementById('drumBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const viewBtn = document.getElementById('viewBtn');
+    const viewNotesBtn = document.getElementById('viewNotesBtn');
+    
     // State
     let sessionId = null;
     let sequenceId = null;
     
-    // Elements
-    const sessionStatus = document.getElementById('sessionStatus');
-    const sequenceStatus = document.getElementById('sequenceStatus');
-    const noteCount = document.getElementById('noteCount');
-    const noteDisplay = document.getElementById('noteDisplay');
-    const logElement = document.getElementById('log');
+    // Update status
+    function updateStatus(message) {
+      status.textContent = message;
+      console.log(message);
+    }
     
     // Logging function
     function log(message, type = 'info') {
@@ -98,54 +137,107 @@
 
         log(`API Call: ${method} ${endpoint}`);
         const response = await fetch(`/api${endpoint}`, options);
-        const data = await response.json();
-
-        if (!data.success) {
-          log(`API Error: ${data.message}`, 'error');
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          log(`API error (${response.status}): ${errorText}`, 'error');
+          updateStatus(`Error: ${response.status} - ${errorText}`);
           return null;
         }
-
+        
+        // For binary responses (like MIDI files), return the Response object
+        if (response.headers.get('Content-Type') === 'audio/midi') {
+          return response;
+        }
+        
+        const data = await response.json();
+        
+        // Handle both error formats
+        if (data.error || (data.success === false)) {
+          log(`API Error: ${data.error || data.message}`, 'error');
+          return null;
+        }
+        
         return data;
       } catch (error) {
         log(`Error: ${error.message}`, 'error');
+        updateStatus(`Error: ${error.message}`);
         return null;
       }
     }
     
-    // Event handlers
-    document.getElementById('createSessionBtn').addEventListener('click', async () => {
-      const data = await callApi('/sessions', 'POST', {});
-      if (data) {
-        sessionId = data.sessionId;
-        sessionStatus.textContent = `Active session: ${sessionId}`;
-        log(`Session created: ${sessionId}`, 'success');
+    // Create a session
+    async function createSession() {
+      updateStatus('Creating session...');
+      
+      const data = await callApi('/sessions', 'POST', {
+        name: 'Minimal Session',
+        bpm: 120,
+        timeSignature: [4, 4]
+      });
+      
+      if (!data) {
+        return;
       }
-    });
+      
+      sessionId = data.sessionId || data._id || data.id;
+      sessionInfo.innerHTML = `
+        <p><strong>Session created!</strong></p>
+        <p>ID: ${sessionId}</p>
+        <p>BPM: ${data.bpm || 120}</p>
+        <p>Time Signature: ${data.timeSignature || [4, 4]}</p>
+      `;
+      
+      sessionStatus.textContent = `Active session: ${sessionId}`;
+      
+      // Enable sequence creation
+      createSequenceBtn.disabled = false;
+      
+      log(`Session created: ${sessionId}`, 'success');
+      updateStatus('Session created. Now create a sequence!');
+    }
     
-    document.getElementById('createSequenceBtn').addEventListener('click', async () => {
+    // Create a sequence
+    async function createSequence() {
       if (!sessionId) {
         log('Create a session first', 'error');
         return;
       }
       
+      updateStatus('Creating sequence...');
+      
       const data = await callApi(`/sessions/${sessionId}/sequences`, 'POST', {
-        name: 'Test Sequence',
+        name: 'Minimal Sequence',
         tempo: 120,
         key: 'C major'
       });
       
-      if (data) {
-        sequenceId = data.sequenceId;
-        sequenceStatus.textContent = `Active sequence: ${sequenceId}`;
-        log(`Sequence created: ${sequenceId}`, 'success');
+      if (!data) {
+        return;
       }
-    });
+      
+      sequenceId = data.sequenceId || data._id || data.id;
+      sequenceStatus.textContent = `Active sequence: ${sequenceId}`;
+      
+      // Enable buttons
+      chordBtn.disabled = false;
+      bassBtn.disabled = false;
+      drumBtn.disabled = false;
+      clearBtn.disabled = false;
+      viewNotesBtn.disabled = false;
+      
+      log(`Sequence created: ${sequenceId}`, 'success');
+      updateStatus('Sequence created. Add some music!');
+    }
     
-    document.getElementById('generateChordBtn').addEventListener('click', async () => {
+    // Generate chord progression
+    async function generateChords() {
       if (!sessionId || !sequenceId) {
         log('Create a session and sequence first', 'error');
         return;
       }
+      
+      updateStatus('Generating chord progression...');
       
       const data = await callApi(`/sessions/${sessionId}/patterns/chord-progression`, 'POST', {
         key: 'C',
@@ -155,19 +247,38 @@
         rhythmPattern: [4]
       });
       
-      if (data) {
-        noteCount.textContent = data.noteCount;
-        log(`Generated chord progression with ${data.noteCount} notes`, 'success');
-        // Refresh notes
-        document.getElementById('viewNotesBtn').click();
+      if (!data) {
+        return;
       }
-    });
+      
+      // Create note display
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note chord';
+      noteElement.innerHTML = `
+        <strong>Chord Progression:</strong> C major, 1-4-5 progression
+        <br>Added ${data.noteCount} notes
+      `;
+      noteContainer.appendChild(noteElement);
+      
+      // Update note count
+      noteCount.textContent = data.noteCount;
+      
+      // Enable export
+      exportBtn.disabled = false;
+      viewBtn.disabled = false;
+      
+      log(`Generated chord progression with ${data.noteCount} notes`, 'success');
+      updateStatus('Chord progression added');
+    }
     
-    document.getElementById('generateBasslineBtn').addEventListener('click', async () => {
+    // Generate bassline
+    async function generateBassline() {
       if (!sessionId || !sequenceId) {
         log('Create a session and sequence first', 'error');
         return;
       }
+      
+      updateStatus('Generating bassline...');
       
       const data = await callApi(`/sessions/${sessionId}/patterns/bassline`, 'POST', {
         key: 'C',
@@ -176,63 +287,210 @@
         octave: 3
       });
       
-      if (data) {
-        noteCount.textContent = data.noteCount;
-        log(`Generated bassline with ${data.noteCount} notes`, 'success');
-        // Refresh notes
-        document.getElementById('viewNotesBtn').click();
+      if (!data) {
+        return;
       }
-    });
+      
+      // Create note display
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note bass';
+      noteElement.innerHTML = `
+        <strong>Bassline:</strong> C major, 1-4-5 progression
+        <br>Added ${data.noteCount} notes
+      `;
+      noteContainer.appendChild(noteElement);
+      
+      // Update note count
+      noteCount.textContent = data.noteCount;
+      
+      // Enable export
+      exportBtn.disabled = false;
+      viewBtn.disabled = false;
+      
+      log(`Generated bassline with ${data.noteCount} notes`, 'success');
+      updateStatus('Bassline added');
+    }
     
-    document.getElementById('generateDrumBtn').addEventListener('click', async () => {
+    // Generate drums
+    async function generateDrums() {
       if (!sessionId || !sequenceId) {
         log('Create a session and sequence first', 'error');
         return;
       }
+      
+      updateStatus('Generating drum pattern...');
       
       const data = await callApi(`/sessions/${sessionId}/patterns/drums`, 'POST', {
         patternType: 'basic',
         measures: 2
       });
       
-      if (data) {
-        noteCount.textContent = data.noteCount;
-        log(`Generated drum pattern with ${data.noteCount} notes`, 'success');
-        // Refresh notes
-        document.getElementById('viewNotesBtn').click();
+      if (!data) {
+        return;
       }
-    });
+      
+      // Create note display
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note drum';
+      noteElement.innerHTML = `
+        <strong>Drum Pattern:</strong> Basic pattern, 2 measures
+        <br>Added ${data.noteCount} notes
+      `;
+      noteContainer.appendChild(noteElement);
+      
+      // Update note count
+      noteCount.textContent = data.noteCount;
+      
+      // Enable export
+      exportBtn.disabled = false;
+      viewBtn.disabled = false;
+      
+      log(`Generated drum pattern with ${data.noteCount} notes`, 'success');
+      updateStatus('Drum pattern added');
+    }
     
-    document.getElementById('viewNotesBtn').addEventListener('click', async () => {
+    // Clear all notes
+    async function clearAllNotes() {
       if (!sessionId || !sequenceId) {
         log('Create a session and sequence first', 'error');
         return;
       }
       
-      const data = await callApi(`/sessions/${sessionId}/sequences/${sequenceId}`);
-      if (data) {
-        // Format and display notes
-        if (data.sequence.notes && data.sequence.notes.length > 0) {
-          noteDisplay.innerHTML = formatNotes(data.sequence.notes);
-          noteCount.textContent = data.sequence.notes.length;
-        } else {
-          noteDisplay.textContent = 'No notes in sequence';
-          noteCount.textContent = '0';
-        }
-        log(`Retrieved sequence with ${data.sequence.notes.length} notes`, 'success');
+      updateStatus('Clearing notes...');
+      
+      const data = await callApi(`/sessions/${sessionId}/notes`, 'DELETE');
+      
+      if (!data) {
+        return;
       }
-    });
+      
+      // Clear display
+      noteContainer.innerHTML = '';
+      noteCount.textContent = '0';
+      
+      // Disable export
+      exportBtn.disabled = true;
+      viewBtn.disabled = true;
+      
+      log('All notes cleared', 'success');
+      updateStatus('All notes cleared');
+    }
+    
+    // Export MIDI
+    async function exportMidi() {
+      if (!sessionId || !sequenceId) {
+        log('Create a session and sequence first', 'error');
+        return;
+      }
+      
+      updateStatus('Exporting MIDI file...');
+      
+      try {
+        // Trigger file download using the export endpoint
+        const response = await callApi(`/sessions/${sessionId}/export/midi`);
+        
+        if (!response) {
+          throw new Error('Failed to get MIDI file from server');
+        }
+        
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Extract filename from the Content-Disposition header if possible
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = 'minimal_song.mid';
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) { 
+            filename = matches[1].replace(/['"]/g, '');
+          }
+        }
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        log(`MIDI file exported: ${filename}`, 'success');
+        updateStatus(`MIDI file exported: ${filename}`);
+      } catch (error) {
+        console.error(error);
+        log(`Export error: ${error.message}`, 'error');
+        updateStatus(`Export error: ${error.message}`);
+      }
+    }
+    
+    // View session data
+    async function viewSessionData() {
+      if (!sessionId || !sequenceId) {
+        log('Create a session and sequence first', 'error');
+        return;
+      }
+      
+      updateStatus('Loading session data...');
+      
+      const data = await callApi(`/sessions/${sessionId}/export/json`, 'GET');
+      
+      if (!data) {
+        return;
+      }
+      
+      // Display data
+      dataDisplay.textContent = JSON.stringify(data.data, null, 2);
+      exportData.style.display = 'block';
+      
+      log('Session data loaded', 'success');
+      updateStatus('Session data loaded');
+    }
+    
+    // View formatted notes
+    async function viewNotes() {
+      if (!sessionId || !sequenceId) {
+        log('Create a session and sequence first', 'error');
+        return;
+      }
+      
+      updateStatus('Loading notes...');
+      
+      const data = await callApi(`/sessions/${sessionId}/sequences/${sequenceId}`);
+      if (!data) {
+        return;
+      }
+      
+      // Format and display notes
+      const sequence = data.sequence || data;
+      if (sequence.notes && sequence.notes.length > 0) {
+        noteContainer.innerHTML = formatNotes(sequence.notes);
+        noteCount.textContent = sequence.notes.length;
+      } else {
+        noteContainer.textContent = 'No notes in sequence';
+        noteCount.textContent = '0';
+      }
+      
+      log(`Retrieved sequence with ${sequence.notes ? sequence.notes.length : 0} notes`, 'success');
+      updateStatus('Notes loaded');
+    }
     
     // Helper to format notes in a readable way
     function formatNotes(notes) {
       let html = '';
       
       // Group notes by type
-      const melodicNotes = notes.filter(note => note.channel === 0);
-      const bassNotes = notes.filter(note => note.channel === 1);
-      const drumNotes = notes.filter(note => note.channel === 9);
+      const melodicNotes = notes.filter(note => note.channel === 0 || note.instrument === 0);
+      const bassNotes = notes.filter(note => note.channel === 1 || note.instrument === 32);
+      const drumNotes = notes.filter(note => note.channel === 9 || note.instrument === 9);
       
-      html += `<h3>Melodic Notes (${melodicNotes.length})</h3>`;
+      html += `<div class="note chord"><h3>Melodic Notes (${melodicNotes.length})</h3>`;
       if (melodicNotes.length > 0) {
         html += '<ul>';
         melodicNotes.slice(0, 10).forEach(note => {
@@ -241,12 +499,12 @@
         if (melodicNotes.length > 10) {
           html += `<li>... and ${melodicNotes.length - 10} more</li>`;
         }
-        html += '</ul>';
+        html += '</ul></div>';
       } else {
-        html += '<p>No melodic notes</p>';
+        html += '<p>No melodic notes</p></div>';
       }
       
-      html += `<h3>Bass Notes (${bassNotes.length})</h3>`;
+      html += `<div class="note bass"><h3>Bass Notes (${bassNotes.length})</h3>`;
       if (bassNotes.length > 0) {
         html += '<ul>';
         bassNotes.slice(0, 10).forEach(note => {
@@ -255,12 +513,12 @@
         if (bassNotes.length > 10) {
           html += `<li>... and ${bassNotes.length - 10} more</li>`;
         }
-        html += '</ul>';
+        html += '</ul></div>';
       } else {
-        html += '<p>No bass notes</p>';
+        html += '<p>No bass notes</p></div>';
       }
       
-      html += `<h3>Drum Notes (${drumNotes.length})</h3>`;
+      html += `<div class="note drum"><h3>Drum Notes (${drumNotes.length})</h3>`;
       if (drumNotes.length > 0) {
         html += '<ul>';
         drumNotes.slice(0, 10).forEach(note => {
@@ -269,13 +527,29 @@
         if (drumNotes.length > 10) {
           html += `<li>... and ${drumNotes.length - 10} more</li>`;
         }
-        html += '</ul>';
+        html += '</ul></div>';
       } else {
-        html += '<p>No drum notes</p>';
+        html += '<p>No drum notes</p></div>';
       }
       
       return html;
     }
+    
+    // Event listeners
+    createBtn.addEventListener('click', createSession);
+    createSequenceBtn.addEventListener('click', createSequence);
+    chordBtn.addEventListener('click', generateChords);
+    bassBtn.addEventListener('click', generateBassline);
+    drumBtn.addEventListener('click', generateDrums);
+    clearBtn.addEventListener('click', clearAllNotes);
+    exportBtn.addEventListener('click', exportMidi);
+    viewBtn.addEventListener('click', viewSessionData);
+    viewNotesBtn.addEventListener('click', viewNotes);
+    
+    // Initial setup
+    createSequenceBtn.disabled = true;
+    updateStatus('Ready to create a session');
+    log('Interface loaded. Click "Create Session" to begin.', 'success');
   </script>
 </body>
 </html>
