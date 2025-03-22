@@ -617,73 +617,90 @@ async function debugSessionState() {
   return true;
 }
     
-    // Update the sequences list in the UI
-    function updateSequencesList() {
-      // Clear existing list
-      sequencesList.innerHTML = '';
-      
-      // Add each sequence
-      state.sequences.forEach(sequence => {
-        const sequenceItem = document.createElement('div');
-        sequenceItem.className = 'sequence-item';
-        sequenceItem.dataset.id = sequence.id;
-        
-        // Add appropriate classes
-        if (sequence.id === state.currentSequenceId) {
-          sequenceItem.classList.add('current');
-          sequenceItem.classList.add('selected');
-        }
-        if (sequence.noteCount > 0) {
-          sequenceItem.classList.add('has-notes');
-        }
-        
-        sequenceItem.innerHTML = `
-          <div class="sequence-name" data-id="${sequence.id}">
-            ${sequence.name}
-            ${sequence.id === state.currentSequenceId ? 
-              '<span class="current-indicator" title="Current Sequence"> (current)</span>' : ''}
-            <span class="note-count">
-              ${sequence.noteCount} notes
-            </span>
-          </div>
-          <button class="delete-btn" data-id="${sequence.id}" title="Delete Sequence"${state.sequences.length <= 1 ? ' disabled' : ''}>
-            &times;
-          </button>
-        `;
-        
-        sequencesList.appendChild(sequenceItem);
-        
-        // Add direct click handler to the entire sequence item
-        sequenceItem.addEventListener('click', function(event) {
-          // Only handle clicks on the sequence name, not the delete button
-          if (!event.target.closest('.delete-btn')) {
-            const seqId = this.dataset.id;
-            log(`Sequence item clicked: ${seqId}`, 'info');
-            debugSessionState(); // Add this line
-            log(`About to select sequence with ID: ${seqId}`, 'info'); // Add this line            
-            selectSequenceDirectly(seqId);
-          }
-        });
-      });
-      
-  // After all the sequence items are added
-  sequencesList.innerHTML += `
-    <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; text-align: center;">
-      <button id="testSessionSwitchBtn" style="background: #ff9800;">Run Diagnostic Test</button>
-    </div>
-  `;
-
-// Add the event listener
-document.getElementById('testSessionSwitchBtn').addEventListener('click', testSessionSwitch);
-
-      // Add event listeners for delete buttons
-      document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', function(event) {
-          event.stopPropagation(); // Prevent triggering the parent's click event
-          deleteSequence(this.dataset.id);
-        });
-      });
+// Complete replacement for the updateSequencesList function
+function updateSequencesList() {
+  // Clear existing list
+  sequencesList.innerHTML = '';
+  
+  // Add each sequence
+  state.sequences.forEach(sequence => {
+    const sequenceItem = document.createElement('div');
+    sequenceItem.className = 'sequence-item';
+    sequenceItem.dataset.id = sequence.id;
+    
+    // Add appropriate classes
+    if (sequence.id === state.currentSequenceId) {
+      sequenceItem.classList.add('current');
+      sequenceItem.classList.add('selected');
     }
+    if (sequence.noteCount > 0) {
+      sequenceItem.classList.add('has-notes');
+    }
+    
+    sequenceItem.innerHTML = `
+      <div class="sequence-name">
+        ${sequence.name}
+        ${sequence.id === state.currentSequenceId ? 
+          '<span class="current-indicator" title="Current Sequence"> (current)</span>' : ''}
+        <span class="note-count">
+          ${sequence.noteCount} notes
+        </span>
+      </div>
+      <button class="delete-btn" data-id="${sequence.id}" title="Delete Sequence"${state.sequences.length <= 1 ? ' disabled' : ''}>
+        &times;
+      </button>
+    `;
+    
+    sequencesList.appendChild(sequenceItem);
+  });
+  
+  // IMPORTANT: Add click handlers AFTER all items are added to DOM
+  document.querySelectorAll('.sequence-item').forEach(item => {
+    // Remove any existing event listeners to prevent duplicates
+    const newItem = item.cloneNode(true);
+    item.parentNode.replaceChild(newItem, item);
+    
+    // Add the click handler to the new element
+    newItem.addEventListener('click', function(event) {
+      // Only handle clicks on the sequence item or sequence name, not delete button
+      if (!event.target.closest('.delete-btn')) {
+        const seqId = this.dataset.id;
+        log(`Sequence item clicked: ${seqId}`, 'info');
+        selectSequenceDirectly(seqId);
+      }
+    });
+  });
+  
+  // Add delete button handlers separately
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function(event) {
+      event.stopPropagation(); // Prevent triggering the parent's click
+      const seqId = this.dataset.id;
+      log(`Delete button clicked for sequence: ${seqId}`, 'info');
+      deleteSequence(seqId);
+    });
+  });
+  
+  // Optional - add a diagnostic test button
+  sequencesList.insertAdjacentHTML('beforeend', `
+    <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; text-align: center;">
+      <button id="testSequenceSwitchBtn" style="background: #ff9800;">Test Sequence Switch</button>
+    </div>
+  `);
+  
+  // Add event listener for the test button
+  document.getElementById('testSequenceSwitchBtn')?.addEventListener('click', function() {
+    log("Testing sequence switching functionality", 'info');
+    // Try to switch to the first sequence that's not the current one
+    const otherSequence = state.sequences.find(s => s.id !== state.currentSequenceId);
+    if (otherSequence) {
+      log(`Test switching to: ${otherSequence.id} (${otherSequence.name})`, 'info');
+      selectSequenceDirectly(otherSequence.id);
+    } else {
+      log("No other sequence to switch to", 'warning');
+    }
+  });
+}
     
     // Update sequence labels in the UI
     function updateSequenceLabels() {
