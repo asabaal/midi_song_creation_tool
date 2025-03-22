@@ -1020,30 +1020,57 @@
       }
     }
     
-  // Refresh piano roll with notes
+  // Refresh piano roll with notes - simpler version to just make it work again
   async function refreshPianoRoll() {
     try {
-      if (!state.sessionId || !state.currentSequenceId) {
-        log('No session or sequence selected', 'error');
+      if (!state.sessionId) {
+        log('No session ID available', 'info');
         return;
       }
       
-      // Explicitly fetch the current sequence data
-      const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences/${state.currentSequenceId}`);
-      if (!sequenceData || !sequenceData.sequence) {
-        log('Failed to get sequence data', 'error');
+      log(`Refreshing piano roll for session ${state.sessionId}`, 'info');
+      
+      // Get session data through /api/sessions/:id endpoint which we know works
+      const data = await callApi(`/sessions/${state.sessionId}`, 'GET');
+      
+      if (!data || !data.session) {
+        log('Failed to get session data', 'error');
         return;
       }
       
       // Clear existing notes
       document.querySelectorAll('.piano-note').forEach(note => note.remove());
       
-      // Extract notes from the sequence
-      const notes = sequenceData.sequence.notes || [];
+      // Extract notes from any tracks in the session
+      let notes = [];
+      let sourceName = "";
       
-      if (notes.length > 0) {
-        log(`Found ${notes.length} notes in sequence`, 'success');
+      if (data.session && data.session.tracks) {
+        // First try to find the current track/sequence
+        if (state.currentSequenceId) {
+          const currentTrack = data.session.tracks.find(t => t.id === state.currentSequenceId);
+          if (currentTrack && currentTrack.notes && currentTrack.notes.length > 0) {
+            notes = currentTrack.notes;
+            sourceName = currentTrack.name || "current sequence";
+            log(`Found ${notes.length} notes in ${sourceName}`, 'success');
+          }
+        }
         
+        // If no notes found in current sequence, look for any track with notes
+        if (notes.length === 0) {
+          for (const track of data.session.tracks) {
+            if (track.notes && track.notes.length > 0) {
+              notes = track.notes;
+              sourceName = track.name || "alternate sequence";
+              log(`No notes in current sequence, using ${notes.length} notes from ${sourceName}`, 'info');
+              break;
+            }
+          }
+        }
+      }
+      
+      // Display the notes
+      if (notes.length > 0) {
         notes.forEach(note => {
           const noteElement = document.createElement('div');
           
