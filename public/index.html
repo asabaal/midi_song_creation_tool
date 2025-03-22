@@ -16,6 +16,11 @@
     button:disabled { background: #cccccc; cursor: not-allowed; }
     .card { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
     .controls { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    select, input { padding: 8px; border-radius: 4px; border: 1px solid #ddd; margin: 5px; }
+    .control-group { display: flex; flex-direction: column; border: 1px solid #eee; 
+                     padding: 10px; border-radius: 4px; margin: 10px 0; }
+    .control-group h3 { margin-top: 0; font-size: 1em; }
+    .pattern-controls { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     #piano-roll { height: 400px; background: #f5f5f5; overflow: auto; position: relative; }
     .piano-key { position: absolute; height: 20px; border-bottom: 1px solid #ddd; display: flex;
                 align-items: center; padding-left: 10px; font-size: 12px; width: 100px; }
@@ -34,6 +39,10 @@
     textarea { width: 100%; height: 100px; margin-top: 10px; font-family: monospace; }
     .hidden { display: none; }
     .info-text { font-size: 0.9em; color: #666; margin: 5px 0; }
+    .col-2 { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 10px; }
+    @media (max-width: 768px) {
+      .col-2 { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -50,11 +59,112 @@
   
   <div class="card">
     <h2>2. Generate Music</h2>
-    <div class="controls">
-      <button id="chordBtn" disabled>Add Chord Progression</button>
-      <button id="bassBtn" class="blue" disabled>Add Bassline</button>
-      <button id="drumBtn" class="blue" disabled>Add Drums</button>
-      <button id="clearBtn" class="red" disabled>Clear Notes</button>
+    <div class="col-2">
+      <!-- Chord Progression Controls -->
+      <div class="control-group">
+        <h3>Chord Progression</h3>
+        <div class="pattern-controls">
+          <select id="chordKey" disabled>
+            <option value="C">C</option>
+            <option value="C#">C#</option>
+            <option value="D">D</option>
+            <option value="D#">D#</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="F#">F#</option>
+            <option value="G">G</option>
+            <option value="G#">G#</option>
+            <option value="A">A</option>
+            <option value="A#">A#</option>
+            <option value="B">B</option>
+          </select>
+          <select id="chordScale" disabled>
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="melodic_minor">Melodic Minor</option>
+            <option value="harmonic_minor">Harmonic Minor</option>
+          </select>
+          <select id="chordOctave" disabled>
+            <option value="3">Octave 3</option>
+            <option value="4" selected>Octave 4</option>
+            <option value="5">Octave 5</option>
+          </select>
+          <select id="chordProgression" disabled>
+            <option value="1-4-5">1-4-5 (I-IV-V)</option>
+            <option value="1-5-6-4">1-5-6-4 (I-V-vi-IV)</option>
+            <option value="1-6-4-5">1-6-4-5 (I-vi-IV-V)</option>
+            <option value="2-5-1">2-5-1 (ii-V-I)</option>
+            <option value="6-4-1-5">6-4-1-5 (vi-IV-I-V)</option>
+          </select>
+        </div>
+        <button id="chordBtn" disabled>Add Chord Progression</button>
+      </div>
+      
+      <!-- Bassline Controls -->
+      <div class="control-group">
+        <h3>Bassline</h3>
+        <div class="pattern-controls">
+          <select id="bassKey" disabled>
+            <option value="C">C</option>
+            <option value="C#">C#</option>
+            <option value="D">D</option>
+            <option value="D#">D#</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="F#">F#</option>
+            <option value="G">G</option>
+            <option value="G#">G#</option>
+            <option value="A">A</option>
+            <option value="A#">A#</option>
+            <option value="B">B</option>
+          </select>
+          <select id="bassScale" disabled>
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="melodic_minor">Melodic Minor</option>
+            <option value="harmonic_minor">Harmonic Minor</option>
+          </select>
+          <select id="bassOctave" disabled>
+            <option value="2">Octave 2</option>
+            <option value="3" selected>Octave 3</option>
+            <option value="4">Octave 4</option>
+          </select>
+          <select id="bassProgression" disabled>
+            <option value="1-4-5">1-4-5 (I-IV-V)</option>
+            <option value="1-5-6-4">1-5-6-4 (I-V-vi-IV)</option>
+            <option value="1-6-4-5">1-6-4-5 (I-vi-IV-V)</option>
+            <option value="2-5-1">2-5-1 (ii-V-I)</option>
+            <option value="6-4-1-5">6-4-1-5 (vi-IV-I-V)</option>
+          </select>
+        </div>
+        <button id="bassBtn" class="blue" disabled>Add Bassline</button>
+      </div>
+      
+      <!-- Drum Controls -->
+      <div class="control-group">
+        <h3>Drums</h3>
+        <div class="pattern-controls">
+          <select id="drumPattern" disabled>
+            <option value="basic">Basic</option>
+            <option value="rock">Rock</option>
+            <option value="jazz">Jazz</option>
+            <option value="funk">Funk</option>
+          </select>
+          <select id="drumMeasures" disabled>
+            <option value="1">1 Measure</option>
+            <option value="2" selected>2 Measures</option>
+            <option value="4">4 Measures</option>
+          </select>
+        </div>
+        <button id="drumBtn" class="blue" disabled>Add Drums</button>
+      </div>
+      
+      <!-- Clear Button -->
+      <div class="control-group">
+        <h3>Clear</h3>
+        <button id="clearBtn" class="red" disabled>Clear All Notes</button>
+        <div class="info-text">Remove all notes from the current sequence.</div>
+      </div>
     </div>
   </div>
   
@@ -125,6 +235,20 @@
     const exportArea = document.getElementById('exportArea');
     const importArea = document.getElementById('importArea');
     const fileInput = document.getElementById('fileInput');
+    
+    // Pattern controls
+    const chordKey = document.getElementById('chordKey');
+    const chordScale = document.getElementById('chordScale');
+    const chordOctave = document.getElementById('chordOctave');
+    const chordProgression = document.getElementById('chordProgression');
+    
+    const bassKey = document.getElementById('bassKey');
+    const bassScale = document.getElementById('bassScale');
+    const bassOctave = document.getElementById('bassOctave');
+    const bassProgression = document.getElementById('bassProgression');
+    
+    const drumPattern = document.getElementById('drumPattern');
+    const drumMeasures = document.getElementById('drumMeasures');
     
     // Buttons
     const setupBtn = document.getElementById('setupBtn');
@@ -237,6 +361,8 @@
       
       // Update UI
       setupStatus.textContent = `Ready (Session: ${state.sessionId.substring(0, 8)}...)`;
+      
+      // Enable all controls
       chordBtn.disabled = false;
       bassBtn.disabled = false;
       drumBtn.disabled = false;
@@ -244,6 +370,20 @@
       exportMidiBtn.disabled = false;
       exportJsonBtn.disabled = false;
       importBtn.disabled = false;
+      
+      // Enable all pattern selectors
+      chordKey.disabled = false;
+      chordScale.disabled = false;
+      chordOctave.disabled = false;
+      chordProgression.disabled = false;
+      
+      bassKey.disabled = false;
+      bassScale.disabled = false;
+      bassOctave.disabled = false;
+      bassProgression.disabled = false;
+      
+      drumPattern.disabled = false;
+      drumMeasures.disabled = false;
       
       // Get piano roll ready
       initPianoRoll();
@@ -260,11 +400,17 @@
       
       updateStatus('Generating chord progression...');
       
+      // Get values from selectors
+      const key = chordKey.value;
+      const scaleType = chordScale.value;
+      const octave = parseInt(chordOctave.value);
+      const progressionName = chordProgression.value;
+      
       const data = await callApi(`/sessions/${state.sessionId}/patterns/chord-progression`, 'POST', {
-        key: 'C',
-        progressionName: '1-4-5',
-        scaleType: 'major',
-        octave: 4,
+        key,
+        progressionName,
+        scaleType,
+        octave,
         rhythmPattern: [4]
       });
       
@@ -274,8 +420,8 @@
       }
       
       state.noteCount = data.noteCount;
-      updateStatus(`Generated chord progression with ${data.noteCount} notes`);
-      log(`Added ${data.noteCount} notes`, 'success');
+      updateStatus(`Generated ${key} ${scaleType} chord progression with ${data.noteCount} notes`);
+      log(`Added ${data.noteCount} notes for ${key} ${progressionName} progression`, 'success');
       
       // Refresh piano roll
       refreshPianoRoll();
@@ -298,11 +444,17 @@
       
       updateStatus('Generating bassline...');
       
+      // Get values from selectors
+      const key = bassKey.value;
+      const scaleType = bassScale.value;
+      const octave = parseInt(bassOctave.value);
+      const progressionName = bassProgression.value;
+      
       const data = await callApi(`/sessions/${state.sessionId}/patterns/bassline`, 'POST', {
-        key: 'C',
-        progressionName: '1-4-5',
-        scaleType: 'major',
-        octave: 3,
+        key,
+        progressionName,
+        scaleType,
+        octave,
         rhythmPattern: [1, 0.5, 0.5]
       });
       
@@ -312,8 +464,8 @@
       }
       
       state.noteCount = data.noteCount;
-      updateStatus(`Added bassline (total: ${data.noteCount} notes)`);
-      log(`Sequence now has ${data.noteCount} notes`, 'success');
+      updateStatus(`Added ${key} ${scaleType} bassline (total: ${data.noteCount} notes)`);
+      log(`Added bassline in ${key} ${scaleType} (${progressionName}) at octave ${octave}`, 'success');
       
       // Refresh piano roll
       refreshPianoRoll();
@@ -336,9 +488,13 @@
       
       updateStatus('Generating drum pattern...');
       
+      // Get values from selectors
+      const patternType = drumPattern.value;
+      const measures = parseInt(drumMeasures.value);
+      
       const data = await callApi(`/sessions/${state.sessionId}/patterns/drums`, 'POST', {
-        patternType: 'basic',
-        measures: 2
+        patternType,
+        measures
       });
       
       if (!data) {
@@ -347,8 +503,8 @@
       }
       
       state.noteCount = data.noteCount;
-      updateStatus(`Added drums (total: ${data.noteCount} notes)`);
-      log(`Sequence now has ${data.noteCount} notes`, 'success');
+      updateStatus(`Added ${patternType} drums for ${measures} measures (total: ${data.noteCount} notes)`);
+      log(`Added ${patternType} drum pattern for ${measures} measures`, 'success');
       
       // Refresh piano roll
       refreshPianoRoll();
@@ -430,10 +586,10 @@
         const disposition = response.headers.get('Content-Disposition');
         let filename = 'my_music.mid';
         if (disposition && disposition.indexOf('attachment') !== -1) {
-          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const filenameRegex = /filename[^;=\\n]*=((['\"]).*?\\2|[^;\\n]*)/;
           const matches = filenameRegex.exec(disposition);
           if (matches != null && matches[1]) { 
-            filename = matches[1].replace(/['"]/g, '');
+            filename = matches[1].replace(/['\"]/g, '');
           }
         }
         
@@ -661,6 +817,19 @@
       }
     }
     
+    // Sync key and scale between chord and bass controls
+    function syncMusicSettings(source, target) {
+      if (source === 'chord') {
+        bassKey.value = chordKey.value;
+        bassScale.value = chordScale.value;
+        bassProgression.value = chordProgression.value;
+      } else {
+        chordKey.value = bassKey.value;
+        chordScale.value = bassScale.value;
+        chordProgression.value = bassProgression.value;
+      }
+    }
+    
     // Play the sequence
     function playSequence() {
       if (!state.audioContext) {
@@ -789,6 +958,14 @@
     copyJsonBtn.addEventListener('click', copyJsonToClipboard);
     saveJsonBtn.addEventListener('click', saveJsonToFile);
     fileInput.addEventListener('change', handleFileUpload);
+    
+    // Add music setting sync
+    chordKey.addEventListener('change', () => syncMusicSettings('chord', 'bass'));
+    chordScale.addEventListener('change', () => syncMusicSettings('chord', 'bass'));
+    chordProgression.addEventListener('change', () => syncMusicSettings('chord', 'bass'));
+    bassKey.addEventListener('change', () => syncMusicSettings('bass', 'chord'));
+    bassScale.addEventListener('change', () => syncMusicSettings('bass', 'chord'));
+    bassProgression.addEventListener('change', () => syncMusicSettings('bass', 'chord'));
     
     // Initialize
     updateStatus('Ready - click "Set Up" to begin');
