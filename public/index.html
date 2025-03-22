@@ -60,9 +60,9 @@
   <div class="card">
     <h2>2. Generate Music</h2>
     <div class="col-2">
-      <!-- Chord Progression Controls -->
+      <!-- Random Notes Controls -->
       <div class="control-group">
-        <h3>Chord Progression</h3>
+        <h3>Random Notes</h3>
         <div class="pattern-controls">
           <select id="chordKey" disabled>
             <option value="C">C</option>
@@ -89,15 +89,10 @@
             <option value="4" selected>Octave 4</option>
             <option value="5">Octave 5</option>
           </select>
-          <select id="chordProgression" disabled>
-            <option value="1-4-5">1-4-5 (I-IV-V)</option>
-            <option value="1-5-6-4">1-5-6-4 (I-V-vi-IV)</option>
-            <option value="1-6-4-5">1-6-4-5 (I-vi-IV-V)</option>
-            <option value="2-5-1">2-5-1 (ii-V-I)</option>
-            <option value="6-4-1-5">6-4-1-5 (vi-IV-I-V)</option>
-          </select>
+          <input type="number" id="noteCount" min="4" max="32" value="8" disabled>
+          <label for="noteCount">notes</label>
         </div>
-        <button id="chordBtn" disabled>Add Chord Progression</button>
+        <button id="chordBtn" disabled>Add Random Notes</button>
       </div>
       
       <!-- Bassline Controls -->
@@ -129,15 +124,10 @@
             <option value="3" selected>Octave 3</option>
             <option value="4">Octave 4</option>
           </select>
-          <select id="bassProgression" disabled>
-            <option value="1-4-5">1-4-5 (I-IV-V)</option>
-            <option value="1-5-6-4">1-5-6-4 (I-V-vi-IV)</option>
-            <option value="1-6-4-5">1-6-4-5 (I-vi-IV-V)</option>
-            <option value="2-5-1">2-5-1 (ii-V-I)</option>
-            <option value="6-4-1-5">6-4-1-5 (vi-IV-I-V)</option>
-          </select>
+          <input type="number" id="bassNoteCount" min="4" max="32" value="8" disabled>
+          <label for="bassNoteCount">notes</label>
         </div>
-        <button id="bassBtn" class="blue" disabled>Add Bassline</button>
+        <button id="bassBtn" class="blue" disabled>Add Random Bassline</button>
       </div>
       
       <!-- Drum Controls -->
@@ -240,12 +230,12 @@
     const chordKey = document.getElementById('chordKey');
     const chordScale = document.getElementById('chordScale');
     const chordOctave = document.getElementById('chordOctave');
-    const chordProgression = document.getElementById('chordProgression');
+    const noteCount = document.getElementById('noteCount');
     
     const bassKey = document.getElementById('bassKey');
     const bassScale = document.getElementById('bassScale');
     const bassOctave = document.getElementById('bassOctave');
-    const bassProgression = document.getElementById('bassProgression');
+    const bassNoteCount = document.getElementById('bassNoteCount');
     
     const drumPattern = document.getElementById('drumPattern');
     const drumMeasures = document.getElementById('drumMeasures');
@@ -375,12 +365,12 @@
       chordKey.disabled = false;
       chordScale.disabled = false;
       chordOctave.disabled = false;
-      chordProgression.disabled = false;
+      noteCount.disabled = false;
       
       bassKey.disabled = false;
       bassScale.disabled = false;
       bassOctave.disabled = false;
-      bassProgression.disabled = false;
+      bassNoteCount.disabled = false;
       
       drumPattern.disabled = false;
       drumMeasures.disabled = false;
@@ -391,37 +381,37 @@
       return true;
     }
     
-    // Generate chord progression
+    // Generate random notes
     async function generateChords() {
       if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
       
-      updateStatus('Generating chord progression...');
+      updateStatus('Generating random notes...');
       
       // Get values from selectors
       const key = chordKey.value;
       const scaleType = chordScale.value;
       const octave = parseInt(chordOctave.value);
-      const progressionName = chordProgression.value;
+      const count = parseInt(noteCount.value) || 8;
       
       const data = await callApi(`/sessions/${state.sessionId}/patterns/chord-progression`, 'POST', {
         key,
-        progressionName,
         scaleType,
         octave,
-        rhythmPattern: [4]
+        noteCount: count,
+        rhythmPattern: [1]
       });
       
       if (!data) {
-        updateStatus('Failed to generate chord progression');
+        updateStatus('Failed to generate random notes');
         return;
       }
       
       state.noteCount = data.noteCount;
-      updateStatus(`Generated ${key} ${scaleType} chord progression with ${data.noteCount} notes`);
-      log(`Added ${data.noteCount} notes for ${key} ${progressionName} progression`, 'success');
+      updateStatus(`Generated ${data.noteCount} random notes in ${key} ${scaleType}`);
+      log(`Added ${data.noteCount} random notes in ${key} ${scaleType} at octave ${octave}`, 'success');
       
       // Refresh piano roll
       refreshPianoRoll();
@@ -435,26 +425,26 @@
       exportStatus.textContent = `Ready to export`;
     }
     
-    // Generate bassline
+    // Generate random bassline
     async function generateBass() {
       if (!state.sessionId || !state.sequenceId) {
         log('Set up session first', 'error');
         return;
       }
       
-      updateStatus('Generating bassline...');
+      updateStatus('Generating random bassline...');
       
       // Get values from selectors
       const key = bassKey.value;
       const scaleType = bassScale.value;
       const octave = parseInt(bassOctave.value);
-      const progressionName = bassProgression.value;
+      const count = parseInt(bassNoteCount.value) || 8;
       
       const data = await callApi(`/sessions/${state.sessionId}/patterns/bassline`, 'POST', {
         key,
-        progressionName,
         scaleType,
         octave,
+        noteCount: count,
         rhythmPattern: [1, 0.5, 0.5]
       });
       
@@ -464,8 +454,8 @@
       }
       
       state.noteCount = data.noteCount;
-      updateStatus(`Added ${key} ${scaleType} bassline (total: ${data.noteCount} notes)`);
-      log(`Added bassline in ${key} ${scaleType} (${progressionName}) at octave ${octave}`, 'success');
+      updateStatus(`Added ${key} ${scaleType} bassline with ${data.noteCount} notes`);
+      log(`Added bassline in ${key} ${scaleType} at octave ${octave}`, 'success');
       
       // Refresh piano roll
       refreshPianoRoll();
@@ -817,16 +807,14 @@
       }
     }
     
-    // Sync key and scale between chord and bass controls
+    // Sync key and scale between melody and bass controls
     function syncMusicSettings(source, target) {
       if (source === 'chord') {
         bassKey.value = chordKey.value;
         bassScale.value = chordScale.value;
-        bassProgression.value = chordProgression.value;
       } else {
         chordKey.value = bassKey.value;
         chordScale.value = bassScale.value;
-        chordProgression.value = bassProgression.value;
       }
     }
     
@@ -962,10 +950,8 @@
     // Add music setting sync
     chordKey.addEventListener('change', () => syncMusicSettings('chord', 'bass'));
     chordScale.addEventListener('change', () => syncMusicSettings('chord', 'bass'));
-    chordProgression.addEventListener('change', () => syncMusicSettings('chord', 'bass'));
     bassKey.addEventListener('change', () => syncMusicSettings('bass', 'chord'));
     bassScale.addEventListener('change', () => syncMusicSettings('bass', 'chord'));
-    bassProgression.addEventListener('change', () => syncMusicSettings('bass', 'chord'));
     
     // Initialize
     updateStatus('Ready - click "Set Up" to begin');
