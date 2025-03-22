@@ -111,6 +111,63 @@ app.get('/api/debug-data', async (req, res) => {
   });
 });
 
+// Special compatibility route for updating a session
+app.put('/api/sessions/:sessionId', async (req, res) => {
+  try {
+    console.log(`DIRECT SESSION PUT HANDLER for: ${req.params.sessionId}`);
+    
+    const sessionId = req.params.sessionId;
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required',
+        message: 'Session ID is required'
+      });
+    }
+    
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found',
+        message: `No session with ID ${sessionId} exists`
+      });
+    }
+    
+    // Update session properties
+    const { name, bpm, timeSignature, loop, currentSequenceId } = req.body;
+    
+    if (name) session.name = name;
+    if (bpm) session.bpm = bpm;
+    if (timeSignature) session.timeSignature = timeSignature;
+    if (loop) session.loop = loop;
+    if (currentSequenceId && session.sequences[currentSequenceId]) {
+      session.currentSequenceId = currentSequenceId;
+    }
+    
+    await session.save();
+    
+    res.json({
+      success: true,
+      session: {
+        id: session.id,
+        name: session.name,
+        bpm: session.bpm,
+        timeSignature: session.timeSignature,
+        loop: session.loop,
+        tracks: session.tracks || [],
+        currentSequenceId: session.currentSequenceId
+      }
+    });
+  } catch (error) {
+    console.error(`Error updating session: ${error.message}`);
+    res.status(400).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 // Add compatibility router for old API paths (must be before API routes)
 app.use('/', compatRouter);
 

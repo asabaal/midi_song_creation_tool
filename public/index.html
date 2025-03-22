@@ -282,7 +282,144 @@
       noteCount: 0,
       sequences: [] // New: store all sequences
     };
+
+// Simple test function to diagnose session switching issues
+async function testSessionSwitch() {
+  log("DIAGNOSTIC TEST: Session Switching", "info");
+  
+  // Log the session ID stored in state
+  log(`Session ID in state: ${state.sessionId || 'NONE'}`, "info");
+  
+  if (!state.sessionId) {
+    log("No session ID available - cannot perform test", "error");
+    return;
+  }
+  
+  // Test 1: Try to get session info (known working path)
+  log("Test 1: GET session info", "info");
+  try {
+    const getResponse = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
     
+    const getStatus = getResponse.status;
+    log(`GET status: ${getStatus}`, getStatus >= 200 && getStatus < 300 ? "success" : "error");
+    
+    if (getStatus >= 200 && getStatus < 300) {
+      const getData = await getResponse.json();
+      log(`GET success: Found session with ID ${getData.session.id}`, "success");
+      log(`Current sequence ID: ${getData.session.currentSequenceId || 'NONE'}`, "info");
+    } else {
+      const errorText = await getResponse.text();
+      log(`GET error response: ${errorText}`, "error");
+    }
+  } catch (error) {
+    log(`GET exception: ${error.message}`, "error");
+  }
+  
+  // Test 2: Try a direct fetch with PUT
+  log("Test 2: PUT session update with fetch", "info");
+  try {
+    // Pick a sequence ID to test with
+    const testSequenceId = state.sequences && state.sequences.length > 0 ? 
+                          state.sequences[0].id : null;
+    
+    if (!testSequenceId) {
+      log("No sequence ID available for testing", "error");
+      return;
+    }
+    
+    log(`Testing with sequence ID: ${testSequenceId}`, "info");
+    
+    const putBody = JSON.stringify({ currentSequenceId: testSequenceId });
+    log(`PUT request body: ${putBody}`, "info");
+    
+    const putResponse = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'PUT', 
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: putBody
+    });
+    
+    const putStatus = putResponse.status;
+    log(`PUT status: ${putStatus}`, putStatus >= 200 && putStatus < 300 ? "success" : "error");
+    
+    const responseText = await putResponse.text();
+    log(`PUT response: ${responseText}`, "info");
+  } catch (error) {
+    log(`PUT exception: ${error.message}`, "error");
+  }
+  
+  // Test 3: Try the original XMLHttpRequest approach but with verbose logging
+  log("Test 3: PUT session update with XMLHttpRequest", "info");
+  try {
+    const testSequenceId = state.sequences && state.sequences.length > 0 ? 
+                          state.sequences[0].id : null;
+    
+    if (!testSequenceId) {
+      log("No sequence ID available for testing", "error");
+      return;
+    }
+    
+    const xhr = new XMLHttpRequest();
+    const url = `/api/sessions/${state.sessionId}`;
+    log(`XHR URL: ${url}`, "info");
+    
+    xhr.open('PUT', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+      log(`XHR status: ${xhr.status}`, xhr.status >= 200 && xhr.status < 300 ? "success" : "error");
+      log(`XHR response: ${xhr.responseText}`, "info");
+    };
+    
+    xhr.onerror = function() {
+      log(`XHR error occurred`, "error");
+    };
+    
+    const requestData = JSON.stringify({ currentSequenceId: testSequenceId });
+    log(`XHR request data: ${requestData}`, "info");
+    xhr.send(requestData);
+  } catch (error) {
+    log(`XHR exception: ${error.message}`, "error");
+  }
+  
+  log("DIAGNOSTIC TEST COMPLETE", "info");
+}
+
+    // Debug helper function
+async function debugSessionState() {
+  log("--- DEBUG SESSION STATE ---", "info");
+  log(`Current session ID: ${state.sessionId || 'NONE'}`, "info");
+  log(`Current sequence ID: ${state.currentSequenceId || 'NONE'}`, "info");
+  
+  try {
+    // Try to fetch session data directly
+    const response = await fetch(`/api/sessions/${state.sessionId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const result = await response.text();
+    log(`Response from session fetch: ${result.substring(0, 100)}...`, "info");
+    
+    // Check what sequences are available
+    if (state.sequences && state.sequences.length > 0) {
+      log(`Available sequences: ${state.sequences.map(s => s.id).join(', ')}`, "info");
+    } else {
+      log("No sequences in client state", "info");
+    }
+  } catch (error) {
+    log(`Debug error: ${error.message}`, "error");
+  }
+  
+  log("--- END DEBUG ---", "info");
+}
+
     // DOM elements
     const setupStatus = document.getElementById('setupStatus');
     const playStatus = document.getElementById('playStatus');
@@ -508,11 +645,23 @@
           if (!event.target.closest('.delete-btn')) {
             const seqId = this.dataset.id;
             log(`Sequence item clicked: ${seqId}`, 'info');
+            debugSessionState(); // Add this line
+            log(`About to select sequence with ID: ${seqId}`, 'info'); // Add this line            
             selectSequenceDirectly(seqId);
           }
         });
       });
       
+  // After all the sequence items are added
+  sequencesList.innerHTML += `
+    <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; text-align: center;">
+      <button id="testSessionSwitchBtn" style="background: #ff9800;">Run Diagnostic Test</button>
+    </div>
+  `;
+
+// Add the event listener
+document.getElementById('testSessionSwitchBtn').addEventListener('click', testSessionSwitch);
+
       // Add event listeners for delete buttons
       document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', function(event) {
@@ -530,98 +679,91 @@
         `${currentSequence.name} (${currentSequence.noteCount} notes)` : 'None';
     }
     
-    // COMPLETELY NEW APPROACH: Direct sequence selection
     async function selectSequenceDirectly(sequenceId) {
-      if (!state.sessionId || !sequenceId) {
-        log('Missing session or sequence ID', 'error');
-        return;
-      }
-      
-      log(`Selecting sequence directly: ${sequenceId}`, 'info');
-      
-      try {
-        // Use XMLHttpRequest for better debugging
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', `/api/sessions/${state.sessionId}`, true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        
-        xhr.onload = async function() {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            log(`Server responded with status ${xhr.status}`, 'success');
-            log(`Response text: ${xhr.responseText.substring(0, 50)}...`, 'info');
-            
-            // Update the current sequence ID
-            state.currentSequenceId = sequenceId;
-            log(`Current sequence ID set to: ${state.currentSequenceId}`, 'success');
-            
-            // Refresh data and UI
-            await refreshSessionData();
-            await refreshPianoRoll();
-            
-            log('Sequence switch completed successfully', 'success');
-          } else {
-            log(`Error: Server returned status ${xhr.status}`, 'error');
-            log(`Response: ${xhr.responseText}`, 'error');
-          }
-        };
-        
-        xhr.onerror = function() {
-          log('Error: Network request failed', 'error');
-        };
-        
-        // Prepare the request body
-        const requestData = JSON.stringify({ 
-          currentSequenceId: sequenceId 
-        });
-        
-        log(`Sending request: ${requestData}`, 'info');
-        xhr.send(requestData);
-      } catch (error) {
-        log(`Error in selectSequenceDirectly: ${error.message}`, 'error');
-      }
+  if (!state.sessionId || !sequenceId) {
+    log('Missing session or sequence ID', 'error');
+    return;
+  }
+  
+  log(`Selecting sequence directly: ${sequenceId}`, 'info');
+  debugSessionState(); // Log the current state
+  
+  try {
+    // Use our callApi helper function instead of XMLHttpRequest
+    const result = await callApi(`/sessions/${state.sessionId}`, 'PUT', {
+      currentSequenceId: sequenceId
+    });
+    
+    if (!result) {
+      log('Failed to update current sequence', 'error');
+      return;
     }
     
+    // Update the current sequence ID
+    state.currentSequenceId = sequenceId;
+    log(`Current sequence ID set to: ${state.currentSequenceId}`, 'success');
+    
+    // Refresh data and UI
+    await refreshSessionData();
+    await refreshPianoRoll();
+    
+    log('Sequence switch completed successfully', 'success');
+  } catch (error) {
+    log(`Error in selectSequenceDirectly: ${error.message}`, 'error');
+  }
+}
+
     // Create a new sequence
     async function createSequence() {
-      if (!state.sessionId) {
-        log('Set up session first', 'error');
-        return;
-      }
-      
-      const name = newSequenceName.value.trim();
-      if (!name) {
-        sequenceError.textContent = 'Sequence name cannot be empty';
-        return;
-      }
-      
-      sequenceError.textContent = '';
-      log(`Creating new sequence: ${name}`);
-      
-      // Create a new sequence
-      const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences`, 'POST', {
-        name: name,
-        tempo: 120,
-        key: 'C major'
-      });
-      
-      if (!sequenceData) {
-        log('Failed to create sequence', 'error');
-        sequenceError.textContent = 'Failed to create sequence';
-        return;
-      }
-      
-      const sequenceId = sequenceData.sequenceId || sequenceData.id;
-      log(`Sequence created: ${sequenceId}`, 'success');
-      
-      // Clear input
-      newSequenceName.value = '';
-      
-      // Refresh data and UI
-      await refreshSessionData();
-      
-      // Select the new sequence
-      await selectSequenceDirectly(sequenceId);
-    }
+  if (!state.sessionId) {
+    log('Set up session first', 'error');
+    return;
+  }
+  
+  const name = newSequenceName.value.trim();
+  if (!name) {
+    sequenceError.textContent = 'Sequence name cannot be empty';
+    return;
+  }
+  
+  sequenceError.textContent = '';
+  log(`Creating new sequence: ${name}`);
+  
+  // Debug current state before creation
+  await debugSessionState();
+  
+  // Create a new sequence
+  const sequenceData = await callApi(`/sessions/${state.sessionId}/sequences`, 'POST', {
+    name: name,
+    tempo: 120,
+    key: 'C major'
+  });
+  
+  if (!sequenceData) {
+    log('Failed to create sequence', 'error');
+    sequenceError.textContent = 'Failed to create sequence';
+    return;
+  }
+  
+  const sequenceId = sequenceData.sequenceId || sequenceData.id;
+  log(`Sequence created: ${sequenceId}`, 'success');
+  
+  // Debug state after creation
+  await debugSessionState();
+  
+  // Clear input
+  newSequenceName.value = '';
+  
+  // Refresh data first
+  await refreshSessionData();
+  
+  // Debug state after refresh
+  await debugSessionState();
+  
+  // Then select the new sequence
+  //await selectSequenceDirectly(sequenceId);
+  await selectSequenceDirectly(sequenceId);
+}
     
   // Delete a sequence (properly call the sequence deletion endpoint)
   async function deleteSequence(sequenceId) {

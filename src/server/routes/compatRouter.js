@@ -34,6 +34,16 @@ router.get('/sessions/:sessionId', (req, res, next) => {
   next('route');
 });
 
+// Forward session routes for PUT requests
+router.put('/sessions/:sessionId', (req, res, next) => {
+  logCompatRequest('PUT /sessions/:sessionId', req);
+  
+  // Rewrite the URL to match the new structure
+  req.url = `/api/sessions/${req.params.sessionId}`;
+  console.log(`Redirecting ${req.originalUrl} to ${req.url}`);
+  next('route');
+});
+
 // Forward session create route
 router.post('/sessions', (req, res, next) => {
   logCompatRequest('POST /sessions', req);
