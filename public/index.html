@@ -469,47 +469,59 @@ async function debugSessionState() {
       statusBar.textContent = 'Status: ' + message;
     }
     
-    // API helper
-    async function callApi(endpoint, method = 'GET', body = null) {
-      try {
-        const options = {
-          method,
-          headers: { 'Content-Type': 'application/json' }
-        };
+// Enhanced API helper with better debugging
+async function callApi(endpoint, method = 'GET', body = null) {
+  try {
+    const options = {
+      method,
+      headers: { 'Content-Type': 'application/json' }
+    };
 
-        if (body) {
-          options.body = JSON.stringify(body);
-        }
-
-        log(`API Call: ${method} ${endpoint}`);
-        const response = await fetch(`/api${endpoint}`, options);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          log(`API error (${response.status}): ${errorText}`, 'error');
-          return null;
-        }
-        
-        // For binary responses (like MIDI files), return the Response object
-        if (response.headers.get('Content-Type') === 'audio/midi') {
-          return response;
-        }
-        
-        const data = await response.json();
-
-        // Handle both error formats for compatibility
-        if (data.error || (data.success === false)) {
-          log(`API Error: ${data.error || data.message}`, 'error');
-          return null;
-        }
-
-        return data;
-      } catch (error) {
-        log(`Error: ${error.message}`, 'error');
-        return null;
+    if (body) {
+      // When making pattern-related calls, ensure the current sequence ID is included
+      if (endpoint.includes('patterns') && state.currentSequenceId) {
+        // Add or update sequenceId and trackId in the request body
+        body.sequenceId = state.currentSequenceId;
+        body.trackId = state.currentSequenceId;
+        log(`Enforcing current sequence ID in API call: ${state.currentSequenceId}`, 'info');
       }
+      
+      options.body = JSON.stringify(body);
+    }
+
+    log(`API Call: ${method} ${endpoint}`);
+    if (body) {
+      log(`Request body: ${JSON.stringify(body)}`, 'info');
     }
     
+    const response = await fetch(`/api${endpoint}`, options);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      log(`API error (${response.status}): ${errorText}`, 'error');
+      return null;
+    }
+    
+    // For binary responses (like MIDI files), return the Response object
+    if (response.headers.get('Content-Type') === 'audio/midi') {
+      return response;
+    }
+    
+    const data = await response.json();
+
+    // Handle both error formats for compatibility
+    if (data.error || (data.success === false)) {
+      log(`API Error: ${data.error || data.message}`, 'error');
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    log(`Error: ${error.message}`, 'error');
+    return null;
+  }
+}
+
     // Initialize audio context
     function initAudio() {
       try {

@@ -169,60 +169,84 @@ class Session {
     }));
   }
 
-  // Add notes to current sequence - CRITICAL FUNCTION
-  addNotes(notes) {
-    const sequence = this.getCurrentSequence();
-    if (!sequence) {
-      throw new Error('No current sequence selected');
+  // Replace or update the addNotes method in src/server/models/session.js
+addNotes(notes) {
+  console.log(`addNotes called with sequence ID: ${this.currentSequenceId}`);
+  
+  if (!this.currentSequenceId) {
+    throw new Error('No current sequence selected');
+  }
+  
+  // Get the sequence by ID, not just "current" sequence
+  const sequence = this.getSequence(this.currentSequenceId);
+  if (!sequence) {
+    throw new Error(`Sequence with ID ${this.currentSequenceId} not found`);
+  }
+  
+  // Convert notes to MidiNote objects if needed
+  const midiNotes = Array.isArray(notes) ? notes.map(note => {
+    if (note instanceof MidiNote) return note;
+    
+    // Handle plain objects
+    return new MidiNote(
+      note.pitch,
+      note.startTime,
+      note.duration,
+      note.velocity || 80,
+      note.channel || 0
+    );
+  }) : [];
+  
+  if (!sequence.notes) {
+    sequence.notes = [];
+  }
+  
+  // Add notes to the sequence
+  sequence.notes = sequence.notes.concat(midiNotes);
+  
+  console.log(`Added ${midiNotes.length} notes to sequence ${sequence.id}. Total notes: ${sequence.notes.length}`);
+  
+  // Find the corresponding track
+  const track = this.tracks.find(t => t.id === sequence.id);
+  if (track) {
+    if (!track.notes) {
+      track.notes = [];
     }
     
-    // Convert notes to MidiNote objects if needed
-    const midiNotes = Array.isArray(notes) ? notes.map(note => {
-      if (note instanceof MidiNote) return note;
-      
-      // Handle plain objects
-      return new MidiNote(
-        note.pitch,
-        note.startTime,
-        note.duration,
-        note.velocity || 80,
-        note.channel || 0
-      );
-    }) : [];
+    // Convert notes to plain objects for storage in tracks
+    const plainNotes = midiNotes.map(note => ({
+      pitch: note.pitch,
+      startTime: note.startTime, 
+      duration: note.duration,
+      velocity: note.velocity,
+      channel: note.channel
+    }));
     
-    if (!sequence.notes) {
-      sequence.notes = [];
-    }
+    track.notes = track.notes.concat(plainNotes);
+    console.log(`Updated track ${track.id} with ${plainNotes.length} notes. Total notes: ${track.notes.length}`);
+  } else {
+    console.error(`No track found for sequence ${sequence.id}`);
     
-    // Add notes to the sequence
-    sequence.notes = sequence.notes.concat(midiNotes);
-    
-    console.log(`Added ${midiNotes.length} notes to sequence ${sequence.id}. Total notes: ${sequence.notes.length}`);
-    
-    // Also update the corresponding track
-    const track = this.tracks.find(t => t.id === sequence.id);
-    if (track) {
-      if (!track.notes) {
-        track.notes = [];
-      }
-      
-      // Important: Convert notes to plain objects for storage in tracks
-      const plainNotes = midiNotes.map(note => ({
+    // If no track exists, create one
+    const newTrack = {
+      id: sequence.id,
+      name: sequence.name || 'New Track',
+      instrument: 0,
+      notes: midiNotes.map(note => ({
         pitch: note.pitch,
-        startTime: note.startTime, 
+        startTime: note.startTime,
         duration: note.duration,
         velocity: note.velocity,
         channel: note.channel
-      }));
-      
-      track.notes = track.notes.concat(plainNotes);
-      console.log(`Updated track ${track.id} with ${plainNotes.length} notes. Total notes: ${track.notes.length}`);
-    } else {
-      console.error(`Warning: No track found for sequence ${sequence.id}`);
-    }
+      }))
+    };
     
-    return midiNotes;
+    this.tracks.push(newTrack);
+    console.log(`Created new track ${newTrack.id} with ${newTrack.notes.length} notes`);
   }
+  
+  return midiNotes;
+}
 
   // Clear all notes from current sequence
   clearNotes() {
