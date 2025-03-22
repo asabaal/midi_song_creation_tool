@@ -555,53 +555,55 @@ async function debugSessionState() {
       return true;
     }
     
-    // Refresh session data and update UI
-    async function refreshSessionData() {
-      if (!state.sessionId) {
-        log('No session ID available', 'error');
-        return false;
-      }
-      
-      const data = await callApi(`/sessions/${state.sessionId}`);
-      if (!data || !data.session) {
-        log('Failed to get session data', 'error');
-        return false;
-      }
-      
-      console.log('Session data:', data);
-      
-      // Store session data
-      state.currentSequenceId = data.session.currentSequenceId;
-      
-      // Extract sequences from tracks (in this app, tracks are used as sequences)
-      if (data.session.tracks) {
-        state.sequences = data.session.tracks.map(track => ({
-          id: track.id,
-          name: track.name,
-          noteCount: track.notes ? track.notes.length : 0,
-          isCurrent: track.id === state.currentSequenceId
-        }));
-        
-        log(`Found ${state.sequences.length} sequences in session`, 'success');
-        
-        // Update UI
-        updateSequencesList();
-        updateSequenceLabels();
-        
-        // Enable buttons if we have at least one sequence
-        const hasSequences = state.sequences.length > 0;
-        chordBtn.disabled = !hasSequences;
-        bassBtn.disabled = !hasSequences;
-        drumBtn.disabled = !hasSequences;
-        clearBtn.disabled = !hasSequences;
-        exportMidiBtn.disabled = !hasSequences;
-        exportJsonBtn.disabled = !hasSequences;
-      } else {
-        log('No sequences found in session', 'warning');
-      }
-      
-      return true;
-    }
+  async function refreshSessionData() {
+  log("Starting refreshSessionData...", 'info');
+  
+  if (!state.sessionId) {
+    log('No session ID available', 'error');
+    return false;
+  }
+  
+  const data = await callApi(`/sessions/${state.sessionId}`);
+  if (!data || !data.session) {
+    log('Failed to get session data', 'error');
+    return false;
+  }
+  
+  console.log('Session data:', data);
+  
+  // Store session data
+  state.currentSequenceId = data.session.currentSequenceId;
+  
+  // Extract sequences from tracks (in this app, tracks are used as sequences)
+  if (data.session.tracks) {
+    state.sequences = data.session.tracks.map(track => ({
+      id: track.id,
+      name: track.name,
+      noteCount: track.notes ? track.notes.length : 0,
+      isCurrent: track.id === state.currentSequenceId
+    }));
+    
+    log(`Found ${state.sequences.length} sequences in session`, 'success');
+    
+    // Explicitly force a UI update
+    updateSequencesList();
+    updateSequenceLabels();
+    
+    // Enable buttons if we have at least one sequence
+    const hasSequences = state.sequences.length > 0;
+    chordBtn.disabled = !hasSequences;
+    bassBtn.disabled = !hasSequences;
+    drumBtn.disabled = !hasSequences;
+    clearBtn.disabled = !hasSequences;
+    exportMidiBtn.disabled = !hasSequences;
+    exportJsonBtn.disabled = !hasSequences;
+  } else {
+    log('No sequences found in session', 'warning');
+  }
+  
+  log("Completed refreshSessionData", 'info');
+  return true;
+}
     
     // Update the sequences list in the UI
     function updateSequencesList() {
@@ -689,7 +691,7 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
   debugSessionState(); // Log the current state
   
   try {
-    // Use our callApi helper function instead of XMLHttpRequest
+    // Use callApi helper function
     const result = await callApi(`/sessions/${state.sessionId}`, 'PUT', {
       currentSequenceId: sequenceId
     });
@@ -703,7 +705,49 @@ document.getElementById('testSessionSwitchBtn').addEventListener('click', testSe
     state.currentSequenceId = sequenceId;
     log(`Current sequence ID set to: ${state.currentSequenceId}`, 'success');
     
-    // Refresh data and UI
+    // DIRECT UI UPDATE - Force the UI to reflect the current sequence
+    log('Directly updating UI...', 'info');
+    
+    // 1. Update all sequence items to remove 'current' and 'selected' classes
+    document.querySelectorAll('.sequence-item').forEach(item => {
+      item.classList.remove('current');
+      item.classList.remove('selected');
+      
+      // Also update any current-indicator spans
+      const currentIndicator = item.querySelector('.current-indicator');
+      if (currentIndicator) {
+        currentIndicator.remove();
+      }
+    });
+    
+    // 2. Add 'current' and 'selected' classes to the selected sequence
+    const selectedItem = document.querySelector(`.sequence-item[data-id="${sequenceId}"]`);
+    if (selectedItem) {
+      selectedItem.classList.add('current');
+      selectedItem.classList.add('selected');
+      
+      // Add the current indicator back
+      const nameElement = selectedItem.querySelector('.sequence-name');
+      if (nameElement) {
+        const indicator = document.createElement('span');
+        indicator.className = 'current-indicator';
+        indicator.title = 'Current Sequence';
+        indicator.textContent = ' (current)';
+        nameElement.appendChild(indicator);
+      }
+      
+      log(`UI updated: Marked sequence ${sequenceId} as current`, 'success');
+    } else {
+      log(`Warning: Could not find sequence element with ID ${sequenceId}`, 'error');
+    }
+    
+    // 3. Update the current sequence label
+    const currentSequence = state.sequences.find(s => s.id === sequenceId);
+    if (currentSequence) {
+      currentSequenceLabel.textContent = `${currentSequence.name} (${currentSequence.noteCount} notes)`;
+    }
+    
+    // 4. Still call the regular refresh functions
     await refreshSessionData();
     await refreshPianoRoll();
     
