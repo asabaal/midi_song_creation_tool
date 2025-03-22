@@ -381,18 +381,23 @@ try {
       return notes;
     },
     
-    createArpeggio: function(chordNotes, octaveRange = 1, pattern = 'up', noteDuration = 0.25, startTime = 0, repeats = 1) {
+    createRandomNotes: function(key, scaleType, octave, noteCount = 8, rhythmPattern = [1]) {
+      // Fallback implementation
       return [
-        new MidiNote(60, 0, 0.25),
-        new MidiNote(64, 0.25, 0.25),
-        new MidiNote(67, 0.5, 0.25)
+        new MidiNote(60, 0, 1, 80, 0),
+        new MidiNote(62, 1, 1, 80, 0),
+        new MidiNote(64, 2, 1, 80, 0),
+        new MidiNote(65, 3, 1, 80, 0)
       ];
     },
     
-    createRhythmicPattern: function(noteValues, notePitches, startTime = 0, repeats = 1) {
+    createRandomBassline: function(key, scaleType, octave, noteCount = 8, rhythmPattern = [1, 0.5, 0.5]) {
+      // Fallback implementation
       return [
-        new MidiNote(60, 0, 0.5),
-        new MidiNote(60, 0.5, 0.5)
+        new MidiNote(36, 0, 1, 90, 1),
+        new MidiNote(38, 1, 1, 90, 1),
+        new MidiNote(41, 2, 1, 90, 1),
+        new MidiNote(43, 3, 1, 90, 1)
       ];
     }
   };
@@ -690,9 +695,9 @@ app.delete('/api/sessions/:sessionId/notes', (req, res) => {
 app.post('/api/sessions/:sessionId/patterns/chord-progression', (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { key, octave = 4, progressionName = '1-4-5', scaleType = 'major', rhythmPattern = [4] } = req.body;
+    const { key, octave = 4, scaleType = 'major', noteCount = 8, rhythmPattern = [1] } = req.body;
     
-    console.log(`Generating chord progression in session ${sessionId}:`, { key, octave, progressionName, scaleType });
+    console.log(`Generating random notes in session ${sessionId}:`, { key, octave, scaleType, noteCount });
     
     // Check if session exists
     if (!sessions.has(sessionId)) {
@@ -709,48 +714,67 @@ app.post('/api/sessions/:sessionId/patterns/chord-progression', (req, res) => {
     if (!session.getCurrentSequence()) {
       console.log('No current sequence, creating one');
       session.createSequence({
-        name: `${key} ${progressionName} Progression`,
+        name: `${key} ${scaleType} Random Notes`,
         key: `${key} ${scaleType}`
       });
     }
     
-    // Generate progression
-    const progression = MusicTheory.generateProgression(
-      key,
-      parseInt(octave),
-      progressionName,
-      scaleType
-    );
-    
-    console.log(`Generated progression with ${progression.length} chords`);
-    
-    // Create chord progression notes
-    const notes = PatternGenerators.createChordProgression(
-      progression,
-      Array.isArray(rhythmPattern) ? rhythmPattern : [4]
-    );
-    
-    console.log(`Generated ${notes.length} notes for chord progression`);
-    
-    // Add notes to sequence
-    session.addNotes(notes);
-    
-    const currentSequence = session.getCurrentSequence();
-    console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
-    
-    res.json({
-      success: true,
-      message: `Added ${notes.length} notes from ${key} ${progressionName} progression`,
-      progression: progression.map(chord => ({
-        root: chord.root,
-        octave: chord.octave,
-        chordType: chord.chordType
-      })),
-      currentSequenceId: session.currentSequenceId,
-      noteCount: currentSequence.notes.length
-    });
+    try {
+      // Generate random notes within key/scale
+      const notes = PatternGenerators.createRandomNotes(
+        key,
+        scaleType,
+        parseInt(octave),
+        parseInt(noteCount) || 8,
+        Array.isArray(rhythmPattern) ? rhythmPattern : [1]
+      );
+      
+      if (!notes || !Array.isArray(notes)) {
+        throw new Error('Random notes generator returned invalid notes');
+      }
+      
+      console.log(`Generated ${notes.length} random notes`);
+      
+      // Add notes to sequence
+      session.addNotes(notes);
+      
+      const currentSequence = session.getCurrentSequence();
+      console.log(`Added notes to sequence ${currentSequence.id}, now has ${currentSequence.notes.length} notes`);
+      
+      res.json({
+        success: true,
+        message: `Added ${notes.length} random notes in ${key} ${scaleType}`,
+        currentSequenceId: session.currentSequenceId,
+        noteCount: currentSequence.notes.length
+      });
+    } catch (error) {
+      console.error(`Error generating random notes: ${error.message}`);
+      console.error(error.stack);
+      
+      // Create fallback notes
+      const fallbackNotes = [
+        new MidiNote(60, 0, 1),
+        new MidiNote(62, 1, 1),
+        new MidiNote(64, 2, 1),
+        new MidiNote(65, 3, 1)
+      ];
+      
+      console.log('Using fallback notes due to error');
+      
+      // Add fallback notes
+      session.addNotes(fallbackNotes);
+      
+      const currentSequence = session.getCurrentSequence();
+      
+      res.json({
+        success: true,
+        message: `Added ${fallbackNotes.length} fallback notes (original error: ${error.message})`,
+        currentSequenceId: session.currentSequenceId,
+        noteCount: currentSequence.notes.length
+      });
+    }
   } catch (error) {
-    console.error(`Error generating chord progression: ${error.message}`);
+    console.error(`Error handling random notes generation: ${error.message}`);
     console.error(error.stack);
     res.status(500).json({
       success: false,
@@ -764,9 +788,9 @@ app.post('/api/sessions/:sessionId/patterns/chord-progression', (req, res) => {
 app.post('/api/sessions/:sessionId/patterns/bassline', (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { key, octave = 3, progressionName = '1-4-5', scaleType = 'major', rhythmPattern = [1, 0.5, 0.5] } = req.body;
+    const { key, octave = 3, scaleType = 'major', noteCount = 8, rhythmPattern = [1, 0.5, 0.5] } = req.body;
     
-    console.log(`Generating bassline in session ${sessionId}:`, { key, octave, progressionName, scaleType });
+    console.log(`Generating random bassline in session ${sessionId}:`, { key, octave, scaleType, noteCount });
     
     // Check if session exists
     if (!sessions.has(sessionId)) {
@@ -783,25 +807,18 @@ app.post('/api/sessions/:sessionId/patterns/bassline', (req, res) => {
     if (!session.getCurrentSequence()) {
       console.log('No current sequence, creating one for bassline');
       session.createSequence({
-        name: `${key} ${progressionName} Bassline`,
+        name: `${key} ${scaleType} Bassline`,
         key: `${key} ${scaleType}`
       });
     }
     
     try {
-      // Generate progression
-      const progression = MusicTheory.generateProgression(
-        key,
+      // Generate random bassline within key/scale
+      const notes = PatternGenerators.createRandomBassline(
+        key, 
+        scaleType,
         parseInt(octave),
-        progressionName,
-        scaleType
-      );
-      
-      console.log(`Generated progression with ${progression.length} chords for bassline`);
-      
-      // Create bassline notes with explicit error handling
-      const notes = PatternGenerators.createBassline(
-        progression,
+        parseInt(noteCount) || 8,
         Array.isArray(rhythmPattern) ? rhythmPattern : [1, 0.5, 0.5]
       );
       
@@ -819,7 +836,7 @@ app.post('/api/sessions/:sessionId/patterns/bassline', (req, res) => {
       
       res.json({
         success: true,
-        message: `Added ${notes.length} notes for ${key} ${progressionName} bassline`,
+        message: `Added ${notes.length} notes for ${key} ${scaleType} bassline`,
         currentSequenceId: session.currentSequenceId,
         noteCount: currentSequence.notes.length
       });
