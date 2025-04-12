@@ -12,11 +12,12 @@
 - **Testing**: Jest for unit tests, Cypress for integration tests
 
 ### Backend
-- **Core Engine**: C++ for performance-critical components
-- **Bindings**: N-API for Node.js integration with C++ components
+- **Primary Language**: TypeScript for rapid development and easy integration
+- **Performance Modules**: WebAssembly for performance-critical components
+- **Future Migration Path**: C++ modules via N-API for ultimate performance (see Issue #17)
 - **Database**: SQLite for local storage, option for cloud sync
 - **File Handling**: Custom binary format for projects, standard MIDI file format support
-- **Performance**: WebAssembly modules for computationally intensive tasks
+- **Runtime**: Node.js with optimized garbage collection configuration
 
 ### AI and Algorithmic Components
 - **Machine Learning**: TensorFlow.js for client-side inference
@@ -40,8 +41,11 @@
 
 ### Performance Considerations
 - Lock-free concurrent data structures for realtime operation
-- SIMD optimization for pattern processing
-- Memory pooling for MIDI event allocation
+- Optimized memory management for event processing
+- Tiered performance approach:
+  - TypeScript for most components
+  - WebAssembly for performance-critical paths
+  - Future C++ migration path for ultimate performance
 - Background thread processing for non-critical tasks
 
 ## Music Theory Engine
@@ -229,6 +233,15 @@
 - Memory footprint: < 500MB base, < 2GB for complex projects
 - Disk I/O: Background saving to prevent UI interruption
 - Smooth operation with projects containing 100+ tracks
+
+### Performance Optimization Strategy
+- Continuous profiling to identify bottlenecks
+- Tiered optimization approach:
+  1. Algorithmic optimizations in TypeScript
+  2. WebAssembly modules for critical paths
+  3. C++ migration for ultimate performance when necessary
+- Performance benchmark suite for regression testing
+- Optimization documentation and knowledge base
 
 ### System Requirements
 - Windows 10/11 64-bit
