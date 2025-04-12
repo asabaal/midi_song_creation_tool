@@ -1,0 +1,129 @@
+/* src/components/PatternEditor/PatternEditor.css */
+
+.pattern-editor-container {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #555;
+    background-color: #282828;
+    color: #eee;
+    font-family: sans-serif;
+    height: 500px; /* Example fixed height */
+    overflow: hidden; /* Prevent content overflow for now */
+}
+
+.piano-roll-header {
+    height: 20px; /* Height for beat ruler */
+    background-color: #333;
+    border-bottom: 1px solid #555;
+    display: flex; /* Use flexbox for alignment */
+    position: relative; /* Needed for absolute positioning of ruler */
+}
+
+/* Offset the beat ruler to align with the grid */
+.beat-ruler {
+    position: absolute;
+    left: 60px; /* Width of piano keys column */
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--num-beats, 16), 1fr);
+    height: 100%;
+    text-align: center;
+    font-size: 10px;
+    color: #aaa;
+}
+
+.beat-marker {
+    border-left: 1px solid #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.beat-marker:first-child {
+    border-left: none;
+}
+
+
+.piano-roll-body {
+    display: flex;
+    flex-grow: 1; /* Take remaining height */
+    overflow-y: scroll; /* Allow vertical scrolling for keys/grid */
+}
+
+.piano-keys {
+    width: 60px; /* Fixed width for piano keys */
+    background-color: #444;
+    border-right: 1px solid #555;
+    display: flex;
+    flex-direction: column;
+}
+
+.piano-key {
+    height: calc(100% / var(--num-keys, 48)); /* Distribute height equally */
+    border-bottom: 1px solid #555;
+    box-sizing: border-box; /* Include border in height */
+    font-size: 9px;
+    position: relative; /* For potential note name display */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Align text to the right */
+    padding-right: 5px;
+}
+
+.piano-key.white-key {
+    background-color: #f0f0f0;
+    color: #333;
+    border-right: 10px solid #d0d0d0; /* Visual depth */
+}
+
+.piano-key.black-key {
+    background-color: #333;
+    color: #ccc;
+    height: calc(100% / var(--num-keys, 48) * 0.95); /* Slightly shorter */
+    width: 65%; /* Narrower */
+    position: relative; /* Needed to overlay slightly */
+    z-index: 1; /* Appear above white keys */
+    margin-left: 35%; /* Indent black keys */
+    border-bottom: none; /* Black keys don't typically have horizontal lines */
+    border-right: 5px solid #222;
+    box-shadow: -2px 2px 2px rgba(0,0,0,0.3);
+}
+
+
+.grid {
+    flex-grow: 1; /* Take remaining width */
+    display: grid;
+    grid-template-columns: repeat(var(--num-beats, 16), 1fr);
+    grid-template-rows: repeat(var(--num-keys, 48), 1fr);
+    background-color: #3a3a3a;
+}
+
+.grid-cell {
+    border-bottom: 1px solid #4f4f4f;
+    border-left: 1px solid #4f4f4f;
+    cursor: pointer;
+    position: relative; /* For placing note elements later */
+}
+
+/* Add slightly darker background for rows corresponding to black keys */
+.grid-cell.black-key-row {
+    background-color: #353535;
+}
+/* Add alternating column background for beat separation */
+.grid-cell.odd-beat {
+     background-color: rgba(0, 0, 0, 0.05); /* Subtle darkening */
+}
+.grid-cell.black-key-row.odd-beat {
+     background-color: rgba(0, 0, 0, 0.1); /* Slightly more darkening */
+}
+
+
+.grid-cell:hover {
+    background-color: #5a5a5a;
+}
+
+/* Add styles later for '.grid-cell.active' or '.grid-cell.selected' */
+.grid-cell.active {
+    background-color: #4a90e2; /* Example active note color */
+    border: 1px solid #7ac0ff;
+    z-index: 2; /* Bring active notes to front */
+}
