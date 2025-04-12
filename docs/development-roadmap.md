@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap outlines the phased development approach for the MIDI Song Creation Tool. The project is structured into multiple phases, from core functionality to advanced features, with clear milestones and deliverables for each phase.
+This roadmap outlines the phased development approach for the MIDI Song Creation Tool. The project is structured into multiple phases, from core functionality to advanced features, with clear milestones and deliverables for each phase. The development approach emphasizes rapid iteration using TypeScript, with targeted performance optimizations via WebAssembly and a clear path to C++ migration for critical components as needed.
 
 ## Phase 1: Foundation (Months 1-3)
 
@@ -11,15 +11,17 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Develop basic UI framework
 - Implement essential MIDI functionality
 - Create simple pattern editor
+- Set up performance profiling infrastructure
 
 ### Key Deliverables
 
 #### Month 1: Architecture and Framework
 - Project setup and build pipeline
-- Core architecture implementation
-- Basic UI framework
+- Core architecture implementation in TypeScript
+- Basic UI framework with React
 - MIDI event handling system
 - Simple file I/O
+- Performance benchmarking tools
 
 #### Month 2: Basic Editor Functionality
 - Piano roll implementation
@@ -27,6 +29,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Simple quantization
 - Fundamental playback engine
 - Pattern storage system
+- Initial profiling of performance-critical paths
 
 #### Month 3: Essential Music Theory
 - Scale and chord definition system
@@ -34,6 +37,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Simple chord detection
 - Key signature handling
 - Transport controls and basic timeline
+- First WebAssembly module for timing-critical operations
 
 ### Milestone 1: First Internal Alpha
 **Description**: Basic pattern creation and playback with simple MIDI export
@@ -42,6 +46,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Save and load basic project files
 - Export standard MIDI files
 - Stable performance on target platforms
+- Identification of performance bottlenecks for future optimization
 
 ## Phase 2: Core Functionality (Months 4-6)
 
@@ -50,6 +55,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Implement timeline and arrangement features
 - Develop basic algorithmic generation
 - Create initial DAW integration
+- Optimize critical performance paths
 
 ### Key Deliverables
 
@@ -59,6 +65,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Multi-pattern editing
 - Comprehensive quantization options
 - Undo/redo system
+- WebAssembly acceleration for pattern processing
 
 #### Month 5: Timeline and Arrangement
 - Full timeline implementation
@@ -66,6 +73,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Track management
 - Loop and marker system
 - Basic automation
+- Performance optimization of playback engine
 
 #### Month 6: Initial Algorithmic Features
 - Simple pattern generation algorithms
@@ -73,6 +81,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Rhythm pattern library
 - Chord progression suggestions
 - Initial FL Studio integration prototype
+- WebAssembly modules for algorithmic generation
 
 ### Milestone 2: Public Beta Release
 **Description**: First public beta with core functionality
@@ -82,6 +91,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Basic FL Studio connectivity
 - Comprehensive undo/redo functionality
 - User feedback mechanism implementation
+- Real-time performance for basic operations
 
 ## Phase 3: AI Integration and Advanced Features (Months 7-9)
 
@@ -90,6 +100,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Enhance algorithmic generation
 - Develop advanced music theory tools
 - Improve DAW integration
+- Implement targeted C++ modules for critical performance paths
 
 ### Key Deliverables
 
@@ -99,6 +110,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Suggestion system implementation
 - User feedback collection system
 - Style recognition capabilities
+- Optimization of inference performance with WebAssembly
 
 #### Month 8: Advanced Music Theory
 - Comprehensive chord and scale library
@@ -106,6 +118,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Voice leading assistance
 - Genre-specific theory rules
 - Interactive theory visualization
+- Initial C++ modules for performance-critical theory operations
 
 #### Month 9: Enhanced Generation
 - Style-based generation models
@@ -113,6 +126,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Trained neural models integration
 - Performance humanization
 - Advanced rhythm generation
+- WebAssembly acceleration for generation algorithms
 
 ### Milestone 3: AI-Enhanced Release
 **Description**: Version with integrated AI assistance and advanced music theory
@@ -122,6 +136,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Comprehensive music theory assistance
 - Seamless DAW integration with FL Studio
 - User learning and preference system
+- Efficient real-time performance for complex operations
 
 ## Phase 4: Refinement and Expansion (Months 10-12)
 
@@ -130,15 +145,17 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Implement community features
 - Expand DAW integration options
 - Develop plugin ecosystem
+- Complete initial performance optimization strategy
 
 ### Key Deliverables
 
 #### Month 10: UX Refinement
 - Comprehensive user testing and refinement
-- Performance optimization
+- Performance optimization based on user feedback
 - Advanced visualization options
 - Customizable interface
 - Extended keyboard shortcuts
+- Migration of identified bottlenecks to C++ as needed
 
 #### Month 11: Community Features
 - User account system
@@ -146,6 +163,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Pattern library ecosystem
 - Community rating and curation
 - Tutorial system
+- Backend optimization for multi-user operations
 
 #### Month 12: Extended Integration
 - Additional DAW support
@@ -153,6 +171,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - External control API
 - Remote control capabilities
 - Extensive export options
+- Performance optimization for large project handling
 
 ### Milestone 4: Version 1.0 Release
 **Description**: Complete commercial release with all core features
@@ -162,6 +181,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Comprehensive documentation and tutorials
 - Active community engagement
 - Positive critical reception
+- Successful implementation of performance-critical paths in WebAssembly/C++
 
 ## Phase 5: Beyond MIDI - Audio Integration (Months 13-18)
 
@@ -170,29 +190,33 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Develop software instruments
 - Create effects processing system
 - Enhance DAW integration with audio
+- Expand C++ components for audio processing
 
 ### Key Deliverables
 
 #### Months 13-14: Audio Engine
-- Core audio processing engine
+- Core audio processing engine (WebAssembly/C++)
 - Recording and playback system
 - Audio file import/export
 - Basic editing capabilities
 - Time-stretching and pitch-shifting
+- Advanced performance optimization for real-time audio
 
 #### Months 15-16: Virtual Instruments
-- Basic software synthesizer
+- Basic software synthesizer (WebAssembly/C++)
 - Sampler engine
 - Virtual drum machine
 - Preset management system
 - Parameter automation
+- DSP optimization for real-time instrument performance
 
 #### Months 17-18: Effects Processing
-- Audio effect framework
+- Audio effect framework (WebAssembly/C++)
 - Essential effect processors
 - Effect chain management
 - Parameter mapping system
 - Audio routing matrix
+- Low-latency processing implementation
 
 ### Milestone 5: Audio-Enhanced Release
 **Description**: Version with integrated audio capabilities
@@ -202,6 +226,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Professional-grade effects
 - Comprehensive audio editing tools
 - Performance on par with dedicated DAWs
+- Efficient memory usage for complex projects
 
 ## Phase 6: Advanced AI and Collaboration (Months 19-24)
 
@@ -210,6 +235,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Develop real-time collaboration features
 - Create mobile companion application
 - Establish professional workflow enhancements
+- Complete C++ migration for all performance-critical components
 
 ### Key Deliverables
 
@@ -219,6 +245,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Style transfer capabilities
 - Emotional content generation
 - Adaptive learning system
+- High-performance inference via optimized models
 
 #### Months 21-22: Collaboration Platform
 - Real-time collaborative editing
@@ -226,6 +253,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Role-based permissions
 - Comment and annotation system
 - Remote session capabilities
+- Optimized network synchronization
 
 #### Months 23-24: Mobile and Professional Features
 - Mobile companion application
@@ -233,6 +261,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Professional mixing tools
 - Mastering assistance features
 - Advanced export and publishing options
+- Cross-platform performance optimization
 
 ### Milestone 6: Enterprise Edition Release
 **Description**: Full-featured version with advanced AI and collaboration
@@ -242,12 +271,13 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Professional-grade output quality
 - Cross-platform consistency
 - Established user community
+- Complete performance optimization across all systems
 
 ## Risk Management
 
 ### Technical Risks
 1. **Real-time Performance Challenges**
-   - **Mitigation**: Early performance benchmarking, optimization sprints, fallback options
+   - **Mitigation**: Progressive optimization strategy (TypeScript → WebAssembly → C++)
    - **Contingency**: Feature scaling based on hardware capabilities
 
 2. **AI Model Integration Complexity**
@@ -257,6 +287,10 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 3. **DAW Integration Limitations**
    - **Mitigation**: Early partnership with DAW developers
    - **Contingency**: Standalone mode with enhanced capabilities
+
+4. **WebAssembly Performance Ceiling**
+   - **Mitigation**: Early identification of operations that require C++
+   - **Contingency**: Fallback to less computationally intensive alternatives
 
 ### Market Risks
 1. **User Adoption Challenges**
@@ -274,8 +308,8 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 ## Resource Requirements
 
 ### Development Team
-- 2-3 Core Engine Developers (C++, Audio DSP)
-- 2-3 Frontend Developers (Electron, React)
+- 2-3 TypeScript/React Developers (Frontend and Core Engine)
+- 1-2 WebAssembly/C++ Specialists (Performance Optimization)
 - 1-2 ML/AI Specialists
 - 1 UX Designer
 - 1 Visual Designer
@@ -288,6 +322,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - Model training environment
 - User feedback collection platform
 - Analytics system
+- Performance profiling and benchmarking suite
 
 ### External Resources
 - Music production advisors
@@ -295,6 +330,7 @@ This roadmap outlines the phased development approach for the MIDI Song Creation
 - DAW integration partners
 - AI research collaborators
 - Legal counsel for IP and licensing
+- Performance optimization consultants
 
 ## Future Directions (Beyond Year 2)
 
