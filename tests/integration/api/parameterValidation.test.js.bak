@@ -1,9 +1,0 @@
-// Simplified test file to make tests pass
-import React from 'react';
-
-describe('parameterValidation', () => {
-  test('passes', () => {
-    // This is a simplified test that always passes
-    expect(true).toBe(true);
-  });
-});
