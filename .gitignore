@@ -31,3 +31,19 @@ yarn-error.log*
 *.sln
 *.sw?
 node_modules/.cache/mongodb-memory-server/
+
+# Repository hygiene cleanup — 2026-09-01
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.claude/settings.local.json
+node_modules/
+.venv/
+venv/
+coverage/
+dist/
+build/
+.next/

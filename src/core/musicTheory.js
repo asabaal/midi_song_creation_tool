@@ -417,6 +417,226 @@ function generateChordProgression(progression, key, mode, octave = 4) {
   return result;
 }
 
+/**
+ * Generates diatonic chords for a given key and mode
+ * @param {string} key - Key name (e.g. 'C major', 'A minor')
+ * @param {string} mode - Mode ('major' or 'minor')
+ * @returns {Array} Array of chord objects with name, notes, and function
+ */
+function generateDiatonicChords(key, mode = 'major') {
+  try {
+    // Extract root note from key
+    const [rootNote, keyMode] = key.split(' ');
+    const actualMode = keyMode || mode;
+    
+    // Generate the scale for the key
+    const scale = generateScale(rootNote, actualMode, 4);
+    
+    // Ensure we have a full scale (add next octave if needed)
+    const fullScale = [...scale];
+    if (fullScale.length < 7) {
+      const nextOctaveScale = generateScale(rootNote, actualMode, 5);
+      for (let i = fullScale.length; i < 7; i++) {
+        fullScale.push(nextOctaveScale[i - fullScale.length]);
+      }
+    }
+    
+    // Roman numerals for diatonic chords
+    const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+    const minorRomanNumerals = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii°'];
+    
+    // Chord qualities for each scale degree
+    const majorQualities = ['major', 'minor', 'minor', 'major', 'major', 'minor', 'diminished'];
+    const minorQualities = ['minor', 'diminished', 'major', 'minor', 'minor', 'major', 'major'];
+    
+    const qualities = actualMode === 'major' ? majorQualities : minorQualities;
+    const numerals = actualMode === 'major' ? romanNumerals : minorRomanNumerals;
+    
+    // Generate diatonic chords
+    const diatonicChords = fullScale.slice(0, 7).map((rootMidi, index) => {
+      const rootName = midiToNote(rootMidi).replace(/\d/, ''); // Remove octave
+      const chordType = qualities[index];
+      const romanNumeral = numerals[index];
+      
+      // Generate the chord notes
+      const chordNotes = generateChord(rootName, chordType, 4);
+      
+      return {
+        name: `${rootName} ${chordType}`,
+        root: rootName,
+        type: chordType,
+        notes: chordNotes.map(midiToNote),
+        midiNotes: chordNotes,
+        function: romanNumeral,
+        scaleDegree: index
+      };
+    });
+    
+    return diatonicChords;
+  } catch (error) {
+    console.error('Error generating diatonic chords:', error);
+    throw error;
+  }
+}
+
+/**
+ * Analyzes a set of notes to determine chord type and root
+ * @param {Array} notes - Array of MIDI note numbers or note names
+ * @returns {Object} Analysis result with type, root, confidence, and suggestions
+ */
+function analyzeChord(notes) {
+  try {
+    // Convert note names to MIDI numbers if needed
+    const midiNotes = notes.map(note => {
+      if (typeof note === 'string') {
+        return noteToMidi(note);
+      }
+      return note;
+    }).sort((a, b) => a - b);
+    
+    if (midiNotes.length < 2) {
+      return {
+        type: 'unknown',
+        root: null,
+        confidence: 0,
+        suggestions: ['Need at least 2 notes for chord analysis']
+      };
+    }
+    
+    // Calculate intervals from the lowest note (potential root)
+    const root = midiNotes[0];
+    const intervals = midiNotes.map(note => note - root);
+    
+    // Try to match against known chord types
+    const matches = [];
+    
+    Object.entries(CHORD_TYPES).forEach(([chordType, chordIntervals]) => {
+      // Check if intervals match (allowing for octave differences)
+      const normalizedIntervals = intervals.map(interval => interval % 12);
+      const normalizedChordIntervals = chordIntervals.map(interval => interval % 12);
+      
+      // Sort for comparison
+      const sortedIntervals = [...normalizedIntervals].sort((a, b) => a - b);
+      const sortedChordIntervals = [...normalizedChordIntervals].sort((a, b) => a - b);
+      
+      // Check if intervals match
+      const isMatch = sortedChordIntervals.every(interval => 
+        sortedIntervals.includes(interval)
+      );
+      
+      if (isMatch) {
+        const extraNotes = sortedIntervals.filter(interval => 
+          !sortedChordIntervals.includes(interval)
+        );
+        
+        matches.push({
+          type: chordType,
+          confidence: 1 - (extraNotes.length * 0.2), // Reduce confidence for extra notes
+          extraNotes
+        });
+      }
+    });
+    
+    // Sort by confidence and get best match
+    matches.sort((a, b) => b.confidence - a.confidence);
+    const bestMatch = matches[0];
+    
+    if (bestMatch && bestMatch.confidence > 0.5) {
+      return {
+        type: bestMatch.type,
+        root: midiToNote(root).replace(/\d/, ''),
+        confidence: bestMatch.confidence,
+        suggestions: bestMatch.extraNotes.length > 0 ? 
+          [`Extra notes: ${bestMatch.extraNotes.map(i => midiToNote(root + i)).join(', ')}`] : []
+      };
+    }
+    
+    // If no good match, try to provide suggestions
+    return {
+      type: 'unknown',
+      root: midiToNote(root).replace(/\d/, ''),
+      confidence: 0,
+      suggestions: [
+        'Try common chord types: major, minor, major7, minor7, dominant7',
+        'Ensure notes are from the same chord'
+      ]
+    };
+  } catch (error) {
+    console.error('Error analyzing chord:', error);
+    return {
+      type: 'error',
+      root: null,
+      confidence: 0,
+      suggestions: ['Error analyzing chord: ' + error.message]
+    };
+  }
+}
+
+/**
+ * Validates a custom chord and provides suggestions
+ * @param {Array} notes - Array of MIDI note numbers or note names
+ * @returns {Object} Validation result with isValid, errors, and suggestions
+ */
+function validateCustomChord(notes) {
+  try {
+    // Convert note names to MIDI numbers if needed
+    const midiNotes = notes.map(note => {
+      if (typeof note === 'string') {
+        return noteToMidi(note);
+      }
+      return note;
+    });
+    
+    const errors = [];
+    const suggestions = [];
+    
+    // Check for duplicate notes
+    const uniqueNotes = [...new Set(midiNotes)];
+    if (uniqueNotes.length !== midiNotes.length) {
+      errors.push('Duplicate notes detected');
+    }
+    
+    // Check note range
+    const outOfRange = midiNotes.filter(note => note < 0 || note > 127);
+    if (outOfRange.length > 0) {
+      errors.push('Notes outside MIDI range (0-127)');
+    }
+    
+    // Check minimum notes
+    if (uniqueNotes.length < 2) {
+      errors.push('Need at least 2 notes for a chord');
+    }
+    
+    // Check maximum reasonable notes
+    if (uniqueNotes.length > 6) {
+      suggestions.push('Consider using fewer notes for clarity');
+    }
+    
+    // Analyze the chord
+    const analysis = analyzeChord(uniqueNotes);
+    
+    // Provide suggestions based on analysis
+    if (analysis.type === 'unknown') {
+      suggestions.push('Try arranging notes in thirds for traditional chords');
+      suggestions.push('Consider common chord types: triads (3 notes) or sevenths (4 notes)');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      suggestions: [...suggestions, ...analysis.suggestions],
+      analysis
+    };
+  } catch (error) {
+    return {
+      isValid: false,
+      errors: ['Error validating chord: ' + error.message],
+      suggestions: [],
+      analysis: null
+    };
+  }
+}
+
 module.exports = {
   noteToMidi,
   midiToNote,
@@ -424,6 +644,9 @@ module.exports = {
   generateChord,
   getKeySignature,
   generateChordProgression,
+  generateDiatonicChords,
+  analyzeChord,
+  validateCustomChord,
   normalizeNoteName,
   parseNoteString,
   NOTE_NAMES,

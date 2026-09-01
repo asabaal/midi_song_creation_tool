@@ -5,6 +5,7 @@ const path = require('path');
 
 // Import route modules
 const musicTheoryRoutes = require('./routes/musicTheoryRoutes');
+const chordProgressionRoutes = require('./routes/chordProgressionRoutes');
 // Import other routes as needed
 
 // Create Express app
@@ -20,6 +21,7 @@ app.enable('case sensitive routing');
 
 // API routes
 app.use('/api/music-theory', musicTheoryRoutes);
+app.use('/api/chord-progression', chordProgressionRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Test - Tone.js Integration</title>
+    <script src="https://unpkg.com/tone@14.9.17/build/Tone.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Audio Test - Tone.js Integration</h1>
+    
+    <div class="test-section">
+        <h2>1. Tone.js Library Check</h2>
+        <div id="tone-status" class="status info">Checking...</div>
+        <button onclick="checkToneJS()">Check Tone.js</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Audio Context Test</h2>
+        <div id="audio-status" class="status info">Not tested</div>
+        <button onclick="testAudioContext()">Test Audio Context</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Basic Synth Test</h2>
+        <div id="synth-status" class="status info">Not tested</div>
+        <button onclick="testBasicSynth()">Play C Major Chord</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Chord Progression Test</h2>
+        <div id="progression-status" class="status info">Not tested</div>
+        <button onclick="testChordProgression()">Play C-G-Am-F Progression</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Duration Test</h2>
+        <div id="duration-status" class="status info">Not tested</div>
+        <button onclick="testDurations()">Test Different Durations</button>
+    </div>
+
+    <script>
+        let synth = null;
+        
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+        
+        function checkToneJS() {
+            if (typeof Tone !== 'undefined') {
+                updateStatus('tone-status', '✅ Tone.js loaded successfully! Version: ' + Tone.version, 'success');
+            } else {
+                updateStatus('tone-status', '❌ Tone.js not loaded', 'error');
+            }
+        }
+        
+        async function testAudioContext() {
+            try {
+                updateStatus('audio-status', 'Starting audio context...', 'info');
+                await Tone.start();
+                updateStatus('audio-status', '✅ Audio context started successfully!', 'success');
+            } catch (error) {
+                updateStatus('audio-status', '❌ Audio context failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function testBasicSynth() {
+            try {
+                if (!synth) {
+                    synth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: 'triangle' },
+                        envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 }
+                    }).connect(Tone.Destination);
+                    synth.volume.value = -20;
+                }
+                
+                updateStatus('synth-status', '🎵 Playing C Major chord (C4-E4-G4)...', 'info');
+                
+                // Play C Major chord for 1 second
+                synth.triggerAttackRelease(['C4', 'E4', 'G4'], '1n');
+                
+                updateStatus('synth-status', '✅ C Major chord played successfully!', 'success');
+            } catch (error) {
+                updateStatus('synth-status', '❌ Synth test failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function testChordProgression() {
+            try {
+                if (!synth) {
+                    await testAudioContext();
+                    synth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: 'triangle' },
+                        envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 }
+                    }).connect(Tone.Destination);
+                    synth.volume.value = -20;
+                }
+                
+                updateStatus('progression-status', '🎵 Playing C-G-Am-F progression...', 'info');
+                
+                // Create chord progression
+                const progression = [
+                    { time: 0, notes: ['C4', 'E4', 'G4'], duration: '1n' },    // C Major
+                    { time: 1, notes: ['G4', 'B4', 'D5'], duration: '1n' },    // G Major  
+                    { time: 2, notes: ['A4', 'C5', 'E5'], duration: '1n' },    // A Minor
+                    { time: 3, notes: ['F4', 'A4', 'C5'], duration: '1n' }     // F Major
+                ];
+                
+                // Create sequence
+                const seq = new Tone.Sequence((time, chord) => {
+                    synth.triggerAttackRelease(chord.notes, chord.duration, time);
+                }, progression, '1n');
+                
+                // Set tempo and play
+                Tone.Transport.bpm.value = 120;
+                Tone.Transport.start();
+                seq.start(0);
+                
+                // Stop after 4 beats
+                setTimeout(() => {
+                    seq.stop();
+                    Tone.Transport.stop();
+                    seq.dispose();
+                    updateStatus('progression-status', '✅ Chord progression played successfully!', 'success');
+                }, 4000);
+                
+            } catch (error) {
+                updateStatus('progression-status', '❌ Progression test failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function testDurations() {
+            try {
+                if (!synth) {
+                    await testAudioContext();
+                    synth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: 'triangle' },
+                        envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 }
+                    }).connect(Tone.Destination);
+                    synth.volume.value = -20;
+                }
+                
+                updateStatus('duration-status', '🎵 Testing different note durations...', 'info');
+                
+                // Test different durations
+                const durations = [
+                    { time: 0, notes: ['C4'], duration: '1n', name: 'Whole note' },
+                    { time: 1, notes: ['D4'], duration: '2n', name: 'Half note' },
+                    { time: 1.5, notes: ['E4'], duration: '4n', name: 'Quarter note' },
+                    { time: 1.75, notes: ['F4'], duration: '8n', name: 'Eighth note' },
+                    { time: 1.875, notes: ['G4'], duration: '16n', name: 'Sixteenth note' }
+                ];
+                
+                // Create sequence
+                const seq = new Tone.Sequence((time, note) => {
+                    console.log(`Playing ${note.name} at time ${time}`);
+                    synth.triggerAttackRelease(note.notes, note.duration, time);
+                }, durations, '16n');
+                
+                // Set tempo and play
+                Tone.Transport.bpm.value = 120;
+                Tone.Transport.start();
+                seq.start(0);
+                
+                // Stop after 2 beats
+                setTimeout(() => {
+                    seq.stop();
+                    Tone.Transport.stop();
+                    seq.dispose();
+                    updateStatus('duration-status', '✅ Duration test completed! Check console for details.', 'success');
+                }, 2000);
+                
+            } catch (error) {
+                updateStatus('duration-status', '❌ Duration test failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Auto-check Tone.js on load
+        window.onload = () => {
+            checkToneJS();
+        };
+    </script>
+</body>
+</html>

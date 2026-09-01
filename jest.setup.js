@@ -35,6 +35,61 @@ if (typeof window !== 'undefined') {
 
   window.ResizeObserver = MockResizeObserver;
 
+  // Mock Tone.js global object for CDN loading
+  window.Tone = {
+    Transport: {
+      start: jest.fn(),
+      stop: jest.fn(),
+      pause: jest.fn(),
+      setLoopPoints: jest.fn(),
+      bpm: {
+        value: 120,
+        set: jest.fn()
+      },
+      loop: false,
+      timeSignature: 4,
+      position: '0:0:0',
+      state: 'stopped',
+      on: jest.fn(),
+      off: jest.fn(),
+      cancel: jest.fn(),
+      schedule: jest.fn(),
+    },
+    context: {
+      currentTime: 0,
+      resume: jest.fn().mockResolvedValue(undefined),
+      state: 'running',
+    },
+    Synth: jest.fn().mockImplementation(() => ({
+      toDestination: jest.fn().mockReturnThis(),
+      triggerAttackRelease: jest.fn(),
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      dispose: jest.fn(),
+    })),
+    PolySynth: jest.fn().mockImplementation(() => ({
+      toDestination: jest.fn().mockReturnThis(),
+      triggerAttackRelease: jest.fn(),
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      dispose: jest.fn(),
+    })),
+    Channel: jest.fn().mockImplementation(() => ({
+      toDestination: jest.fn().mockReturnThis(),
+      volume: { value: 0 },
+      receive: jest.fn(),
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      dispose: jest.fn(),
+    })),
+    Destination: {
+      volume: { value: 0 },
+      mute: false,
+    },
+    start: jest.fn().mockResolvedValue(undefined),
+    now: jest.fn().mockReturnValue(0),
+  };
+
   // Mock global fetch for tests
   global.fetch = jest.fn(() =>
     Promise.resolve({

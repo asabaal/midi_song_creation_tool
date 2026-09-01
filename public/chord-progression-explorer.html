@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chord Progression Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-size: 1.2rem;
+        }
+        .error {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #e74c3c;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="loading">
+            Loading Chord Progression Explorer...
+        </div>
+    </div>
+
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tone.js for audio -->
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Import our components (simplified for testing)
+        const ChordProgressionExplorer = () => {
+            const [selectedKey, setSelectedKey] = React.useState('C major');
+            const [progression, setProgression] = React.useState([]);
+            const [diatonicChords, setDiatonicChords] = React.useState([]);
+            const [loading, setLoading] = React.useState(false);
+            const [error, setError] = React.useState(null);
+
+            // Load diatonic chords when key changes
+            React.useEffect(() => {
+                const loadDiatonicChords = async () => {
+                    try {
+                        setLoading(true);
+                        setError(null);
+                        const response = await fetch(`/api/chord-progression/diatonic-chords/${encodeURIComponent(selectedKey)}`);
+                        const data = await response.json();
+                        setDiatonicChords(data.chords || []);
+                    } catch (err) {
+                        setError('Failed to load diatonic chords');
+                        console.error('Error loading diatonic chords:', err);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+
+                loadDiatonicChords();
+            }, [selectedKey]);
+
+            // Handle key change
+            const handleKeyChange = (newKey) => {
+                setSelectedKey(newKey);
+                setProgression([]);
+            };
+
+            // Add a simple test chord
+            const addTestChord = () => {
+                if (diatonicChords.length > 0) {
+                    const newChord = {
+                        ...diatonicChords[0],
+                        id: Date.now(),
+                        duration: '1',
+                        durationInBeats: 1,
+                        startTime: progression.length
+                    };
+                    setProgression([...progression, newChord]);
+                }
+            };
+
+            return (
+                <div style={{
+                    backgroundColor: '#2a2a2a',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    color: 'white',
+                    maxWidth: '1200px',
+                    margin: '0 auto',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
+                }}>
+                    <header style={{ textAlign: 'center', marginBottom: '30px' }}>
+                        <h2 style={{ color: '#1db954', margin: '0 0 8px 0', fontSize: '2rem' }}>
+                            Chord Progression Explorer
+                        </h2>
+                        <p style={{ color: '#b3b3b3', margin: 0 }}>
+                            Create, explore, and export chord progressions with custom chord support
+                        </p>
+                    </header>
+
+                    {error && (
+                        <div style={{
+                            backgroundColor: '#e74c3c',
+                            color: 'white',
+                            padding: '12px 16px',
+                            borderRadius: '4px',
+                            marginBottom: '20px'
+                        }}>
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Key Selection */}
+                    <section style={{
+                        backgroundColor: '#3a3a3a',
+                        borderRadius: '6px',
+                        padding: '20px',
+                        marginBottom: '20px',
+                        border: '1px solid #4a4a4a'
+                    }}>
+                        <h3 style={{ color: '#1db954', margin: '0 0 16px 0' }}>
+                            Key Selection
+                        </h3>
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                            <label style={{ color: '#b3b3b3' }}>Select Key:</label>
+                            <select
+                                value={selectedKey}
+                                onChange={(e) => handleKeyChange(e.target.value)}
+                                style={{
+                                    backgroundColor: '#4a4a4a',
+                                    border: '1px solid #5a5a5a',
+                                    color: 'white',
+                                    padding: '8px 12px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem'
+                                }}
+                                disabled={loading}
+                            >
+                                <optgroup label="Major Keys">
+                                    <option value="C major">C major</option>
+                                    <option value="G major">G major</option>
+                                    <option value="D major">D major</option>
+                                    <option value="A major">A major</option>
+                                    <option value="E major">E major</option>
+                                    <option value="F major">F major</option>
+                                    <option value="Bb major">Bb major</option>
+                                </optgroup>
+                                <optgroup label="Minor Keys">
+                                    <option value="A minor">A minor</option>
+                                    <option value="E minor">E minor</option>
+                                    <option value="B minor">B minor</option>
+                                    <option value="F# minor">F# minor</option>
+                                    <option value="D minor">D minor</option>
+                                    <option value="G minor">G minor</option>
+                                </optgroup>
+                            </select>
+                            {loading && <span>Loading...</span>}
+                        </div>
+
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                            gap: '12px',
+                            marginTop: '16px',
+                            padding: '12px',
+                            backgroundColor: '#4a4a4a',
+                            borderRadius: '4px'
+                        }}>
+                            <div>
+                                <span style={{ fontSize: '0.8rem', color: '#b3b3b3' }}>Current Key:</span>
+                                <span style={{ marginLeft: '8px', color: 'white', fontWeight: '500' }}>{selectedKey}</span>
+                            </div>
+                            <div>
+                                <span style={{ fontSize: '0.8rem', color: '#b3b3b3' }}>Mode:</span>
+                                <span style={{ marginLeft: '8px', color: 'white', fontWeight: '500' }}>
+                                    {selectedKey.includes('major') ? 'Major' : 'Minor'}
+                                </span>
+                            </div>
+                            <div>
+                                <span style={{ fontSize: '0.8rem', color: '#b3b3b3' }}>Available Chords:</span>
+                                <span style={{ marginLeft: '8px', color: 'white', fontWeight: '500' }}>
+                                    {diatonicChords.length}
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Diatonic Chords */}
+                    <section style={{
+                        backgroundColor: '#3a3a3a',
+                        borderRadius: '6px',
+                        padding: '20px',
+                        marginBottom: '20px',
+                        border: '1px solid #4a4a4a'
+                    }}>
+                        <h3 style={{ color: '#1db954', margin: '0 0 16px 0' }}>
+                            Diatonic Chords
+                        </h3>
+                        {diatonicChords.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: '#b3b3b3', padding: '20px' }}>
+                                {loading ? 'Loading chords...' : 'No chords available'}
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                                gap: '12px'
+                            }}>
+                                {diatonicChords.map((chord, index) => (
+                                    <div
+                                        key={index}
+                                        style={{
+                                            backgroundColor: '#4a4a4a',
+                                            border: '1px solid #5a5a5a',
+                                            borderRadius: '4px',
+                                            padding: '12px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onClick={() => console.log('Selected chord:', chord)}
+                                        onMouseEnter={(e) => {
+                                            e.target.style.backgroundColor = '#5a5a5a';
+                                            e.target.style.borderColor = '#1db954';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.target.style.backgroundColor = '#4a4a4a';
+                                            e.target.style.borderColor = '#5a5a5a';
+                                        }}
+                                    >
+                                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>{chord.name}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#b3b3b3' }}>{chord.function}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#b3b3b3' }}>
+                                            {chord.notes.join(', ')}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Progression */}
+                    <section style={{
+                        backgroundColor: '#3a3a3a',
+                        borderRadius: '6px',
+                        padding: '20px',
+                        marginBottom: '20px',
+                        border: '1px solid #4a4a4a'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h3 style={{ color: '#1db954', margin: 0 }}>
+                                Progression ({progression.length} chords)
+                            </h3>
+                            <button
+                                onClick={addTestChord}
+                                disabled={diatonicChords.length === 0}
+                                style={{
+                                    backgroundColor: '#1db954',
+                                    border: 'none',
+                                    color: 'white',
+                                    padding: '8px 16px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem'
+                                }}
+                            >
+                                Add Test Chord
+                            </button>
+                        </div>
+
+                        {progression.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: '#b3b3b3', padding: '20px' }}>
+                                No chords in progression. Click "Add Test Chord" to start.
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: 'flex',
+                                gap: '8px',
+                                flexWrap: 'wrap'
+                            }}>
+                                {progression.map((chord, index) => (
+                                    <div
+                                        key={chord.id}
+                                        style={{
+                                            backgroundColor: '#1db954',
+                                            color: 'white',
+                                            padding: '8px 12px',
+                                            borderRadius: '16px',
+                                            fontSize: '0.85rem',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        {chord.name}
+                                        {index < progression.length - 1 && <span style={{ margin: '0 4px' }}>→</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    {/* Status */}
+                    <footer style={{
+                        marginTop: '24px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid #4a4a4a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '0.85rem',
+                        color: '#b3b3b3'
+                    }}>
+                        <span>Key: {selectedKey}</span>
+                        <span>•</span>
+                        <span>Chords: {progression.length}</span>
+                        <span>•</span>
+                        <span>Available: {diatonicChords.length}</span>
+                    </footer>
+                </div>
+            );
+        };
+
+        // Render the app
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<ChordProgressionExplorer />);
+    </script>
+</body>
+</html>

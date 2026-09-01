@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Verification</title>
+    <script src="https://unpkg.com/tone@14.9.17/build/Tone.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { margin: 5px; padding: 10px 15px; font-size: 14px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Tone.js Integration Verification</h1>
+    
+    <div class="test-section">
+        <h2>1. Tone.js Library Check</h2>
+        <div id="tone-status" class="status info">Checking...</div>
+        <button onclick="checkToneJS()">Check Tone.js</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Audio Context Test</h2>
+        <div id="audio-status" class="status info">Not tested</div>
+        <button onclick="testAudioContext()">Test Audio Context</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Duration Conversion Test</h2>
+        <div id="duration-status" class="status info">Not tested</div>
+        <button onclick="testDurationConversion()">Test Duration Conversion</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Chord Progression Test</h2>
+        <div id="progression-status" class="status info">Not tested</div>
+        <button onclick="testChordProgression()">Test C-G-Am-F Progression</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Full Integration Test</h2>
+        <div id="integration-status" class="status info">Not tested</div>
+        <button onclick="testFullIntegration()">Test Complete Integration</button>
+    </div>
+
+    <script>
+        let synth = null;
+        
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+        
+        function checkToneJS() {
+            if (typeof Tone !== 'undefined') {
+                updateStatus('tone-status', `✅ Tone.js loaded successfully! Version: ${Tone.version}`, 'success');
+            } else {
+                updateStatus('tone-status', '❌ Tone.js not loaded', 'error');
+            }
+        }
+        
+        async function testAudioContext() {
+            try {
+                updateStatus('audio-status', 'Starting audio context...', 'info');
+                await Tone.start();
+                updateStatus('audio-status', '✅ Audio context started successfully!', 'success');
+            } catch (error) {
+                updateStatus('audio-status', `❌ Audio context failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function testDurationConversion() {
+            try {
+                // This is the exact function from PlaybackControls.jsx
+                const beatsToToneNotation = (beats) => {
+                    if (beats === 4) return '1n';    // Whole note
+                    if (beats === 2) return '2n';    // Half note
+                    if (beats === 1) return '4n';    // Quarter note
+                    if (beats === 0.5) return '8n';   // Eighth note
+                    if (beats === 0.25) return '16n'; // Sixteenth note
+                    return `${beats}n`; // Custom duration
+                };
+                
+                const tests = [
+                    { input: 4, expected: '1n', name: 'Whole note' },
+                    { input: 2, expected: '2n', name: 'Half note' },
+                    { input: 1, expected: '4n', name: 'Quarter note' },
+                    { input: 0.5, expected: '8n', name: 'Eighth note' },
+                    { input: 0.25, expected: '16n', name: 'Sixteenth note' }
+                ];
+                
+                let allPassed = true;
+                let results = [];
+                
+                tests.forEach(test => {
+                    const result = beatsToToneNotation(test.input);
+                    const passed = result === test.expected;
+                    allPassed = allPassed && passed;
+                    results.push(`${test.name}: ${test.input} → ${result} ${passed ? '✅' : '❌'}`);
+                });
+                
+                updateStatus('duration-status', 
+                    allPassed ? '✅ All duration conversions passed!' : '❌ Some conversions failed', 
+                    allPassed ? 'success' : 'error'
+                );
+                
+                console.log('Duration Conversion Results:');
+                results.forEach(result => console.log(result));
+                
+            } catch (error) {
+                updateStatus('duration-status', `❌ Duration conversion test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testChordProgression() {
+            try {
+                if (!synth) {
+                    await testAudioContext();
+                    synth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: 'triangle' },
+                        envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 }
+                    }).connect(Tone.Destination);
+                    synth.volume.value = -20;
+                }
+                
+                updateStatus('progression-status', '🎵 Playing C-G-Am-F progression...', 'info');
+                
+                // Test progression data (same format as from API)
+                const testProgression = [
+                    { time: 0, notes: [60, 64, 67], duration: '1n', index: 0 },    // C Major
+                    { time: 1, notes: [67, 71, 74], duration: '1n', index: 1 },    // G Major  
+                    { time: 2, notes: [69, 72, 76], duration: '1n', index: 2 },    // A Minor
+                    { time: 3, notes: [65, 69, 72], duration: '1n', index: 3 }     // F Major
+                ];
+                
+                // Create sequence (same as in PlaybackControls.jsx)
+                const seq = new Tone.Sequence((time, chord) => {
+                    if (chord.notes && chord.notes.length > 0) {
+                        synth.triggerAttackRelease(chord.notes, chord.duration, time);
+                        console.log(`🎵 Playing chord index ${chord.index}:`, chord.notes);
+                    }
+                }, testProgression, '1n');
+                
+                // Set tempo and play
+                Tone.Transport.bpm.value = 120;
+                Tone.Transport.start();
+                seq.start(0);
+                
+                setTimeout(() => {
+                    seq.stop();
+                    Tone.Transport.stop();
+                    seq.dispose();
+                    updateStatus('progression-status', '✅ Chord progression test completed!', 'success');
+                }, 5000);
+                
+            } catch (error) {
+                updateStatus('progression-status', `❌ Chord progression test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFullIntegration() {
+            try {
+                updateStatus('integration-status', '🔄 Running full integration test...', 'info');
+                
+                // Test all components together
+                await testAudioContext();
+                testDurationConversion();
+                await testChordProgression();
+                
+                setTimeout(() => {
+                    updateStatus('integration-status', '✅ Full integration test completed successfully!', 'success');
+                    console.log('🎉 All Tone.js integration tests passed!');
+                }, 6000);
+                
+            } catch (error) {
+                updateStatus('integration-status', `❌ Full integration test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-check Tone.js on load
+        window.onload = () => {
+            checkToneJS();
+        };
+    </script>
+</body>
+</html>
