@@ -564,3 +564,297 @@ Because ABC is plain text, it becomes a strong agentic composition medium:
 - renderer-independent
 
 This architecture should make the repository a composition system rather than merely a MIDI note generator.
+
+
+---
+
+## 16. Vocal Composition, Lyrics, and Alignment
+
+This section extends the architecture after the initial ABC-first implementation and supersedes earlier project-layout examples where they omit explicit lyric artifacts.
+
+### 16.1 Core rule
+
+The vocal part has two distinct musical artifacts:
+
+1. **Vocal melody** — pitch, rhythm, rests, phrasing boundaries, and musical placement. This belongs in `composition.abc`, normally in a named vocal voice such as `V: Vocal`.
+2. **Lyrics** — the words to be sung. These are a first-class sibling artifact and must not be treated as incidental prompt text.
+
+For YuE2 integration specifically, lyrics must remain separate from the ABC passed to the renderer. The application should not depend on ABC `w:` lyric fields for YuE2 rendering.
+
+Conceptually:
+
+```text
+                  SONG PROJECT
+
+     composition.abc             lyrics.txt
+     melody • harmony            canonical words
+     form • vocal notes          sections / lines
+             │                       │
+             └──────────┬────────────┘
+                        │
+             vocal-alignment.json
+                 (optional)
+                        │
+             ┌──────────┴──────────┐
+             ▼                     ▼
+        MIDI / score             YuE2
+                                  │
+                                  ▼
+                              sung audio
+```
+
+### 16.2 Revised project layout
+
+The preferred project shape becomes:
+
+```text
+project/
+    composition.abc
+    lyrics.txt
+    vocal-alignment.json      # optional
+    arrangement.json
+    composition.mid
+    yue2/
+        request.json
+        output.wav
+```
+
+#### `composition.abc`
+
+Canonical musical composition.
+
+For vocal songs it should include the vocal tune in a named voice, for example:
+
+```abc
+V: Vocal clef=treble name="Vocal Melody"
+"C" G4 A4 c8 |
+"Am" c4 B4 A8 |
+```
+
+The ABC owns the notes. It does not own the canonical lyric text.
+
+#### `lyrics.txt`
+
+Canonical textual lyric artifact.
+
+It should preserve human-meaningful song structure such as sections and line breaks. The format should stay intentionally simple and diffable.
+
+Example:
+
+```text
+[Verse 1]
+I hear the sound
+I feel it move
+
+[Chorus]
+Sound and feeling
+Carry me through
+```
+
+Lyrics must remain editable independently from pitch/rhythm so a songwriter or synthetic agent can revise wording without rewriting the score representation.
+
+#### `vocal-alignment.json`
+
+Optional explicit mapping between lyric units and the vocal melody.
+
+This exists for cases where section/line ordering alone is insufficient and deliberate syllable-to-note placement matters.
+
+Do not require this file for every song. YuE2 may perform its own alignment when explicit alignment is absent.
+
+The initial schema should be simple, versioned, and stable. A recommended shape is:
+
+```json
+{
+  "version": 1,
+  "voice": "Vocal",
+  "units": [
+    {
+      "text": "Sound",
+      "section": "chorus",
+      "line": 1,
+      "syllable": 1,
+      "noteStart": 24,
+      "noteCount": 1
+    },
+    {
+      "text": "and",
+      "section": "chorus",
+      "line": 1,
+      "syllable": 2,
+      "noteStart": 25,
+      "noteCount": 1
+    },
+    {
+      "text": "feel-",
+      "section": "chorus",
+      "line": 1,
+      "syllable": 3,
+      "noteStart": 26,
+      "noteCount": 1
+    },
+    {
+      "text": "-ing",
+      "section": "chorus",
+      "line": 1,
+      "syllable": 4,
+      "noteStart": 27,
+      "noteCount": 2
+    }
+  ]
+}
+```
+
+The exact indexing representation may evolve during implementation, but it must use stable references into the parsed vocal voice rather than brittle character offsets into raw ABC text.
+
+The alignment model must allow:
+
+- one syllable across multiple notes (melisma)
+- multiple syllables across successive notes
+- rests between lyric units
+- lyric lines / sections
+- instrumental passages with no lyric assignment
+- repeated lyric sections without ambiguity
+
+### 16.3 Standard ABC lyric fields
+
+Standard ABC supports lyric fields such as `w:`, and the application may eventually support import/export of these for interoperability.
+
+However:
+
+- `w:` is not the canonical lyric store for this architecture.
+- YuE2 rendering must not depend on `w:`.
+- importing ABC with `w:` may populate or propose `lyrics.txt` and alignment data.
+- exporting general-purpose ABC may optionally emit `w:` derived from canonical lyrics/alignment.
+- lossless round-trip behavior must be documented before treating `w:` as supported.
+
+This preserves interoperability without coupling the internal project model to a notation-specific lyric encoding.
+
+### 16.4 Composition model extension
+
+The internal composition abstraction should clearly identify vocal voices.
+
+Conceptually:
+
+```text
+Composition
+  metadata
+  sections[]
+  voices[]
+    id
+    role                 # vocal | instrumental | other
+    notes/rests
+  harmony[]
+  source
+    abcText
+
+SongProject
+  composition
+  lyrics
+  vocalAlignment?
+  arrangement?
+  renderMetadata?
+```
+
+Do not force lyrics into the base `Composition` object if doing so makes instrumental compositions awkward. A higher-level `SongProject` or equivalent aggregate is preferred for combining composition, lyrics, alignment, arrangement, and renderer metadata.
+
+### 16.5 YuE2 adapter contract
+
+The YuE2 boundary should explicitly accept separate composition and lyric inputs:
+
+```text
+YuE2Renderer.render({
+    abc,
+    lyrics,
+    vocalAlignment,
+    style,
+    outputDirectory,
+    options
+})
+```
+
+`vocalAlignment` may initially be advisory or unsupported by the underlying YuE2 runtime; the adapter must not pretend the model consumes controls it does not actually consume.
+
+The adapter should always preserve the requested alignment artifact alongside the render so future renderers or later YuE2 capabilities can use it.
+
+The renderer must construct YuE2 input according to YuE2's actual supported interface:
+
+- vocal melody/harmony/form from ABC
+- lyric text through the separate lyric input
+- style/production instructions through the style input
+
+### 16.6 UI requirements
+
+The composition UI should evolve to make vocals inspectable and editable without conflating notes and words.
+
+Desired views become approximately:
+
+```text
+[ ABC Source ] [ Score ] [ Lyrics ] [ Vocal Alignment ] [ Piano Roll ] [ Render ]
+```
+
+For the next implementation milestone, minimum useful support is:
+
+- display/edit `lyrics.txt`
+- identify the vocal ABC voice
+- render the vocal melody in the score
+- show whether an alignment sidecar exists
+- pass lyrics separately to YuE2
+
+A graphical syllable-to-note alignment editor can come later.
+
+### 16.7 Validation rules
+
+Add validation across the song project, not just individual files.
+
+At minimum:
+
+- configured vocal voice must exist in the parsed composition
+- lyric file must be readable when a vocal render requires lyrics
+- alignment references must point to existing vocal notes
+- alignment must not reference instrumental voices as vocal notes
+- overlapping/conflicting alignment ranges should be rejected unless explicitly supported
+- melismatic mappings must be legal
+- absence of alignment must remain valid
+- instrumental compositions must remain valid without lyrics
+
+### 16.8 Tests
+
+Add tests for:
+
+- detection of a named vocal voice
+- vocal melody preserved through ABC parse/serialize
+- loading/saving canonical lyrics
+- section and line preservation in lyrics
+- optional alignment loading
+- one-syllable/one-note alignment
+- melisma (one syllable to multiple notes)
+- invalid note references
+- missing vocal voice
+- songs with lyrics but no explicit alignment
+- instrumental songs with no lyrics
+- YuE2 adapter receives lyrics separately from ABC
+- YuE2 adapter does not inject `w:` lines as a substitute for its lyric input
+
+### 16.9 Next vertical slice
+
+The next end-to-end proof should be a short vocal song:
+
+```text
+composition.abc
+    └── V: Vocal melody
+
+lyrics.txt
+    └── canonical words
+
+vocal-alignment.json
+    └── optional note/syllable mapping
+
+        ↓
+
+same song project
+   ├──→ rendered score
+   ├──→ MIDI preview of vocal melody/harmony
+   └──→ YuE2 sung audio
+```
+
+Success means the project can revise **what is sung** and **how it is sung melodically** as separate version-controlled artifacts, then combine them reproducibly at render time.
